@@ -1,86 +1,83 @@
 ---
 layout: cv
-title: Isaac Newtons's CV
+title: Caleb Hale's CV
 ---
-# Isaac Newton - not me
-Physicist, Mathematician, Cambridge professor.
+# Caleb Hale
+Interdisciplinarian, Mathematician, Curious Lifelong learner.
 
 <div id="webaddress">
-<a href="isaac@applesdofall.org">isaac@applesdofall.org</a>
-| <a href="http://en.wikipedia.org/wiki/Isaac_Newton">My wikipedia page</a>
+<a href="https://www.linkedin.com/in/caleb-hale-curious/">My Linkedin</a>
+| <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=RDdQw4w9WgXcQ&start_radio=1">My wikipedia page</a>
 </div>
 
 
 ## Currently
 
-Standing on the shoulders of giants
+Graduate of Brigham Young University-Idaho with a [Bachelor's of Interdisciplinary Studies](https://www.byui.edu/catalog/#/programs/EJgKm7-3oW/B16QspNZH?bc=true&bcCurrent=Mathematics&bcItemType=programs) degree, exploring my options, honing my skills, and filling in this portfolio while I work part-time.
 
 ### Specialized in
 
-Laws of motion, gravitation, minting coins, disliking [Robert Hooke](http://en.wikipedia.org/wiki/Robert_Hooke)
+Math and Computer Science, particularly where they intersect in the field of [Reasoning Systems](https://en.wikipedia.org/wiki/Reasoning_system#Types_of_reasoning_system).
 
 
 ### Research interests
 
-Cooling, power series, optics, alchemy, planetary motions, apples.
+Math, science, philosophy, communication, psychology, etc. I primarily focus on math and logic in my active research, and some political science for [a podcast](https://www.youtube.com/@Bad_Sophists) I help run.
 
 
 ## Education
 
-`1654-1660`
-__The King's School, Grantham.__
+`2018-2026 (Intermittent)`
+__Brigham Young University - Idaho__
 
-`June 1661 - now`
-__Trinity College, Cambridge__
+- Bachelor's Degree
+- Society Leadership
+- Convocation Speaker
 
-- Sizar
+`2026 - death`
+__Lifelong Learning__
 
-`1667 - death`
-__Trinity College, Cambridge__
-
-- Fellow
+- Stay Tuned
 
 
 
 ## Awards
 
-`2012`
-President, *Royal Society*, London, UK
+`2018`
+Certificate of Completion, *Seminaries and Institutes of Religion*
 
-Associate, *French Academy of Science*, Paris, France
+`2018`
+High School Diploma, *Capital High School*
+
+`2015`
+Outstanding Academic Achievement, *President's Education Awards Program*
+
+`2010`
+Arrow of Light, *Boy Scouts of America*
 
 
 
 ## Publications
 
-<!-- A list is also available [online](http://scholar.google.co.uk/citations?user=LTOTl0YAAAAJ) -->
-
-### Journals
-
-`1669`
-Newton Sir I, De analysi per æquationes numero terminorum infinitas. 
-
-`1669`
-Lectiones opticæ.
-
-etc. etc. etc.
-
-### Patents
-
-`2012`
-Infinitesimal calculus for solutions to physics problems, [SMBC](http://www.techdirt.com/articles/20121011/09312820678/if-patents-had-been-around-time-newton.shtml) patent 001
+`2024`
+[Math Proof Portfolio](https://www.linkedin.com/in/caleb-hale-curious/overlay/Project/1298141262/treasury/?profileId=ACoAABTTec0B1NKH5xIVzXiq3ONlQaKn_tuAQZc)
 
 
 ## Occupation
 
-`1600`
-__Royal Mint__, London
+`2022-Present`
+__Contractor__, Web Dev By Design
 
-- Warden
-- Minted coins
+- Drupal
+- Wordpress
+- Zoho
+- UI/UX
 
-`1600`
-__Lucasian professor of Mathematics__, Cambridge University
+`2023-2024`
+__Assistant Project Manager__, BYU-I Curriculum Department
+
+`2020-2022` *Non-Profit Service*
+__Missionary__, Church of Jesus Christ of Latter-Day Saints
 
 
 
