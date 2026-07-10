@@ -2,14 +2,14 @@
 layout: cv
 title: Caleb Hale's CV
 ---
+
 # Caleb Hale
+
 Interdisciplinarian, Mathematician, Curious Lifelong learner.
 
-<div id="webaddress">
-<a href="https://www.linkedin.com/in/caleb-hale-curious/">My Linkedin</a>
-| <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=RDdQw4w9WgXcQ&start_radio=1">My wikipedia page</a>
-</div>
-
+::: {#webaddress}
+<a href="https://www.linkedin.com/in/caleb-hale-curious/">My Linkedin</a> \| <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=RDdQw4w9WgXcQ&start_radio=1">My wikipedia page</a>
+:::
 
 ## Currently
 
@@ -19,68 +19,55 @@ Graduate of Brigham Young University-Idaho with a [Bachelor's of Interdisciplina
 
 Math and Computer Science, particularly where they intersect in the field of [Reasoning Systems](https://en.wikipedia.org/wiki/Reasoning_system#Types_of_reasoning_system).
 
-
 ### Research interests
 
 Math, science, philosophy, communication, psychology, etc. I primarily focus on math and logic in my active research, and some political science for [a podcast](https://www.youtube.com/@Bad_Sophists) I help run.
 
-
 ## Education
 
-`2018-2026 (Intermittent)`
-__Brigham Young University - Idaho__
+`2018-2026 (Intermittent)` **Brigham Young University - Idaho**
 
-- Bachelor's Degree
-- Society Leadership
-- Convocation Speaker
+-   Bachelor's Degree
+-   Society Leadership
+-   Convocation Speaker
 
-`2026 - death`
-__Lifelong Learning__
+`2026-death` **Lifelong Learning**
 
-- Stay Tuned
-
-
+-   Stay Tuned
 
 ## Awards
 
-`2018`
-Certificate of Completion, *Seminaries and Institutes of Religion*
+`2026` Bachelor's Degree Diploma, *Brigham Young University - Idaho*
 
-`2018`
-High School Diploma, *Capital High School*
+`2024` Associates Degree Diploma, *Brigham Young University - Idaho*
 
-`2015`
-Outstanding Academic Achievement, *President's Education Awards Program*
+`2018` Certificate of Completion, *Seminaries and Institutes of Religion*
 
-`2010`
-Arrow of Light, *Boy Scouts of America*
+`2018` High School Diploma, *Capital High School*
 
+`2015` Outstanding Academic Achievement, *President's Education Awards Program*
 
+`2010` Arrow of Light, *Boy Scouts of America*
 
 ## Publications
 
-`2024`
-[Math Proof Portfolio](https://www.linkedin.com/in/caleb-hale-curious/overlay/Project/1298141262/treasury/?profileId=ACoAABTTec0B1NKH5xIVzXiq3ONlQaKn_tuAQZc)
-
+`2024` [Math Proof Portfolio](https://www.linkedin.com/in/caleb-hale-curious/overlay/Project/1298141262/treasury/?profileId=ACoAABTTec0B1NKH5xIVzXiq3ONlQaKn_tuAQZc)
 
 ## Occupation
 
-`2022-Present`
-__Contractor__, Web Dev By Design
+`2022-Present` **Contractor**, Web Dev By Design
 
-- Drupal
-- Wordpress
-- Zoho
-- UI/UX
+-   Drupal
+-   Wordpress
+-   Zoho
+-   UI/UX
 
-`2023-2024`
-__Assistant Project Manager__, BYU-I Curriculum Department
+`2023-2024` **Assistant Project Manager**, BYU-I Curriculum Department
 
-`2020-2022` *Non-Profit Service*
-__Missionary__, Church of Jesus Christ of Latter-Day Saints
+`2020-2022` **Missionary**, Church of Jesus Christ of Latter-Day Saints \**Non-Profit Service*
 
-
-
+```{=html}
 <!-- ### Footer
 
 Last updated: May 2013 -->
+```
