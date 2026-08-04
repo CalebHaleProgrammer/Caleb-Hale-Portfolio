@@ -3,7 +3,7 @@ project:
   output-dir: docs
 
 website:
-  title: "Your_Name - Data Science Portfolio"
+  title: "Caleb Hale Portfolio"
   favicon: Images/favicon.png
   back-to-top-navigation: true
   repo-url: https://github.com/username/username.github.io
@@ -11,10 +11,10 @@ website:
 
   page-footer: 
     border: true
-    left: "Your_Name 2024©"
+    left: "Caleb Hale 2026©"
     right: 
       - icon: linkedin
-        href: Your_LinkedIn_URL
+        href: linkedin.com/in/caleb-hale-curious/
 
   navbar:
     background: primary
