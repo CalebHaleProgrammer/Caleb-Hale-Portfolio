@@ -1,7 +1,7 @@
 ---
-title: "Client Report - [Insert Project Title]"
-subtitle: "Course DS 250"
-author: "[STUDENT NAME]"
+title: "Prometheus' Architecture"
+subtitle: "Foundational Framework of the Prometheus Reasoning System"
+author: "Caleb Hale"
 format:
   html:
     self-contained: true
@@ -25,4 +25,76 @@ execute:
     
 ---
 
-### Paste in a template
+
+## Overview
+The Prometheus' Architecture is a foundational framework for a metamathematical reasoning system. It is designed to contain the expressive power of ZFC set theory while bridging the reasoning levels of rigorous mathematical logic and human-level reasoning. The architecture is built upon a set of primitives and constructions that allow for the representation and manipulation of mathematical objects and concepts.
+
+## Primitives
+* Sets (constant, variable-constant, and variable. The program will attempt to classify everything in terms of constant or variable sets)
+  + Constant type set: {}C (represents a collection as a single object)
+  + Variable-constant type set: {}VC (represents a possibility space of an unknown single object)
+  + Variable type set: {}V (represents a collection of objects as an abstraction over all members of the collection)
+* [^1]Programming language primitives 
+    + String
+    + Integer
+    + Boolean
+    + etc.
+  + sub-item 2
+    - sub-sub-item 1
+
+[^1]: ("primitive" as endpoints of reducing evaluation, but conceptually reducible. They are computationally treated as primitives, but not logically.)
+
+## Constructions and equivalencies:
+
+### Standard set theory foundation constructions, with constant sets:
+* Intersection
+: A∩B = {x | x∈A and x∈B}C
+* Union
+: A∪B = {x | x∈A or x∈B}C
+* Power Set
+: 𝒫(A) = {X | X⊆A}C
+* Predicate Subset
+: {x | P(x)}C = {x | x∈A and P(x)}C
+* Cartesian Product
+: A×B = {(a,b) | a∈A and b∈B}C
+* Function Mapping
+: f(A) = {f(x) | x∈A}C
+
+As well as extending set theory formulations that build up set theory constructively:
+* Disjoint Union
+: A⊎B = {AX{0}C ∪ BX{1}C}C
+* Relation
+: R⊆A×B = { (a,b) | a∈A and b∈B }C
+* Function
+: f:A→B = { (a,b) | a∈A and b∈B and f(a)=b }C [^2]
+* etc.
+
+[^2]: with the additional constraint that for all a∈A, there exists a unique b∈B such that (a,b)∈f; that is, one input maps to only one output
+
+
+### Ambiguity and Possibility constructions, with variable-constant sets:
+* Impossibility: 
+: NA = {}VC 
+* Tautology/Single possibility: 
+: x = {x}VC
+* Possibility compilation: 
+: {A={...}VC, B={...}VC}VC = {AUB}VC
+* Ambiguous Component:
+: f({...}VC) = {f(...)}VC -- A VC set with type X members can be used as a component in any construction, object method, or operation that requires a type X member. Operation and object method results will be a VC set as a collection of evaluation outcomes for each member. E.g. {3, 4}%3 = {0,1} E.g. length({“12”, 12}) = {2, NA}
+
+
+### Abstraction with variable sets:
+
+
+
+## Starting Axioms and Template Structures:
+### Axioms
+
+### ...
+
+
+## Misc Notes:
+* Set-typing; indicates membership of a constant or subsetting of constant-variable or variable sets in relation to the Constant "type" set. Useful for defining allowed domains and behaviors. Adds "types" but in a more intuitive approach, allowing a term to belong to multiple types. X is of settype A means: X is a Constant as a member of A or X is either a VC set or variable set as a subset of A.
+
+
+

@@ -86,9 +86,9 @@
   {
     "objectID": "Machine_Learning/project1.html",
     "href": "Machine_Learning/project1.html",
-    "title": "Client Report - [Insert Project Title]",
+    "title": "Prometheus’ Architecture",
     "section": "",
-    "text": "Paste in a template\n\n\n\n\n Back to top",
+    "text": "The Prometheus’ Architecture is a foundational framework for a metamathematical reasoning system. It is designed to contain the expressive power of ZFC set theory while bridging the reasoning levels of rigorous mathematical logic and human-level reasoning. The architecture is built upon a set of primitives and constructions that allow for the representation and manipulation of mathematical objects and concepts.",
     "crumbs": [
       "Machine Learning",
       "Project 1"
@@ -300,14 +300,14 @@
   {
     "objectID": "index.html",
     "href": "index.html",
-    "title": "about me",
+    "title": "About Me",
     "section": "",
     "text": "MarkDown Basics"
   },
   {
     "objectID": "index.html#title-2-header",
     "href": "index.html#title-2-header",
-    "title": "about me",
+    "title": "About Me",
     "section": "",
     "text": "MarkDown Basics"
   },
@@ -362,6 +362,83 @@
     "crumbs": [
       "Story Telling",
       "Project 3"
+    ]
+  },
+  {
+    "objectID": "Machine_Learning/project1.html#header-test",
+    "href": "Machine_Learning/project1.html#header-test",
+    "title": "Prometheus’ Architecture",
+    "section": "",
+    "text": "The Prometheus’ Architecture is a foundational framework for a metamathematical reasoning system. It is designed to contain the expressive power of ZFC set theory while bridging the reasoning levels of rigorous mathematical logic and human-level reasoning. The architecture is built upon a set of primitives and constructions that allow for the representation and manipulation of mathematical objects and concepts.\n\n\n\n\nSets (constant, variable-constant, and variable. The program will attempt to classify everything in terms of constant or variable sets)\n\nConstant type set: {}C (represents a collection as a single object)\nVariable-constant type set: {}VC (represents a possibility space of an unknown single object)\nVariable type set: {}V (represents a collection of objects as an abstraction over all members of the collection)\n\n1Programming language primitives\n\nString\nInteger\nBoolean\netc.\nsub-item 2\n\nsub-sub-item 1\n\n\n\n\n\n\n\n\n\n\nIntersection\n\nA∩B = {x | x∈A and x∈B}C\n\n\n\nUnion\n\nA∪B = {x | x∈A or x∈B}C\n\n\n\nPower Set\n\n𝒫(A) = {X | X⊆A}C\n\n\n\nPredicate Subset\n\n{x | P(x)}C = {x | x∈A and P(x)}C\n\n\n\nCartesian Product\n\nA×B = {(a,b) | a∈A and b∈B}C\n\n\n\nFunction Mapping\n\nf(A) = {f(x) | x∈A}C As well as extending set theory formulations that build up set theory constructively:\n\n\n\nDisjoint Union\n\nA⊎B = {AX{0}C ∪ BX{1}C}C\n\n\n\nRelation\n\nR⊆A×B = { (a,b) | a∈A and b∈B }C\n\n\n\nFunction\n\nf:A→B = { (a,b) | a∈A and b∈B and f(a)=b }C *with the additional constraint that for all a∈A, there exists a unique b∈B such that (a,b)∈f; that is, one input maps to only one output\n\n\netc.\n\n\n\n\n\n\nImpossibility:\n\nNA = {}VC\n\n\n\nTautology/Single possibility:\n\nx = {x}VC\n\n\n\nPossibility compilation:\n\n{A={…}VC, B={…}VC}VC = {AUB}VC\n\n\n\nAmbiguous Component:\n\nf({…}VC) = {f(…)}VC – A VC set with type X members can be used as a component in any construction, object method, or operation that requires a type X member. Operation and object method results will be a VC set as a collection of evaluation outcomes for each member. E.g. {3, 4}%3 = {0,1} E.g. length({“12”, 12}) = {2, NA}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nSet-typing; indicates membership of a constant or subsetting of constant-variable or variable sets in relation to the Constant “type” set. Useful for defining allowed domains and behaviors. Adds “types” but in a more intuitive approach, allowing a term to belong to multiple types. X is of settype A means: X is a Constant as a member of A or X is either a VC set or variable set as a subset of A.",
+    "crumbs": [
+      "Machine Learning",
+      "Project 1"
+    ]
+  },
+  {
+    "objectID": "Machine_Learning/project1.html#footnotes",
+    "href": "Machine_Learning/project1.html#footnotes",
+    "title": "Prometheus’ Architecture",
+    "section": "Footnotes",
+    "text": "Footnotes\n\n\n(“primitive” as endpoints of reducing evaluation, but conceptually reducible. They are computationally treated as primitives, but not logically.)↩︎\nwith the additional constraint that for all a∈A, there exists a unique b∈B such that (a,b)∈f; that is, one input maps to only one output↩︎",
+    "crumbs": [
+      "Machine Learning",
+      "Project 1"
+    ]
+  },
+  {
+    "objectID": "Machine_Learning/project1.html#overview",
+    "href": "Machine_Learning/project1.html#overview",
+    "title": "Prometheus’ Architecture",
+    "section": "",
+    "text": "The Prometheus’ Architecture is a foundational framework for a metamathematical reasoning system. It is designed to contain the expressive power of ZFC set theory while bridging the reasoning levels of rigorous mathematical logic and human-level reasoning. The architecture is built upon a set of primitives and constructions that allow for the representation and manipulation of mathematical objects and concepts.",
+    "crumbs": [
+      "Machine Learning",
+      "Project 1"
+    ]
+  },
+  {
+    "objectID": "Machine_Learning/project1.html#primitives",
+    "href": "Machine_Learning/project1.html#primitives",
+    "title": "Prometheus’ Architecture",
+    "section": "Primitives",
+    "text": "Primitives\n\nSets (constant, variable-constant, and variable. The program will attempt to classify everything in terms of constant or variable sets)\n\nConstant type set: {}C (represents a collection as a single object)\nVariable-constant type set: {}VC (represents a possibility space of an unknown single object)\nVariable type set: {}V (represents a collection of objects as an abstraction over all members of the collection)\n\n1Programming language primitives\n\nString\nInteger\nBoolean\netc.\nsub-item 2\n\nsub-sub-item 1",
+    "crumbs": [
+      "Machine Learning",
+      "Project 1"
+    ]
+  },
+  {
+    "objectID": "Machine_Learning/project1.html#constructions-and-equivalencies",
+    "href": "Machine_Learning/project1.html#constructions-and-equivalencies",
+    "title": "Prometheus’ Architecture",
+    "section": "Constructions and equivalencies:",
+    "text": "Constructions and equivalencies:\n\nStandard set theory foundation constructions, with constant sets:\n\n\nIntersection\n\nA∩B = {x | x∈A and x∈B}C\n\n\n\nUnion\n\nA∪B = {x | x∈A or x∈B}C\n\n\n\nPower Set\n\n𝒫(A) = {X | X⊆A}C\n\n\n\nPredicate Subset\n\n{x | P(x)}C = {x | x∈A and P(x)}C\n\n\n\nCartesian Product\n\nA×B = {(a,b) | a∈A and b∈B}C\n\n\n\nFunction Mapping\n\nf(A) = {f(x) | x∈A}C\n\n\n\nAs well as extending set theory formulations that build up set theory constructively: * Disjoint Union : A⊎B = {AX{0}C ∪ BX{1}C}C * Relation : R⊆A×B = { (a,b) | a∈A and b∈B }C * Function : f:A→B = { (a,b) | a∈A and b∈B and f(a)=b }C 2 * etc.\n\n\nAmbiguity and Possibility constructions, with variable-constant sets:\n\n\nImpossibility:\n\nNA = {}VC\n\n\n\nTautology/Single possibility:\n\nx = {x}VC\n\n\n\nPossibility compilation:\n\n{A={…}VC, B={…}VC}VC = {AUB}VC\n\n\n\nAmbiguous Component:\n\nf({…}VC) = {f(…)}VC – A VC set with type X members can be used as a component in any construction, object method, or operation that requires a type X member. Operation and object method results will be a VC set as a collection of evaluation outcomes for each member. E.g. {3, 4}%3 = {0,1} E.g. length({“12”, 12}) = {2, NA}\n\n\n\n\n\nAbstraction with variable sets:",
+    "crumbs": [
+      "Machine Learning",
+      "Project 1"
+    ]
+  },
+  {
+    "objectID": "Machine_Learning/project1.html#starting-axioms-and-template-structures",
+    "href": "Machine_Learning/project1.html#starting-axioms-and-template-structures",
+    "title": "Prometheus’ Architecture",
+    "section": "Starting Axioms and Template Structures:",
+    "text": "Starting Axioms and Template Structures:",
+    "crumbs": [
+      "Machine Learning",
+      "Project 1"
+    ]
+  },
+  {
+    "objectID": "Machine_Learning/project1.html#misc-notes",
+    "href": "Machine_Learning/project1.html#misc-notes",
+    "title": "Prometheus’ Architecture",
+    "section": "Misc Notes:",
+    "text": "Misc Notes:\n\nSet-typing; indicates membership of a constant or subsetting of constant-variable or variable sets in relation to the Constant “type” set. Useful for defining allowed domains and behaviors. Adds “types” but in a more intuitive approach, allowing a term to belong to multiple types. X is of settype A means: X is a Constant as a member of A or X is either a VC set or variable set as a subset of A.",
+    "crumbs": [
+      "Machine Learning",
+      "Project 1"
     ]
   }
 ]
