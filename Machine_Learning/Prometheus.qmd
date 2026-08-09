@@ -1,5 +1,5 @@
 ---
-title: "Prometheus' Architecture"
+title: "Prometheus' Architecture Documentation"
 subtitle: "Foundational Framework of the Prometheus Reasoning System"
 author: "Caleb Hale"
 format:
@@ -28,6 +28,16 @@ execute:
 
 ## Overview
 The Prometheus' Architecture is a foundational framework for a metamathematical reasoning system. It is designed to contain the expressive power of ZFC set theory while bridging the reasoning levels of rigorous mathematical logic and human-level reasoning. The architecture is built upon a set of primitives and constructions that allow for the representation and manipulation of mathematical objects and concepts.
+
+## To Do and Future Work
+* Finalize axioms for numbers systems, (e.g., Peano's axioms, Frege's axioms)
+* Explicitly define axioms for relations (equivalence, partial order, strict partial order, etc.)
+* Define axioms for functions, including injective, surjective, bijective, and other properties
+* Define axioms for predicates, including quantifiers and logical connectives (and, or, not, implies, etc.) and how they relate to the custom set types (constant, variable-constant, variable).
+* Define axioms for the custom set types (constant, variable-constant, variable) and their relationships to each other and to standard set theory.
+* Define incomplete extensional definitions with unknown unknowns, and how they relate to the custom set types (constant, variable-constant, variable). Note: define as an unknown that aligns with known (an unknown from the category of possibilities defined by a known detail). Only unknown unknowns with no known details are impossible to define.
+* Define attributes by their relationships to other objects and their possible values, and explore abstraction with attributes and how they relate to the custom set types (constant, variable-constant, variable).
+
 
 ## Program Structure
 Mathematical objects exist (primarily as sets) within a graph structure, with relationships and operations between them. ...
