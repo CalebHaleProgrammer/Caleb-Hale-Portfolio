@@ -29,12 +29,15 @@ execute:
 ## Overview
 The Prometheus' Architecture is a foundational framework for a metamathematical reasoning system. It is designed to contain the expressive power of ZFC set theory while bridging the reasoning levels of rigorous mathematical logic and human-level reasoning. The architecture is built upon a set of primitives and constructions that allow for the representation and manipulation of mathematical objects and concepts.
 
+## Program Structure
+Mathematical objects exist (primarily as sets) within a graph structure, with relationships and operations between them. ...
+
 ## Primitives
 * Sets (constant, variable-constant, and variable. The program will attempt to classify everything in terms of constant or variable sets)
   + Constant type set: {}C (represents a collection as a single object)
   + Variable-constant type set: {}VC (represents a possibility space of an unknown single object)
   + Variable type set: {}V (represents a collection of objects as an abstraction over all members of the collection)
-* [^1]Programming language primitives 
+* [^1][Rust primitives](https://claude.ai/chat/491db745-dce3-4b0c-8d09-138aeda0d09b)
     + String
     + Integer
     + Boolean
@@ -42,11 +45,12 @@ The Prometheus' Architecture is a foundational framework for a metamathematical 
   + sub-item 2
     - sub-sub-item 1
 
-[^1]: ("primitive" as endpoints of reducing evaluation, but conceptually reducible. They are computationally treated as primitives, but not logically.)
+[^1]: "primitive" as endpoints of reducing evaluation, but conceptually reducible. They are computationally treated as primitives, but not logically.
 
 ## Constructions and equivalencies:
 
 ### Standard set theory foundation constructions, with constant sets:
+::: {}
 * Intersection
 : A∩B = {x | x∈A and x∈B}C
 * Union
@@ -59,6 +63,7 @@ The Prometheus' Architecture is a foundational framework for a metamathematical 
 : A×B = {(a,b) | a∈A and b∈B}C
 * Function Mapping
 : f(A) = {f(x) | x∈A}C
+:::
 
 As well as extending set theory formulations that build up set theory constructively:
 * Disjoint Union
@@ -70,7 +75,6 @@ As well as extending set theory formulations that build up set theory constructi
 * etc.
 
 [^2]: with the additional constraint that for all a∈A, there exists a unique b∈B such that (a,b)∈f; that is, one input maps to only one output
-
 
 ### Ambiguity and Possibility constructions, with variable-constant sets:
 * Impossibility: 
@@ -87,14 +91,20 @@ As well as extending set theory formulations that build up set theory constructi
 
 
 
+Also, for any set that can be validly constructed as one type of set, its intension is valid for the other types of sets. E.g. {1,2,3}C ⇔ {1,2,3}VC ⇔ {1,2,3}V. 
+
+
 ## Starting Axioms and Template Structures:
 ### Axioms
 
-### ...
 
+### ...
+Peanos' Axioms and/or Frege's Axioms
+Predicates as functions that map to truth values
 
 ## Misc Notes:
 * Set-typing; indicates membership of a constant or subsetting of constant-variable or variable sets in relation to the Constant "type" set. Useful for defining allowed domains and behaviors. Adds "types" but in a more intuitive approach, allowing a term to belong to multiple types. X is of settype A means: X is a Constant as a member of A or X is either a VC set or variable set as a subset of A.
 
+## Walkthrough and Examples
 
 

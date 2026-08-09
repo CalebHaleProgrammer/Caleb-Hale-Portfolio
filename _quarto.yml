@@ -94,8 +94,8 @@ website:
         - text: "Machine Learning"
           file: ml.qmd
         - text: "---"
-        - text: "Project 1"
-          file: Machine_Learning/project1.qmd
+        - text: "Prometheus Architecture"
+          file: Machine_Learning/Prometheus.qmd
         - text: "---"
         - text: "Project 2"
           file: Machine_Learning/project2.qmd
