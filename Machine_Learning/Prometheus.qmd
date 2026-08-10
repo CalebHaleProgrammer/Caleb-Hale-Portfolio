@@ -30,13 +30,22 @@ execute:
 The Prometheus' Architecture is a foundational framework for a metamathematical reasoning system. It is designed to contain the expressive power of ZFC set theory while bridging the reasoning levels of rigorous mathematical logic and human-level reasoning. The architecture is built upon a set of primitives and constructions that allow for the representation and manipulation of mathematical objects and concepts.
 
 ## To Do and Future Work
+### Top Priority
+* Explore the "environment" concept with Claude to understand how a program might be an agent according to my perspective, and how to implement this in Prometheus.
+
 * Finalize axioms for numbers systems, (e.g., Peano's axioms, Frege's axioms)
-* Explicitly define axioms for relations (equivalence, partial order, strict partial order, etc.)
-* Define axioms for functions, including injective, surjective, bijective, and other properties
+* Explicitly define axioms for relations (equivalence, partial order, strict partial order, etc.) and mappings, enabling checking for equal cardinality of sets (allowing the "number" abstraction to be defined as a set of equivalence classes of sets with equal cardinality?).
 * Define axioms for predicates, including quantifiers and logical connectives (and, or, not, implies, etc.) and how they relate to the custom set types (constant, variable-constant, variable).
-* Define axioms for the custom set types (constant, variable-constant, variable) and their relationships to each other and to standard set theory.
 * Define incomplete extensional definitions with unknown unknowns, and how they relate to the custom set types (constant, variable-constant, variable). Note: define as an unknown that aligns with known (an unknown from the category of possibilities defined by a known detail). Only unknown unknowns with no known details are impossible to define.
 * Define attributes by their relationships to other objects and their possible values, and explore abstraction with attributes and how they relate to the custom set types (constant, variable-constant, variable).
+### Next Priority
+
+* Define axioms for functions, including injective, surjective, bijective, and other properties
+
+* Define axioms for the custom set types (constant, variable-constant, variable) and their relationships to each other and to standard set theory.
+
+
+* Explore tests for determining cardinality of sets, including finite, countably infinite, and uncountably infinite sets (allowing explicit exhaustive enumeration of possibilities for sufficiently small finite sets).
 
 
 ## Program Structure
@@ -108,7 +117,28 @@ Also, for any set that can be validly constructed as one type of set, its intens
 ### Axioms
 
 
-### ...
+### Starting Template Structures
+Progression Axioms:
+1. Some first object exists (e.g., 0)
+2. Every object has a successor, which is also an object.
+3. No two objects have the same successor
+4. The first object is not the successor of any object.
+5. If a property is possessed by the first object and also by the successor of every object that has that property, then it is possessed by all objects (including classifications and memberships).
+
+This is a generalization of Peano's Axioms:
+1. 0 is a number.
+2. Every number has a successor, which is also a number.
+3. No two numbers have the same successor
+4. 0 is not the successor of any number.
+5. If a property is possessed by 0 and also by the successor of every number that has that property, then it is possessed by all numbers. 
+* Endless sequence of unique numbers (via 2 and 3) that don't loop (via 4), which includes all numbers (via 5).
+* "Ordinal arithmetic" -- m+n is defined using m+0=m and m+(n+1)=S(m+n), reducing recursion. Defines addition and equivalents for progressions.
+
+* Some mechanism of mapping between sets to compare their cardinality, allowing the definition of numbers as equivalence classes of sets with equal cardinality. (One-one relation identification with the two sets as domain and codomain.)
+pdf pg 37
+
+[Number as defined by collection of equivalence classes of sets with equal cardinality]
+
 Peanos' Axioms and/or Frege's Axioms
 Predicates as functions that map to truth values
 

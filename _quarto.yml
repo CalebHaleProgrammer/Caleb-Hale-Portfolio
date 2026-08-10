@@ -39,22 +39,6 @@ website:
   # comment out any of the sections below to turn off the sidebar
 
   sidebar: 
-    - title: "Data Cleansing"
-      style: "docked"
-      background: light
-      contents:
-        - text: "Data Cleansing"
-          file: cleansing.qmd
-        - text: "---"
-        - text: "Project 1"
-          file: Cleansing_Projects/project1.qmd
-        - text: "---"
-        - text: "Project 2"
-          file: Cleansing_Projects/project2.qmd
-        - text: "---"
-        - text: "Project 3"
-          file: Cleansing_Projects/project3.qmd
-        - text: "---"
     - title: "Data Exploration"
       style: "docked"
       background: light
