@@ -26,12 +26,12 @@ website:
         file: resume.qmd
       - text: "Data Exploration"
         file: exploration.qmd
-      - text: "Story Telling"
-        file: story_telling.qmd
+      #- text: "Story Telling"
+      #  file: story_telling.qmd
       - text: "Machine Learning"
         file: ml.qmd
-      - text: "Full Stack"
-        file: full_stack.qmd
+      #- text: "Full Stack"
+      #  file: full_stack.qmd
       #- text: "Competitions"
       #  file: competition.qmd
   

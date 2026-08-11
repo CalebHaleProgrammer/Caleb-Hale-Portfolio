@@ -1,6 +1,6 @@
 ---
 title: "Scheduler project"
-subtitle: "Course DS 250"
+subtitle: ""
 author: "Caleb Hale"
 format:
   html:
@@ -89,7 +89,7 @@ html, body{
 }
 
 #duty-board{
-  max-width: 1520px;
+  max-width: min(2200px, 96vw);
   margin: 0 auto;
   padding: 28px 28px 64px;
 }
@@ -108,7 +108,9 @@ html, body{
   display:flex;
   align-items:flex-end;
   justify-content:space-between;
-  gap: 24px;
+  gap: 18px;
+  flex-wrap: wrap;
+  row-gap: 12px;
   margin-bottom: 22px;
   padding-bottom: 18px;
   border-bottom: 1px solid var(--border);
@@ -138,6 +140,47 @@ html, body{
   margin-top: 4px;
 }
 .db-toolbar{ display:flex; align-items:center; gap:8px; flex-wrap: wrap; }
+
+.db-tabs-bar{
+  display:flex; align-items:center; gap:6px;
+  overflow-x:auto;
+  flex: 1 1 260px;
+  min-width: 160px;
+  padding-bottom: 2px;
+}
+.db-tab{
+  display:flex; align-items:center; gap:6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--panel);
+  font-size: 12.5px; font-weight: 550;
+  white-space:nowrap;
+  cursor:pointer;
+  user-select:none;
+  transition: border-color .12s ease, background .12s ease;
+  position: relative;
+}
+.db-tab:hover{ border-color: var(--accent); }
+.db-tab.active{ background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.db-tab.dragging{ opacity: .4; }
+.db-tab .idx{ font-family: var(--font-mono); font-size:10px; opacity:.7; }
+.db-tab-menu{
+  position: fixed; z-index: 65;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-pop);
+  padding: 6px;
+  width: 160px;
+}
+.db-tab-menu button{
+  display:block; width:100%; text-align:left;
+  padding: 7px 9px; border-radius: var(--radius-sm);
+  border:none; background:transparent; font-size:12.5px; color: var(--ink);
+}
+.db-tab-menu button:hover{ background: var(--accent-soft); color: var(--accent); }
+.db-tab-menu button.danger:hover{ background: var(--danger-soft); color: var(--danger); }
 
 .btn{
   display:inline-flex; align-items:center; gap:7px;
@@ -195,21 +238,6 @@ html, body{
 }
 .db-panel-head .db-panel-note{ font-size: 11.5px; color: var(--muted); font-family: var(--font-mono); }
 
-/* ---------------- Legend ---------------- */
-.db-legend{
-  display:flex; flex-wrap:wrap; gap: 14px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel-2);
-  font-size: 11.5px;
-  color: var(--muted);
-}
-.db-legend .item{ display:flex; align-items:center; gap:6px; }
-.db-legend .swatch{ width:12px; height:12px; border-radius:3px; display:inline-block; }
-.db-legend .swatch.confirmed{ background: var(--ink); }
-.db-legend .swatch.suggested{ background: var(--ink); opacity:.32; }
-.db-legend .swatch.forbidden{ background: repeating-linear-gradient(45deg, #cfd6e0, #cfd6e0 3px, #e7ebf0 3px, #e7ebf0 6px); }
-
 /* ---------------- Chart ---------------- */
 .db-chart-scroll{
   overflow-x: auto;
@@ -257,9 +285,19 @@ html, body{
   border-right: 2px solid var(--border-strong);
   display:flex; flex-direction:column; justify-content:center;
   padding: 0 12px;
+  cursor: pointer;
+  transition: background .12s ease, outline .12s ease;
 }
+.db-row-label:hover{ background: var(--accent-soft); }
+.db-row-label.highlight-red{ outline: 2px solid var(--danger); outline-offset: -2px; background: var(--danger-soft); }
 .db-row-label .name{ font-weight: 600; font-size: 13px; }
 .db-row-label .tags{ display:flex; flex-wrap:wrap; gap:3px; margin-top:3px; }
+.db-row-label .tags.tags-hidden{ display:none; }
+
+.db-chart-footer{
+  display:flex; align-items:center; gap:8px;
+  padding: 8px 16px 14px 16px;
+}
 
 .db-cell{
   border-bottom: 1px solid var(--border);
@@ -293,17 +331,28 @@ html, body{
   text-shadow: 0 1px 1px rgba(0,0,0,0.45);
 }
 .db-block.confirmed{ box-shadow: var(--shadow-card); }
-.db-block.suggested{
-  opacity: .4;
-  border: 1.5px dashed rgba(0,0,0,0.25);
-}
-.db-block.suggested:hover{ opacity:.62; }
-.db-block .star{ margin-left:4px; font-size:10px; }
 .db-block.rule-violated{ outline: 2px solid var(--danger); outline-offset: 1px; }
 
-.db-block.confirmed:hover::after,
-.db-block.suggested:hover::after{ content:''; }
-.db-block:hover{ filter: brightness(1.05); }
+.db-suggestion-box{
+  position:relative;
+  margin: 3px 2px;
+  border-radius: var(--radius-sm);
+  border: 1.5px dashed var(--border-strong);
+  background: rgba(255,255,255,0.4);
+  display:flex; align-items:center; justify-content:space-evenly;
+  padding: 0 4px;
+  z-index: 2;
+  cursor:pointer;
+  transition: background .12s ease, border-color .12s ease;
+}
+.db-suggestion-box:hover{ background: var(--accent-soft); border-color: var(--accent); }
+.db-suggestion-star{
+  font-size: 13px;
+  line-height:1;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25));
+}
+
+.db-tab.highlight-red{ outline: 2px solid var(--danger); outline-offset: 1px; }
 
 /* ---------------- Dropdown (assign) ---------------- */
 .db-dropdown{
@@ -388,6 +437,8 @@ html, body{
   transition: border-color .12s ease;
 }
 .db-decision-card:hover{ border-color: var(--accent); }
+.db-decision-card.hotspot{ border-color: var(--preferred); background: var(--preferred-soft); }
+.db-decision-card.hotspot:hover{ border-color: var(--preferred); }
 .db-decision-card .top-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:3px;}
 .db-decision-card .count-badge{
   font-family: var(--font-mono); font-size:11px; font-weight:700;
@@ -570,6 +621,10 @@ html, body{
   margin-bottom: 16px;
 }
 .db-rule-builder h3{ font-size: 13px; margin: 0 0 10px; font-family: var(--font-display); }
+.db-relative-fields{
+  border-top: 1px dashed var(--border-strong);
+  margin-top: 8px; padding-top: 10px;
+}
 .db-rule-preview{
   font-size: 12.5px; background:#fff; border:1px solid var(--border); border-radius: var(--radius-sm);
   padding: 8px 10px; margin-top: 10px; color: var(--ink);
@@ -600,11 +655,13 @@ html, body{
         <div class="db-sub" id="db-header-sub">10:30 AM – 4:30 PM · 15‑minute slots</div>
       </div>
     </div>
+    <div class="db-tabs-bar" id="schedule-tabs"></div>
     <div class="db-toolbar">
       <button class="btn" id="btn-save" title="Save schedule as .xlsx">Save .xlsx</button>
       <button class="btn" id="btn-load" title="Load schedule from .xlsx">Load .xlsx</button>
       <input type="file" id="file-input" accept=".xlsx" style="display:none" />
-      <button class="btn btn-primary" id="btn-solve" title="Fill schedule satisfying required rules and as many preferred rules as possible">▶ Solve</button>
+      <button class="btn btn-primary" id="btn-solve" title="Fill in every currently-unsatisfied required rule. Preferred rules stay as faded suggestions.">▶ Solve</button>
+      <button class="btn btn-icon" id="btn-fullscreen" title="Toggle fullscreen">⛶</button>
     </div>
   </header>
 
@@ -617,14 +674,11 @@ html, body{
         <h2>Schedule</h2>
         <span class="db-panel-note" id="chart-range-note"></span>
       </div>
-      <div class="db-legend">
-        <span class="item"><span class="swatch confirmed"></span> Confirmed assignment</span>
-        <span class="item"><span class="swatch suggested"></span> Preferred suggestion (click to accept/reject)</span>
-        <span class="item"><span class="swatch forbidden"></span> Forbidden by a required rule</span>
-        <span class="item">★ = matches a preferred rule</span>
-      </div>
       <div class="db-chart-scroll">
         <div class="db-chart-grid" id="chart-grid"></div>
+      </div>
+      <div class="db-chart-footer">
+        <button class="btn btn-sm" id="btn-toggle-tags">Person tags: on</button>
       </div>
     </section>
 
@@ -690,7 +744,12 @@ html, body{
     <div class="db-modal">
       <div class="db-modal-head">
         <h2>Advanced settings</h2>
-        <button class="db-icon-btn" id="btn-close-settings">✕</button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="btn btn-sm" id="btn-settings-save" title="Save people, positions, tags, and time range to a file">Save settings</button>
+          <button class="btn btn-sm" id="btn-settings-load" title="Load people, positions, tags, and time range from a file">Load settings</button>
+          <input type="file" id="settings-file-input" accept=".json" style="display:none" />
+          <button class="db-icon-btn" id="btn-close-settings">✕</button>
+        </div>
       </div>
       <div class="db-modal-tabs" id="modal-tabs">
         <div class="db-modal-tab active" data-tab="people">People</div>
@@ -709,9 +768,14 @@ html, body{
    Duty Board — scheduling constraint solver
    Vanilla JS, no build step. All state lives in memory (`state`)
    and is rendered imperatively into the DOM on every change.
+   State is also persisted to localStorage so nothing is lost on
+   reload/close (this file is a standalone page once rendered by
+   Quarto, not a sandboxed in-chat artifact, so localStorage is
+   fully supported here).
    ============================================================ */
 
 const SLOT_MINUTES = 15;
+const STORAGE_KEY = 'duty-board-state-v1';
 var idCounter = 1000;
 function genId(prefix){ return `${prefix}_${(idCounter++).toString(36)}`; }
 function range(a,b){ const out=[]; for(let i=a;i<=b;i++) out.push(i); return out; }
@@ -738,28 +802,56 @@ var state = {
     { id:'pos_breakrelief',  name:'Break Relief',  durationMinutes:15, singlePerson:false, color:'#db2777', tags:[] },
   ],
   tags: [
-    { id:'tag_male',      name:'Male',                   category:'person',   highlightColor:'#E4E7FB', textColor:'#3730A3' },
-    { id:'tag_female',    name:'Female',                 category:'person',   highlightColor:'#F6E4F5', textColor:'#86198F' },
-    { id:'tag_bilingual', name:'Bilingual',               category:'person',   highlightColor:'#DCFCE7', textColor:'#166534' },
-    { id:'tag_physical',  name:'Physically demanding',    category:'position', highlightColor:'#FDE7D9', textColor:'#9A3412' },
+    { id:'tag_male',      name:'Male',                 category:'person',   highlightColor:'#E4E7FB', textColor:'#3730A3' },
+    { id:'tag_female',    name:'Female',               category:'person',   highlightColor:'#F6E4F5', textColor:'#86198F' },
+    { id:'tag_bilingual', name:'Bilingual',             category:'person',   highlightColor:'#DCFCE7', textColor:'#166534' },
+    { id:'tag_physical',  name:'Physically demanding',  category:'position', highlightColor:'#FDE7D9', textColor:'#9A3412' },
+    { id:'tag_skill',     name:'Skill',                 category:'rule',     highlightColor:'#E0F2FE', textColor:'#0369A1' },
+    { id:'tag_coverage',  name:'Coverage',              category:'rule',     highlightColor:'#FCE7F3', textColor:'#9D174D' },
+    { id:'tag_comfort',   name:'Comfort',               category:'rule',     highlightColor:'#EDE9FE', textColor:'#5B21B6' },
+    { id:'tag_language',  name:'Language',              category:'rule',     highlightColor:'#FEF3C7', textColor:'#92400E' },
+    { id:'tag_fairness',  name:'Fairness',              category:'rule',     highlightColor:'#E4E7FB', textColor:'#3730A3' },
+    { id:'tag_pairing',   name:'Pairing',               category:'rule',     highlightColor:'#DCFCE7', textColor:'#166534' },
   ],
-  rules: [
-    { id:'rule_0', strength:'required',  effect:'require', active:true,
-      person:{mode:'id', value:'p_bob'}, position:{mode:'id', value:'pos_breakrelief'}, slot:{mode:'id', value:10}, tags:['coverage'] },
-    { id:'rule_1', strength:'required',  effect:'forbid',  active:true,
-      person:{mode:'id', value:'p_carol'}, position:{mode:'id', value:'pos_setup'}, slot:{mode:'any'}, tags:['skill'] },
-    { id:'rule_2', strength:'required',  effect:'require', active:true,
-      person:{mode:'any'}, position:{mode:'id', value:'pos_registration'}, slot:{mode:'id', value:0}, tags:['coverage'] },
-    { id:'rule_3', strength:'preferred', effect:'forbid',  active:true,
-      person:{mode:'tag', value:'tag_female'}, position:{mode:'tag', value:'tag_physical'}, slot:{mode:'any'}, tags:['comfort'] },
-    { id:'rule_4', strength:'preferred', effect:'require', active:true,
-      person:{mode:'id', value:'p_alice'}, position:{mode:'id', value:'pos_techsupport'}, slot:{mode:'id', value:4}, tags:['skill'] },
-    { id:'rule_5', strength:'preferred', effect:'require', active:true,
-      person:{mode:'tag', value:'tag_bilingual'}, position:{mode:'id', value:'pos_frontdesk'}, slot:{mode:'range', start:0, end:3}, tags:['language'] },
+  schedules: [
+    {
+      id: 'sched_1',
+      name: 'Schedule 1',
+      assignments: [],
+      rejectedSuggestions: new Set(),
+      rules: [
+        { id:'rule_0', kind:'standard', strength:'required',  effect:'require', active:true,
+          person:{mode:'id', value:'p_bob'}, position:{mode:'id', value:'pos_breakrelief'}, slot:{mode:'id', value:10}, tags:['tag_coverage'] },
+        { id:'rule_1', kind:'standard', strength:'required',  effect:'forbid',  active:true,
+          person:{mode:'id', value:'p_carol'}, position:{mode:'id', value:'pos_setup'}, slot:{mode:'any'}, tags:['tag_skill'] },
+        { id:'rule_2', kind:'standard', strength:'required',  effect:'require', active:true,
+          person:{mode:'any'}, position:{mode:'id', value:'pos_registration'}, slot:{mode:'id', value:0}, tags:['tag_coverage'] },
+        { id:'rule_3', kind:'standard', strength:'preferred', effect:'forbid',  active:true,
+          person:{mode:'tag', value:'tag_female'}, position:{mode:'tag', value:'tag_physical'}, slot:{mode:'any'}, tags:['tag_comfort'] },
+        { id:'rule_4', kind:'standard', strength:'preferred', effect:'require', active:true,
+          person:{mode:'id', value:'p_alice'}, position:{mode:'id', value:'pos_techsupport'}, slot:{mode:'id', value:4}, tags:['tag_skill'] },
+        { id:'rule_5', kind:'standard', strength:'preferred', effect:'require', active:true,
+          person:{mode:'tag', value:'tag_bilingual'}, position:{mode:'id', value:'pos_frontdesk'}, slot:{mode:'range', start:0, end:3}, tags:['tag_language'] },
+        { id:'rule_6', kind:'relative', strength:'preferred', effect:'require', active:true,
+          person:{mode:'id', value:'p_alice'}, position:{mode:'any'}, slot:{mode:'any'},
+          relative:{ type:'together', otherPerson:{mode:'id', value:'p_bob'} }, tags:['tag_pairing'] },
+        { id:'rule_7', kind:'relative', strength:'required', effect:'forbid', active:true,
+          person:{mode:'any'}, position:{mode:'tag', value:'tag_physical'}, slot:{mode:'any'},
+          relative:{ type:'consecutive', maxConsecutive:2 }, tags:['tag_fairness'] },
+      ],
+    },
   ],
-  assignments: [],
-  rejectedSuggestions: new Set(),
+  activeScheduleId: 'sched_1',
+  assignments: null,
+  rules: null,
+  rejectedSuggestions: null,
 };
+state.assignments = state.schedules[0].assignments;
+state.rules = state.schedules[0].rules;
+state.rejectedSuggestions = state.schedules[0].rejectedSuggestions;
+
+var rulesFocusPersonId = null;
+var showPersonTags = true;
 
 const NEW_TAG_PALETTE = [
   {bg:'#E4E7FB', text:'#3730A3'}, {bg:'#F6E4F5', text:'#86198F'},
@@ -768,6 +860,105 @@ const NEW_TAG_PALETTE = [
   {bg:'#EDE9FE', text:'#5B21B6'}, {bg:'#FEF3C7', text:'#92400E'},
 ];
 function nextTagPalette(){ return NEW_TAG_PALETTE[state.tags.length % NEW_TAG_PALETTE.length]; }
+
+/* ================================================================
+   SCHEDULE (TAB) MANAGEMENT
+   ================================================================ */
+function activeSchedule(){ return state.schedules.find(s=>s.id===state.activeScheduleId); }
+
+function setActiveSchedule(id){
+  const sched = state.schedules.find(s=>s.id===id);
+  if(!sched) return;
+  state.activeScheduleId = id;
+  state.assignments = sched.assignments;
+  state.rules = sched.rules;
+  state.rejectedSuggestions = sched.rejectedSuggestions;
+  renderAll();
+  const overlay = document.getElementById('settings-overlay');
+  if(overlay && overlay.style.display==='flex'){
+    const activeTab = document.querySelector('.db-modal-tab.active');
+    if(activeTab) switchModalTab(activeTab.dataset.tab);
+  }
+}
+function createSchedule(name, seed){
+  const sched = {
+    id: genId('sched'),
+    name: name || `Schedule ${state.schedules.length+1}`,
+    assignments: (seed && seed.assignments) || [],
+    rules: (seed && seed.rules) || [],
+    rejectedSuggestions: (seed && seed.rejectedSuggestions) || new Set(),
+  };
+  state.schedules.push(sched);
+  return sched;
+}
+function cloneActiveSchedule(){
+  const src = activeSchedule();
+  const cloned = createSchedule(`${src.name} (copy)`, {
+    assignments: src.assignments.map(a=>({ ...a, id:genId('asg') })),
+    rules: src.rules.map(r=>({ ...JSON.parse(JSON.stringify(r)), id:genId('rule') })),
+    rejectedSuggestions: new Set(src.rejectedSuggestions),
+  });
+  setActiveSchedule(cloned.id);
+}
+function deleteSchedule(id){
+  if(state.schedules.length<=1){ alert('At least one schedule must remain.'); return; }
+  const idx = state.schedules.findIndex(s=>s.id===id);
+  if(idx<0) return;
+  state.schedules.splice(idx,1);
+  if(state.activeScheduleId===id){
+    setActiveSchedule(state.schedules[Math.max(0, idx-1)].id);
+  } else {
+    renderAll();
+  }
+}
+function reorderSchedule(fromId, toId){
+  const fromIdx = state.schedules.findIndex(s=>s.id===fromId);
+  const toIdx = state.schedules.findIndex(s=>s.id===toId);
+  if(fromIdx<0 || toIdx<0 || fromIdx===toIdx) return;
+  const [item] = state.schedules.splice(fromIdx,1);
+  state.schedules.splice(toIdx,0,item);
+  renderAll();
+}
+
+/* ================================================================
+   PERSISTENCE (localStorage)
+   ================================================================ */
+function persist(){
+  try{
+    const payload = {
+      people: state.people, positions: state.positions, tags: state.tags, settings: state.settings,
+      schedules: state.schedules.map(s=>({
+        id:s.id, name:s.name, assignments:s.assignments, rules:s.rules,
+        rejectedSuggestions: Array.from(s.rejectedSuggestions),
+      })),
+      activeScheduleId: state.activeScheduleId,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  }catch(e){ console.warn('Could not persist Duty Board state', e); }
+}
+function loadPersisted(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const payload = JSON.parse(raw);
+    if(!payload || !Array.isArray(payload.schedules) || payload.schedules.length===0) return false;
+    state.people = payload.people || [];
+    state.positions = payload.positions || [];
+    state.tags = payload.tags || [];
+    state.settings = payload.settings || state.settings;
+    state.schedules = payload.schedules.map(s=>({
+      id:s.id, name:s.name, assignments:s.assignments||[], rules:s.rules||[],
+      rejectedSuggestions: new Set(s.rejectedSuggestions||[]),
+    }));
+    state.activeScheduleId = (payload.activeScheduleId && state.schedules.some(s=>s.id===payload.activeScheduleId))
+      ? payload.activeScheduleId : state.schedules[0].id;
+    const sched = activeSchedule();
+    state.assignments = sched.assignments;
+    state.rules = sched.rules;
+    state.rejectedSuggestions = sched.rejectedSuggestions;
+    return true;
+  }catch(e){ console.warn('Could not load persisted Duty Board state', e); return false; }
+}
 
 /* ---------------- Time / slot helpers ---------------- */
 function getSlots(){
@@ -815,25 +1006,25 @@ function assignmentOccupiesSlots(a){ return range(a.startSlot, a.startSlot+a.slo
 
 /* ---------------- Rule target matching ---------------- */
 function personMatchesTarget(target, personId){
-  if(target.mode==='any') return true;
+  if(!target || target.mode==='any') return true;
   if(target.mode==='id') return target.value===personId;
   if(target.mode==='tag'){ const p = state.people.find(p=>p.id===personId); return !!p && p.tags.includes(target.value); }
   return false;
 }
 function positionMatchesTarget(target, positionId){
-  if(target.mode==='any') return true;
+  if(!target || target.mode==='any') return true;
   if(target.mode==='id') return target.value===positionId;
   if(target.mode==='tag'){ const p = state.positions.find(p=>p.id===positionId); return !!p && p.tags.includes(target.value); }
   return false;
 }
 function slotMatchesTarget(target, slotIndex){
-  if(target.mode==='any') return true;
+  if(!target || target.mode==='any') return true;
   if(target.mode==='id') return target.value===slotIndex;
   if(target.mode==='range') return slotIndex>=target.start && slotIndex<=target.end;
   return false;
 }
 function targetSlotIndices(target, totalSlots){
-  if(target.mode==='any') return range(0, totalSlots-1);
+  if(!target || target.mode==='any') return range(0, totalSlots-1);
   if(target.mode==='id') return [target.value];
   if(target.mode==='range') return range(Math.max(0,target.start), Math.min(totalSlots-1,target.end));
   return [];
@@ -841,7 +1032,7 @@ function targetSlotIndices(target, totalSlots){
 function candidateStartSlotsForSlotTarget(target, durSlots, totalSlots){
   const maxStart = totalSlots - durSlots;
   if(maxStart<0) return [];
-  if(target.mode==='any') return range(0, maxStart);
+  if(!target || target.mode==='any') return range(0, maxStart);
   if(target.mode==='id'){
     const lo = Math.max(0, target.value-durSlots+1), hi = Math.min(maxStart, target.value);
     return lo<=hi ? range(lo,hi) : [];
@@ -855,7 +1046,7 @@ function candidateStartSlotsForSlotTarget(target, durSlots, totalSlots){
 
 /* ---------------- Rule label generation ---------------- */
 function targetDescription(target, kind){
-  if(target.mode==='any') return kind==='person' ? 'anyone' : 'any position';
+  if(!target || target.mode==='any') return kind==='person' ? 'anyone' : 'any position';
   if(target.mode==='id') return kind==='person' ? personName(target.value) : positionName(target.value);
   if(target.mode==='tag'){
     const t = state.tags.find(t=>t.id===target.value);
@@ -866,7 +1057,7 @@ function targetDescription(target, kind){
 }
 function slotDescription(target){
   const slots = getSlots();
-  if(target.mode==='any') return 'at any time';
+  if(!target || target.mode==='any') return 'at any time';
   if(target.mode==='id') return `at ${slots[target.value] ? slots[target.value].label : '?'}`;
   if(target.mode==='range') return `from ${slots[target.start] ? slots[target.start].label : '?'} to ${slots[target.end] ? slots[target.end].label : '?'}`;
   return '';
@@ -875,8 +1066,145 @@ function ruleLabel(rule){
   const p = targetDescription(rule.person, 'person');
   const pos = targetDescription(rule.position, 'position');
   const t = slotDescription(rule.slot);
-  if(rule.effect==='forbid') return `${cap(p)} cannot be scheduled for ${pos}, ${t}.`;
-  return `${cap(p)} must be scheduled for ${pos}, ${t}.`;
+
+  if(rule.kind!=='relative'){
+    const verb = rule.effect==='forbid' ? 'cannot be scheduled' : 'must be scheduled';
+    return `${cap(p)} ${verb} for ${pos}, ${t}.`;
+  }
+  const rel = rule.relative || {};
+  const modal = rule.effect==='forbid' ? 'cannot' : 'must';
+  if(rel.type==='sequence'){
+    const other = targetDescription(rel.otherPosition, 'position');
+    const order = rel.order==='before' ? 'before' : 'after';
+    return `${cap(p)} ${modal} be scheduled for ${pos} ${order} being scheduled for ${other}.`;
+  }
+  if(rel.type==='together'){
+    const other = targetDescription(rel.otherPerson, 'person');
+    const posClause = (rule.position && rule.position.mode!=='any') ? ` (specifically ${pos})` : '';
+    return `${cap(p)} ${modal} be scheduled for the same position and time as ${other}${posClause}.`;
+  }
+  if(rel.type==='consecutive'){
+    const n = rel.maxConsecutive || 2;
+    return `${cap(p)} ${modal} be scheduled for ${pos} in ${n} consecutive slots.`;
+  }
+  if(rel.type==='crossSchedule'){
+    const n = rel.maxRepeat || 2;
+    return `${cap(p)} ${modal} repeat the same ${pos} assignment (same time slot) in ${n} consecutive schedules (viewing order).`;
+  }
+  return `${cap(p)} ${rule.effect==='forbid'?'cannot':'must'} be scheduled for ${pos}, ${t}.`;
+}
+
+/* ---------------- Relative-rule matching (hard constraint side) ---------------- */
+function violatesSequenceRule(rule, personId, positionId, occupiedSlots, excludeId){
+  if(!personMatchesTarget(rule.person, personId)) return false;
+  const order = rule.relative.order==='before' ? 'before' : 'after';
+  const otherTarget = rule.relative.otherPosition || {mode:'any'};
+  const matchesPrimary = positionMatchesTarget(rule.position, positionId);
+  const matchesOther = positionMatchesTarget(otherTarget, positionId);
+  if(!matchesPrimary && !matchesOther) return false;
+
+  const candStart = occupiedSlots[0], candEnd = occupiedSlots[occupiedSlots.length-1];
+  const others = state.assignments.filter(a=>a.personId===personId && a.id!==excludeId);
+
+  if(matchesPrimary){
+    for(const a of others){
+      if(!positionMatchesTarget(otherTarget, a.positionId)) continue;
+      const aStart=a.startSlot, aEnd=a.startSlot+a.slotCount-1;
+      if(order==='after' && aEnd<candStart) return true;
+      if(order==='before' && aStart>candEnd) return true;
+    }
+  }
+  if(matchesOther){
+    for(const a of others){
+      if(!positionMatchesTarget(rule.position, a.positionId)) continue;
+      const aStart=a.startSlot, aEnd=a.startSlot+a.slotCount-1;
+      if(order==='after' && candEnd<aStart) return true;
+      if(order==='before' && candStart>aEnd) return true;
+    }
+  }
+  return false;
+}
+function violatesTogetherRule(rule, personId, positionId, occupiedSlots, excludeId){
+  const otherTarget = rule.relative.otherPerson || {mode:'any'};
+  const matchesPrimary = personMatchesTarget(rule.person, personId);
+  const matchesOther = personMatchesTarget(otherTarget, personId);
+  if(!matchesPrimary && !matchesOther) return false;
+  if(!positionMatchesTarget(rule.position, positionId)) return false;
+
+  const counterpartTarget = matchesPrimary ? otherTarget : rule.person;
+  const counterpartIds = state.people.filter(p=>p.id!==personId && personMatchesTarget(counterpartTarget, p.id)).map(p=>p.id);
+  return state.assignments.some(a=>
+    a.id!==excludeId && counterpartIds.includes(a.personId) && a.positionId===positionId &&
+    assignmentOccupiesSlots(a).some(s=>occupiedSlots.includes(s))
+  );
+}
+function violatesConsecutiveRule(rule, personId, positionId, startSlot, durSlots, excludeId){
+  if(!personMatchesTarget(rule.person, personId)) return false;
+  if(!positionMatchesTarget(rule.position, positionId)) return false;
+  const maxConsecutive = rule.relative.maxConsecutive || 2;
+  const existing = state.assignments.filter(a=>a.personId===personId && a.id!==excludeId);
+  const items = [
+    ...existing.map(a=>({ startSlot:a.startSlot, slotCount:a.slotCount, matches: positionMatchesTarget(rule.position, a.positionId) })),
+    { startSlot, slotCount:durSlots, matches:true },
+  ].sort((a,b)=>a.startSlot-b.startSlot);
+
+  let streak=0, best=0, prevEnd=null;
+  for(const item of items){
+    const end = item.startSlot+item.slotCount-1;
+    const touches = prevEnd!==null && item.startSlot===prevEnd+1;
+    streak = item.matches ? (touches ? streak+1 : 1) : 0;
+    best = Math.max(best, streak);
+    prevEnd = end;
+  }
+  return best>=maxConsecutive;
+}
+function violatesCrossScheduleRule(rule, personId, positionId, startSlot, durSlots){
+  if(!personMatchesTarget(rule.person, personId)) return false;
+  if(!positionMatchesTarget(rule.position, positionId)) return false;
+  const maxRepeat = rule.relative.maxRepeat || 2;
+  const activeIdx = state.schedules.findIndex(s=>s.id===state.activeScheduleId);
+  let streak = 1;
+  for(let i=activeIdx-1; i>=0; i--){
+    const match = state.schedules[i].assignments.some(a=>
+      a.personId===personId && a.positionId===positionId && a.startSlot===startSlot && a.slotCount===durSlots);
+    if(match) streak++; else break;
+  }
+  return streak>=maxRepeat;
+}
+
+function describeHighlights(rule, personId, positionId, occupiedSlots){
+  const out = { personIds:[], slots:[], assignmentIds:[], scheduleIds:[] };
+  if(rule.person && rule.person.mode!=='any') out.personIds.push(personId);
+  if(!rule.kind || rule.kind!=='relative'){
+    if(rule.slot && rule.slot.mode!=='any') out.slots = occupiedSlots.slice();
+    return out;
+  }
+  const rel = rule.relative || {};
+  if(rel.type==='sequence'){
+    const otherTarget = rel.otherPosition || {mode:'any'};
+    state.assignments.filter(a=>a.personId===personId && positionMatchesTarget(otherTarget, a.positionId))
+      .forEach(a=>out.assignmentIds.push(a.id));
+  } else if(rel.type==='together'){
+    const matchesPrimary = personMatchesTarget(rule.person, personId);
+    const counterpartTarget = matchesPrimary ? (rel.otherPerson||{mode:'any'}) : rule.person;
+    const counterpartIds = state.people.filter(p=>p.id!==personId && personMatchesTarget(counterpartTarget, p.id)).map(p=>p.id);
+    out.personIds.push(...counterpartIds);
+    state.assignments.filter(a=>counterpartIds.includes(a.personId) && a.positionId===positionId && assignmentOccupiesSlots(a).some(s=>occupiedSlots.includes(s)))
+      .forEach(a=>out.assignmentIds.push(a.id));
+  } else if(rel.type==='consecutive'){
+    state.assignments.filter(a=>a.personId===personId && positionMatchesTarget(rule.position, a.positionId) &&
+      (a.startSlot+a.slotCount===occupiedSlots[0] || occupiedSlots[occupiedSlots.length-1]+1===a.startSlot)
+    ).forEach(a=>out.assignmentIds.push(a.id));
+  } else if(rel.type==='crossSchedule'){
+    const activeIdx = state.schedules.findIndex(s=>s.id===state.activeScheduleId);
+    const durSlots = occupiedSlots.length;
+    for(let i=activeIdx-1;i>=0;i--){
+      const match = state.schedules[i].assignments.some(a=>
+        a.personId===personId && a.positionId===positionId && a.startSlot===occupiedSlots[0] && a.slotCount===durSlots);
+      if(match) out.scheduleIds.push(state.schedules[i].id); else break;
+    }
+  }
+  return out;
 }
 
 /* ---------------- Hard constraint checking ---------------- */
@@ -908,22 +1236,64 @@ function isValidPlacement(personId, positionId, startSlot){
 
   for(const rule of state.rules){
     if(!rule.active || rule.strength!=='required' || rule.effect!=='forbid') continue;
+
+    if(rule.kind==='relative'){
+      const relType = rule.relative && rule.relative.type;
+      let violated = false;
+      if(relType==='sequence') violated = violatesSequenceRule(rule, personId, positionId, occupied);
+      else if(relType==='together') violated = violatesTogetherRule(rule, personId, positionId, occupied);
+      else if(relType==='consecutive') violated = violatesConsecutiveRule(rule, personId, positionId, startSlot, durSlots);
+      else if(relType==='crossSchedule') violated = violatesCrossScheduleRule(rule, personId, positionId, startSlot, durSlots);
+      if(violated) return { ok:false, reason: ruleLabel(rule), rule, highlights: describeHighlights(rule, personId, positionId, occupied) };
+      continue;
+    }
+
     if(!personMatchesTarget(rule.person, personId)) continue;
     if(!positionMatchesTarget(rule.position, positionId)) continue;
     for(const s of occupied){
       if(slotMatchesTarget(rule.slot, s)){
-        return { ok:false, reason: ruleLabel(rule), rule };
+        return { ok:false, reason: ruleLabel(rule), rule, highlights: describeHighlights(rule, personId, positionId, occupied) };
       }
     }
   }
   return { ok:true };
 }
 
+/* ---------------- Preferred-rule matching (soft/suggestion side) ---------------- */
+function matchesSequencePreferred(rule, personId, positionId, occupiedSlots){
+  if(!personMatchesTarget(rule.person, personId)) return false;
+  if(!positionMatchesTarget(rule.position, positionId)) return false;
+  const order = rule.relative.order==='before' ? 'before' : 'after';
+  const otherTarget = rule.relative.otherPosition || {mode:'any'};
+  const candStart = occupiedSlots[0], candEnd = occupiedSlots[occupiedSlots.length-1];
+  return state.assignments.some(a=>{
+    if(a.personId!==personId) return false;
+    if(!positionMatchesTarget(otherTarget, a.positionId)) return false;
+    const aStart=a.startSlot, aEnd=a.startSlot+a.slotCount-1;
+    return order==='after' ? aEnd<candStart : aStart>candEnd;
+  });
+}
+function matchesTogetherPreferred(rule, personId, positionId, occupiedSlots){
+  const otherTarget = rule.relative.otherPerson || {mode:'any'};
+  const matchesPrimary = personMatchesTarget(rule.person, personId);
+  const matchesOther = personMatchesTarget(otherTarget, personId);
+  if(!matchesPrimary && !matchesOther) return false;
+  if(!positionMatchesTarget(rule.position, positionId)) return false;
+  const counterpartTarget = matchesPrimary ? otherTarget : rule.person;
+  const counterpartIds = state.people.filter(p=>p.id!==personId && personMatchesTarget(counterpartTarget, p.id)).map(p=>p.id);
+  return state.assignments.some(a=>counterpartIds.includes(a.personId) && a.positionId===positionId && assignmentOccupiesSlots(a).some(s=>occupiedSlots.includes(s)));
+}
 function preferredMatchesFor(personId, positionId, startSlot){
   const durSlots = positionDurationSlots(positionId);
   const occ = range(startSlot, startSlot+durSlots-1);
   return state.rules.filter(rule=>{
     if(!rule.active || rule.strength!=='preferred' || rule.effect!=='require') return false;
+    if(rule.kind==='relative'){
+      const t = rule.relative && rule.relative.type;
+      if(t==='sequence') return matchesSequencePreferred(rule, personId, positionId, occ);
+      if(t==='together') return matchesTogetherPreferred(rule, personId, positionId, occ);
+      return false;
+    }
     if(!personMatchesTarget(rule.person, personId)) return false;
     if(!positionMatchesTarget(rule.position, positionId)) return false;
     return occ.some(s=>slotMatchesTarget(rule.slot, s));
@@ -936,6 +1306,22 @@ function computeViolations(){
   const totalSlots = getSlots().length;
   for(const rule of state.rules){
     if(!rule.active) continue;
+
+    if(rule.kind==='relative'){
+      if(rule.effect!=='forbid') continue; // required+require relative rules aren't auto-checked for coverage (see docs)
+      const relType = rule.relative && rule.relative.type;
+      for(const a of state.assignments){
+        const occ = assignmentOccupiesSlots(a);
+        let violated = false;
+        if(relType==='sequence') violated = violatesSequenceRule(rule, a.personId, a.positionId, occ, a.id);
+        else if(relType==='together') violated = violatesTogetherRule(rule, a.personId, a.positionId, occ, a.id);
+        else if(relType==='consecutive') violated = violatesConsecutiveRule(rule, a.personId, a.positionId, a.startSlot, a.slotCount, a.id);
+        else if(relType==='crossSchedule') violated = violatesCrossScheduleRule(rule, a.personId, a.positionId, a.startSlot, a.slotCount);
+        if(violated && rule.strength==='required') out.push({ rule, assignment:a, kind:'forbidden-but-scheduled' });
+      }
+      continue;
+    }
+
     if(rule.effect==='forbid'){
       for(const a of state.assignments){
         if(!personMatchesTarget(rule.person, a.personId)) continue;
@@ -964,12 +1350,12 @@ function getUnsatisfiedRequiredCoverage(){
 }
 
 /* Auto-materialize fully-specific required "must be scheduled" rules
-   (exact person + exact position + exact slot) as confirmed assignments,
-   so the chart reflects required rules immediately, without needing Solve. */
+   (exact person + exact position + exact slot, standard kind only) as
+   confirmed assignments, so the chart reflects required rules immediately. */
 function syncDirectRequiredAssignments(){
   const totalSlots = getSlots().length;
   for(const rule of state.rules){
-    if(!rule.active || rule.strength!=='required' || rule.effect!=='require') continue;
+    if(!rule.active || rule.strength!=='required' || rule.effect!=='require' || rule.kind==='relative') continue;
     if(rule.person.mode!=='id' || rule.position.mode!=='id' || rule.slot.mode!=='id') continue;
     const already = state.assignments.some(a=>
       a.personId===rule.person.value && a.positionId===rule.position.value &&
@@ -991,8 +1377,41 @@ function syncDirectRequiredAssignments(){
 function computeSuggestions(){
   const totalSlots = getSlots().length;
   const seen = new Map();
+  function tryAdd(rule, personId, positionId, startSlot){
+    const key = `${personId}|${positionId}|${startSlot}`;
+    if(state.rejectedSuggestions.has(key)) return;
+    const check = isValidPlacement(personId, positionId, startSlot);
+    if(!check.ok) return;
+    const durSlots = positionDurationSlots(positionId);
+    if(!seen.has(key)) seen.set(key, { key, personId, positionId, startSlot, durSlots, ruleIds:new Set() });
+    seen.get(key).ruleIds.add(rule.id);
+  }
+
   for(const rule of state.rules){
     if(!rule.active || rule.strength!=='preferred' || rule.effect!=='require') continue;
+
+    if(rule.kind==='relative'){
+      const relType = rule.relative && rule.relative.type;
+      if(relType!=='sequence' && relType!=='together') continue;
+      const people = state.people.filter(p=>personMatchesTarget(rule.person, p.id)).map(p=>p.id);
+      const positions = state.positions.filter(p=>positionMatchesTarget(rule.position, p.id)).map(p=>p.id);
+      for(const personId of people){
+        for(const positionId of positions){
+          const durSlots = positionDurationSlots(positionId);
+          for(const startSlot of range(0, totalSlots-durSlots)){
+            const occ = range(startSlot, startSlot+durSlots-1);
+            const already = state.assignments.some(a=>a.personId===personId && a.positionId===positionId && assignmentOccupiesSlots(a).some(s=>occ.includes(s)));
+            if(already) continue;
+            const matched = relType==='sequence'
+              ? matchesSequencePreferred(rule, personId, positionId, occ)
+              : matchesTogetherPreferred(rule, personId, positionId, occ);
+            if(matched) tryAdd(rule, personId, positionId, startSlot);
+          }
+        }
+      }
+      continue;
+    }
+
     const targets = targetSlotIndices(rule.slot, totalSlots);
     for(const s of targets){
       const covered = state.assignments.some(a=>
@@ -1006,22 +1425,45 @@ function computeSuggestions(){
         for(const positionId of positions){
           const durSlots = positionDurationSlots(positionId);
           const starts = candidateStartSlotsForSlotTarget({mode:'id', value:s}, durSlots, totalSlots);
-          for(const startSlot of starts){
-            const key = `${personId}|${positionId}|${startSlot}`;
-            if(state.rejectedSuggestions.has(key)) continue;
-            const check = isValidPlacement(personId, positionId, startSlot);
-            if(!check.ok) continue;
-            if(!seen.has(key)) seen.set(key, { key, personId, positionId, startSlot, durSlots, ruleIds:new Set() });
-            seen.get(key).ruleIds.add(rule.id);
-          }
+          for(const startSlot of starts) tryAdd(rule, personId, positionId, startSlot);
         }
       }
     }
   }
+
   return Array.from(seen.values()).map(v=>({ ...v, ruleIds: Array.from(v.ruleIds) }));
 }
 
-/* ---------------- Solver ---------------- */
+/* ---------------- Constraint hot-spots (decision prioritization) ---------------- */
+function computeHotSpots(){
+  const slots = getSlots();
+  const results = [];
+  for(const person of state.people){
+    for(const slot of slots){
+      const covered = state.assignments.some(a=>a.personId===person.id && assignmentOccupiesSlots(a).includes(slot.index));
+      if(covered) continue;
+      let impact = 0;
+      for(const rule of state.rules){
+        if(!rule.active) continue;
+        const personHit = personMatchesTarget(rule.person, person.id) ||
+          (rule.kind==='relative' && rule.relative && rule.relative.otherPerson && personMatchesTarget(rule.relative.otherPerson, person.id));
+        if(!personHit) continue;
+        const slotHit = rule.kind==='relative' ? true : slotMatchesTarget(rule.slot, slot.index);
+        if(!slotHit) continue;
+        let weight = 1;
+        if(rule.position && rule.position.mode!=='id') weight += 1;
+        if(rule.person && rule.person.mode!=='id') weight += 1;
+        if(rule.kind==='relative') weight += 1;
+        if(rule.strength==='required') weight += 1;
+        impact += weight;
+      }
+      if(impact>0) results.push({ personId: person.id, slot: slot.index, impact });
+    }
+  }
+  return results.sort((a,b)=>b.impact-a.impact).slice(0,8);
+}
+
+/* ---------------- Solver (required rules only) ---------------- */
 function candidatesForCoverage(rule, slot){
   const totalSlots = getSlots().length;
   const people = state.people.filter(p=>personMatchesTarget(rule.person, p.id)).map(p=>p.id);
@@ -1068,21 +1510,12 @@ function solve(){
     filled++;
   }
 
-  let prefFilled=0, guard=0, progress=true;
-  while(progress && guard++ < 3000){
-    progress=false;
-    const suggestions = computeSuggestions();
-    if(suggestions.length===0) break;
-    const sug = suggestions[0];
-    state.assignments.push({ id:genId('asg'), personId:sug.personId, positionId:sug.positionId, startSlot:sug.startSlot, slotCount:sug.durSlots });
-    prefFilled++; progress=true;
-  }
-
   const remaining = getUnsatisfiedRequiredCoverage().length;
   renderAll();
   showToast(
-    `Solve finished — placed ${filled} required + ${prefFilled} preferred assignment${(filled+prefFilled)===1?'':'s'}.` +
-    (remaining ? ` ${remaining} required instance${remaining===1?'':'s'} still can't be satisfied — see red items in Decisions.` : ' All required rules satisfied.')
+    `Solve finished — placed ${filled} required assignment${filled===1?'':'s'}.` +
+    (remaining ? ` ${remaining} required instance${remaining===1?'':'s'} still can't be satisfied — see red items in Decisions.` : ' All required rules satisfied.') +
+    ' Preferred-rule suggestions are shown as stars — click one to accept.'
   );
 }
 
@@ -1095,9 +1528,37 @@ function renderAll(){
     `${formatTime(state.settings.startMinutes)} – ${formatTime(state.settings.endMinutes)} · ${getSlots().length} × 15-min slots`;
   document.getElementById('chart-range-note').textContent =
     `${state.people.length} people · ${state.positions.length} positions`;
+  renderScheduleTabs();
   renderChart();
   renderDecisions();
   renderRules();
+  persist();
+}
+
+function renderScheduleTabs(){
+  const bar = document.getElementById('schedule-tabs');
+  bar.innerHTML = '';
+  state.schedules.forEach((sched, idx)=>{
+    const tab = document.createElement('div');
+    tab.className = 'db-tab' + (sched.id===state.activeScheduleId ? ' active' : '');
+    tab.dataset.scheduleId = sched.id;
+    tab.draggable = true;
+    tab.title = sched.id===state.activeScheduleId ? 'Click for clone/delete options' : `Switch to ${sched.name}`;
+    tab.innerHTML = `<span class="idx">${idx+1}</span><span class="name">${escapeHtml(sched.name)}</span>`;
+    tab.addEventListener('click', (e)=>{
+      if(sched.id===state.activeScheduleId) openTabMenu(e, sched.id);
+      else setActiveSchedule(sched.id);
+    });
+    tab.addEventListener('dragstart', ()=>{ tab.classList.add('dragging'); tab.__dragId = sched.id; window.__dbDragScheduleId = sched.id; });
+    tab.addEventListener('dragend', ()=>{ tab.classList.remove('dragging'); });
+    tab.addEventListener('dragover', (e)=>{ e.preventDefault(); });
+    tab.addEventListener('drop', (e)=>{
+      e.preventDefault();
+      const fromId = window.__dbDragScheduleId;
+      if(fromId) reorderSchedule(fromId, sched.id);
+    });
+    bar.appendChild(tab);
+  });
 }
 
 function renderChart(){
@@ -1132,7 +1593,9 @@ function renderChart(){
     label.className = 'db-row-label';
     label.style.gridColumn = '1';
     label.style.gridRow = `${pi+2}`;
-    label.innerHTML = `<div class="name">${escapeHtml(p.name)}</div><div class="tags">${p.tags.map(t=>tagChipHtml(t)).join('')}</div>`;
+    label.dataset.personId = p.id;
+    label.innerHTML = `<div class="name">${escapeHtml(p.name)}</div><div class="tags${showPersonTags?'':' tags-hidden'}">${p.tags.map(t=>tagChipHtml(t)).join('')}</div>`;
+    label.addEventListener('click', (e)=>openPersonPopup(e, p.id));
     grid.appendChild(label);
 
     slots.forEach((s,si)=>{
@@ -1170,20 +1633,35 @@ function renderChart(){
   });
 
   const suggestions = computeSuggestions();
+  const grouped = new Map();
   suggestions.forEach(sug=>{
-    const pi = state.people.findIndex(p=>p.id===sug.personId);
+    const key = `${sug.personId}|${sug.startSlot}`;
+    if(!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(sug);
+  });
+  grouped.forEach((group, key)=>{
+    const [personId, startSlotStr] = key.split('|');
+    const startSlot = Number(startSlotStr);
+    const pi = state.people.findIndex(p=>p.id===personId);
     if(pi<0) return;
-    const pos = state.positions.find(p=>p.id===sug.positionId);
-    if(!pos) return;
-    const block = document.createElement('div');
-    block.className = 'db-block suggested';
-    block.style.gridColumn = `${sug.startSlot+2} / span ${sug.durSlots}`;
-    block.style.gridRow = `${pi+2}`;
-    block.style.background = pos.color;
-    block.innerHTML = `${escapeHtml(pos.name)} <span class="star">★</span>`;
-    block.title = `Suggested: ${pos.name} for ${personName(sug.personId)} — click to accept or reject`;
-    block.addEventListener('click', (e)=>{ e.stopPropagation(); openSuggestionPopup(e, sug); });
-    grid.appendChild(block);
+    const maxDur = Math.max(...group.map(g=>g.durSlots));
+    const box = document.createElement('div');
+    box.className = 'db-suggestion-box';
+    box.style.gridColumn = `${startSlot+2} / span ${maxDur}`;
+    box.style.gridRow = `${pi+2}`;
+    box.title = `${group.length} suggestion${group.length===1?'':'s'} — click a star to accept or reject`;
+    group.forEach(sug=>{
+      const pos = state.positions.find(p=>p.id===sug.positionId);
+      if(!pos) return;
+      const star = document.createElement('span');
+      star.className = 'db-suggestion-star';
+      star.style.color = pos.color;
+      star.textContent = '★';
+      star.title = `${pos.name} for ${personName(personId)}`;
+      star.addEventListener('click', (e)=>{ e.stopPropagation(); openSuggestionPopup(e, sug); });
+      box.appendChild(star);
+    });
+    grid.appendChild(box);
   });
 }
 
@@ -1201,7 +1679,7 @@ function renderDecisions(){
     const txt = document.createElement('div');
     txt.className = 'txt';
     txt.textContent = v.kind==='forbidden-but-scheduled'
-      ? `${ruleLabel(v.rule)} but ${personName(v.assignment.personId)} is scheduled for ${positionName(v.assignment.positionId)} at ${getSlots()[v.assignment.startSlot].label}.`
+      ? `${ruleLabel(v.rule)} But ${personName(v.assignment.personId)} is scheduled for ${positionName(v.assignment.positionId)} at ${getSlots()[v.assignment.startSlot].label}.`
       : `${ruleLabel(v.rule)} Not yet covered at ${getSlots()[v.slot].label}.`;
     card.appendChild(tag); card.appendChild(txt);
     card.addEventListener('click', ()=>{
@@ -1216,13 +1694,6 @@ function renderDecisions(){
     .map(pair=>({ pair, count: candidatesForCoverage(pair.rule, pair.slot).length }))
     .sort((a,b)=>a.count-b.count)
     .slice(0,20);
-
-  if(pairs.length===0 && violations.length===0){
-    const empty = document.createElement('div');
-    empty.className = 'db-empty-note';
-    empty.textContent = 'No open required decisions — all required coverage is satisfied.';
-    body.appendChild(empty);
-  }
 
   decisionItems.forEach(item=>{
     const card = document.createElement('div');
@@ -1240,11 +1711,43 @@ function renderDecisions(){
     body.appendChild(card);
   });
 
+  const hotSpots = computeHotSpots();
+  if(hotSpots.length){
+    const title = document.createElement('div');
+    title.className = 'db-rules-section-title';
+    title.textContent = 'Constraint hot-spots';
+    title.title = 'Deciding these narrows the most remaining possibilities elsewhere in the schedule.';
+    body.appendChild(title);
+    hotSpots.forEach(hs=>{
+      const card = document.createElement('div');
+      card.className = 'db-decision-card hotspot';
+      const top = document.createElement('div'); top.className = 'top-row';
+      const badge = document.createElement('span');
+      badge.className = 'count-badge';
+      badge.style.background = 'var(--preferred)';
+      badge.textContent = `impact ${hs.impact}`;
+      top.appendChild(badge);
+      card.appendChild(top);
+      const txt = document.createElement('div'); txt.className = 'txt';
+      txt.textContent = `${personName(hs.personId)} @ ${getSlots()[hs.slot].label} touches several rules — deciding this narrows the most other possibilities.`;
+      card.appendChild(txt);
+      card.addEventListener('click', ()=>flashCell(hs.personId, hs.slot));
+      body.appendChild(card);
+    });
+  }
+
+  if(pairs.length===0 && violations.length===0 && hotSpots.length===0){
+    const empty = document.createElement('div');
+    empty.className = 'db-empty-note';
+    empty.textContent = 'No open required decisions — all required coverage is satisfied.';
+    body.appendChild(empty);
+  }
+
   document.getElementById('decisions-note').textContent = `${violations.length} violated · ${pairs.length} open`;
 }
 
 function flashCell(personId, slotIndex){
-  document.querySelectorAll('.cell-flash').forEach(el=>el.classList.remove('cell-flash'));
+  clearAllHighlights();
   let targets;
   if(personId) targets = document.querySelectorAll(`.db-cell[data-person="${personId}"][data-slot="${slotIndex}"]`);
   else targets = document.querySelectorAll(`.db-cell[data-slot="${slotIndex}"]`);
@@ -1277,8 +1780,14 @@ function getFilteredRules(){
     if(!matchesDimFilter(rule.person, fPerson)) return false;
     if(!matchesDimFilter(rule.position, fPosition)) return false;
     if(!matchesDimFilter(rule.slot, fTime)) return false;
+    if(rulesFocusPersonId){
+      const touchesFocus = personMatchesTarget(rule.person, rulesFocusPersonId) ||
+        (rule.kind==='relative' && rule.relative && rule.relative.otherPerson && personMatchesTarget(rule.relative.otherPerson, rulesFocusPersonId));
+      if(!touchesFocus) return false;
+    }
     if(search){
-      const hay = (ruleLabel(rule) + ' ' + (rule.tags||[]).join(' ')).toLowerCase();
+      const tagText = (rule.tags||[]).map(tid=>tagName(tid)).join(' ');
+      const hay = (ruleLabel(rule) + ' ' + tagText).toLowerCase();
       if(!hay.includes(search)) return false;
     }
     return true;
@@ -1287,6 +1796,19 @@ function getFilteredRules(){
 function renderRules(){
   const body = document.getElementById('rules-body');
   body.innerHTML = '';
+
+  if(rulesFocusPersonId){
+    const chip = document.createElement('div');
+    chip.style.cssText = 'margin-bottom:10px; font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:8px;';
+    chip.innerHTML = `Showing rules for <strong style="color:var(--ink);">${escapeHtml(personName(rulesFocusPersonId))}</strong>`;
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'btn btn-sm';
+    clearBtn.textContent = 'Clear';
+    clearBtn.addEventListener('click', ()=>{ rulesFocusPersonId = null; renderRules(); });
+    chip.appendChild(clearBtn);
+    body.appendChild(chip);
+  }
+
   const filtered = getFilteredRules();
   const violations = computeViolations();
   const required = filtered.filter(r=>r.strength==='required');
@@ -1321,13 +1843,25 @@ function renderRuleRow(rule, violations){
   chip.textContent = rule.effect==='forbid' ? 'FORBID' : 'REQUIRE';
   row.appendChild(chip);
 
+  if(rule.kind==='relative'){
+    const relChip = document.createElement('span');
+    relChip.className = 'effect-chip';
+    relChip.style.background = '#EDE9FE'; relChip.style.color = '#5B21B6';
+    relChip.textContent = 'RELATIVE';
+    row.appendChild(relChip);
+  }
+
   const main = document.createElement('div'); main.className = 'rule-main';
   const txt = document.createElement('div'); txt.className = 'rule-text'; txt.textContent = ruleLabel(rule);
   main.appendChild(txt);
   const meta = document.createElement('div'); meta.className = 'rule-meta';
-  (rule.tags||[]).forEach(t=>{
-    const chipEl = document.createElement('span'); chipEl.className = 'db-tag-chip'; chipEl.textContent = t;
-    meta.appendChild(chipEl);
+  (rule.tags||[]).forEach(tid=>{
+    const html = tagChipHtml(tid);
+    if(html){
+      const wrap = document.createElement('span');
+      wrap.innerHTML = html;
+      meta.appendChild(wrap.firstChild);
+    }
   });
   if(isViolated){
     const w = document.createElement('span');
@@ -1367,9 +1901,9 @@ function renderRuleRow(rule, violations){
 }
 
 /* ================================================================
-   FLOATING UI: dropdown, accept/reject popup, remove popup
+   FLOATING UI: dropdown, popups, tab menu
    ================================================================ */
-var currentCloser = null;
+let currentCloser = null;
 function registerCloser(fn){
   if(currentCloser) document.removeEventListener('mousedown', currentCloser);
   currentCloser = fn;
@@ -1390,17 +1924,36 @@ function positionFloating(el, rect){
   el.style.left = `${left}px`;
   el.style.top = `${top}px`;
 }
-function highlightConflict(personId, slotIndex, durSlots, conflictAssignmentId){
-  range(slotIndex, slotIndex+durSlots-1).forEach(c=>{
-    document.querySelectorAll(`.db-cell[data-person="${personId}"][data-slot="${c}"]`).forEach(el=>el.classList.add('cell-flash'));
-  });
-  if(conflictAssignmentId){
-    const block = document.querySelector(`[data-assignment-id="${conflictAssignmentId}"]`);
-    if(block) block.classList.add('cell-flash');
-  }
+function clearAllHighlights(){
+  document.querySelectorAll('.cell-flash, .highlight-red').forEach(el=>el.classList.remove('cell-flash','highlight-red'));
 }
-function clearConflictHighlight(){
-  document.querySelectorAll('.cell-flash').forEach(el=>el.classList.remove('cell-flash'));
+function applyOptionHighlight(opt, personId, slotIndex){
+  clearAllHighlights();
+  if(opt.conflictAssignmentId){
+    const block = document.querySelector(`[data-assignment-id="${opt.conflictAssignmentId}"]`);
+    if(block) block.classList.add('cell-flash');
+    range(slotIndex, slotIndex+opt.durSlots-1).forEach(c=>{
+      document.querySelectorAll(`.db-cell[data-person="${personId}"][data-slot="${c}"]`).forEach(el=>el.classList.add('cell-flash'));
+    });
+    return;
+  }
+  const h = opt.highlights;
+  if(!h) return;
+  h.personIds.forEach(pid=>{
+    const row = document.querySelector(`.db-row-label[data-person-id="${pid}"]`);
+    if(row) row.classList.add('highlight-red');
+  });
+  h.slots.forEach(s=>{
+    document.querySelectorAll(`.db-cell[data-person="${personId}"][data-slot="${s}"]`).forEach(el=>el.classList.add('cell-flash'));
+  });
+  h.assignmentIds.forEach(aid=>{
+    const block = document.querySelector(`[data-assignment-id="${aid}"]`);
+    if(block) block.classList.add('cell-flash');
+  });
+  h.scheduleIds.forEach(sid=>{
+    const tab = document.querySelector(`.db-tab[data-schedule-id="${sid}"]`);
+    if(tab) tab.classList.add('highlight-red');
+  });
 }
 
 function positionOptionsFor(personId, slotIndex){
@@ -1408,7 +1961,7 @@ function positionOptionsFor(personId, slotIndex){
     const check = isValidPlacement(personId, pos.id, slotIndex);
     const durSlots = positionDurationSlots(pos.id);
     const prefMatches = check.ok ? preferredMatchesFor(personId, pos.id, slotIndex) : [];
-    return { position:pos, ok:check.ok, reason:check.reason, conflictAssignmentId:check.conflictAssignmentId, starred: prefMatches.length>0, durSlots };
+    return { position:pos, ok:check.ok, reason:check.reason, conflictAssignmentId:check.conflictAssignmentId, highlights:check.highlights, starred: prefMatches.length>0, durSlots };
   });
 }
 
@@ -1443,12 +1996,12 @@ function openAssignDropdown(e, personId, slotIndex){
         tip.className = 'db-option-tooltip';
         tip.textContent = opt.reason;
         row.appendChild(tip);
-        highlightConflict(personId, slotIndex, opt.durSlots, opt.conflictAssignmentId);
+        applyOptionHighlight(opt, personId, slotIndex);
       });
       row.addEventListener('mouseleave', ()=>{
         const tip = row.querySelector('.db-option-tooltip');
         if(tip) tip.remove();
-        clearConflictHighlight();
+        clearAllHighlights();
       });
     }
     list.appendChild(row);
@@ -1501,6 +2054,46 @@ function openAssignmentPopup(e, a){
   registerCloser((ev)=>{ if(!pop.contains(ev.target)) closeFloating(); });
 }
 
+function openPersonPopup(e, personId){
+  closeFloating();
+  const layer = document.getElementById('floating-layer');
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pop = document.createElement('div');
+  pop.className = 'db-popup';
+  const person = state.people.find(p=>p.id===personId);
+  const tagsHtml = person.tags.map(t=>tagChipHtml(t)).join(' ') || '<span class="db-empty-note" style="padding:0;">No tags</span>';
+  pop.innerHTML = `<div class="title">${escapeHtml(person.name)}</div>
+    <div class="rule-hint">${tagsHtml}</div>
+    <div class="row"><button class="btn btn-sm btn-primary" id="pop-show-rules" style="width:100%;">Show rules</button></div>`;
+  layer.appendChild(pop);
+  positionFloating(pop, rect);
+  pop.querySelector('#pop-show-rules').addEventListener('click', ()=>{
+    rulesFocusPersonId = personId;
+    closeFloating();
+    renderRules();
+    const panel = document.getElementById('rules-panel');
+    if(panel.scrollIntoView) panel.scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+  registerCloser((ev)=>{ if(!pop.contains(ev.target)) closeFloating(); });
+}
+
+function openTabMenu(e, scheduleId){
+  closeFloating();
+  const layer = document.getElementById('floating-layer');
+  const rect = e.currentTarget.getBoundingClientRect();
+  const menu = document.createElement('div');
+  menu.className = 'db-tab-menu';
+  menu.innerHTML = `<button id="tab-clone">Clone as new</button><button id="tab-delete" class="danger">Delete</button>`;
+  layer.appendChild(menu);
+  positionFloating(menu, rect);
+  menu.querySelector('#tab-clone').addEventListener('click', ()=>{ closeFloating(); cloneActiveSchedule(); });
+  menu.querySelector('#tab-delete').addEventListener('click', ()=>{
+    closeFloating();
+    if(confirm('Delete this schedule tab? This cannot be undone.')) deleteSchedule(scheduleId);
+  });
+  registerCloser((ev)=>{ if(!menu.contains(ev.target)) closeFloating(); });
+}
+
 /* ================================================================
    TOAST
    ================================================================ */
@@ -1517,7 +2110,7 @@ function showToast(msg){
 /* ================================================================
    SETTINGS MODAL
    ================================================================ */
-var editingRuleId = null;
+let editingRuleId = null;
 
 function openSettings(tab, editRuleId){
   document.getElementById('settings-overlay').style.display = 'flex';
@@ -1539,7 +2132,7 @@ function renderPeopleTab(){
   const body = document.getElementById('modal-body');
   const personTags = state.tags.filter(t=>t.category==='person');
   body.innerHTML = `
-    <div class="db-help-text">People can be tagged with attributes (e.g. Male / Female / Bilingual) so rules can target a group instead of one individual.</div>
+    <div class="db-help-text">People can be tagged with attributes (e.g. Male / Female / Bilingual) so rules can target a group instead of one individual. The roster below is shared by every schedule tab.</div>
     <table class="db-mini-table">
       <thead><tr><th>Name</th><th>Tags</th><th></th></tr></thead>
       <tbody id="people-tbody"></tbody>
@@ -1571,9 +2164,10 @@ function renderPeopleTab(){
   tbody.querySelectorAll('[data-del-person]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const pid = btn.dataset.delPerson;
-      if(!confirm('Delete this person? Their assignments will also be removed.')) return;
+      if(!confirm('Delete this person? Their assignments will also be removed from every schedule.')) return;
       state.people = state.people.filter(p=>p.id!==pid);
-      state.assignments = state.assignments.filter(a=>a.personId!==pid);
+      state.schedules.forEach(s=>{ s.assignments = s.assignments.filter(a=>a.personId!==pid); });
+      state.assignments = activeSchedule().assignments;
       renderPeopleTab(); renderAll();
     });
   });
@@ -1591,7 +2185,7 @@ function renderPositionsTab(){
   const body = document.getElementById('modal-body');
   const posTags = state.tags.filter(t=>t.category==='position');
   body.innerHTML = `
-    <div class="db-help-text">Positions occupy consecutive 15‑minute slots based on their duration. "Single‑person" positions can only hold one person at a time; otherwise multiple people can share a position at once.</div>
+    <div class="db-help-text">Positions occupy consecutive 15‑minute slots based on their duration. "Single‑person" positions can only hold one person at a time; otherwise multiple people can share a position at once. Shared by every schedule tab.</div>
     <table class="db-mini-table">
       <thead><tr><th>Name</th><th>Duration</th><th>Single‑person</th><th>Color</th><th>Tags</th><th></th></tr></thead>
       <tbody id="positions-tbody"></tbody>
@@ -1651,9 +2245,10 @@ function renderPositionsTab(){
   tbody.querySelectorAll('[data-del-position]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const posId = btn.dataset.delPosition;
-      if(!confirm('Delete this position? Its assignments will also be removed.')) return;
+      if(!confirm('Delete this position? Its assignments will also be removed from every schedule.')) return;
       state.positions = state.positions.filter(p=>p.id!==posId);
-      state.assignments = state.assignments.filter(a=>a.positionId!==posId);
+      state.schedules.forEach(s=>{ s.assignments = s.assignments.filter(a=>a.positionId!==posId); });
+      state.assignments = activeSchedule().assignments;
       renderPositionsTab(); renderAll();
     });
   });
@@ -1673,7 +2268,7 @@ function renderTagsTab(){
   const body = document.getElementById('modal-body');
   const palette = nextTagPalette();
   body.innerHTML = `
-    <div class="db-help-text">Tags classify people or positions (e.g. "Female", "Physically demanding") so rules can target a group instead of one individual. Each tag's colors control how it's shown as a chip throughout the app.</div>
+    <div class="db-help-text">Tags classify people, positions, or rules (e.g. "Female", "Physically demanding", "Coverage") so rules can target a group instead of one individual, and so rules can be grouped for searching. Each tag's colors control how it's shown as a chip throughout the app.</div>
     <table class="db-mini-table">
       <thead><tr><th>Name</th><th>Applies to</th><th>Highlight</th><th>Text</th><th>Preview</th><th>Used by</th><th></th></tr></thead>
       <tbody id="tags-tbody"></tbody>
@@ -1681,20 +2276,23 @@ function renderTagsTab(){
     <div class="db-field-row" style="margin-top:14px;">
       <div class="db-field"><label>New tag name</label><input type="text" id="new-tag-name" placeholder="e.g. Bilingual"/></div>
       <div class="db-field"><label>Applies to</label>
-        <select id="new-tag-category"><option value="person">People</option><option value="position">Positions</option></select>
+        <select id="new-tag-category"><option value="person">People</option><option value="position">Positions</option><option value="rule">Rules</option></select>
       </div>
       <div class="db-field"><label>Highlight</label><input type="color" id="new-tag-highlight" value="${palette.bg}"/></div>
       <div class="db-field"><label>Text</label><input type="color" id="new-tag-text" value="${palette.text}"/></div>
       <button class="btn btn-primary" id="add-tag-btn">Add tag</button>
     </div>`;
+  const categoryLabel = c => c==='person' ? 'People' : c==='position' ? 'Positions' : 'Rules';
   const tbody = document.getElementById('tags-tbody');
   state.tags.forEach(t=>{
     const usageCount = t.category==='person'
       ? state.people.filter(p=>p.tags.includes(t.id)).length
-      : state.positions.filter(p=>p.tags.includes(t.id)).length;
+      : t.category==='position'
+        ? state.positions.filter(p=>p.tags.includes(t.id)).length
+        : state.schedules.reduce((sum,s)=>sum + s.rules.filter(r=>(r.tags||[]).includes(t.id)).length, 0);
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${escapeHtml(t.name)}</td>
-      <td>${t.category==='person' ? 'People' : 'Positions'}</td>
+      <td>${categoryLabel(t.category)}</td>
       <td><input type="color" value="${t.highlightColor}" data-tag-highlight="${t.id}"/></td>
       <td><input type="color" value="${t.textColor}" data-tag-text="${t.id}"/></td>
       <td><span class="db-tag-pill" id="tag-preview-${t.id}" style="background:${t.highlightColor};color:${t.textColor};">${escapeHtml(t.name)}</span></td>
@@ -1723,11 +2321,18 @@ function renderTagsTab(){
   tbody.querySelectorAll('[data-del-tag]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const tid = btn.dataset.delTag;
-      const usedByRules = state.rules.some(r=>r.person.value===tid || r.position.value===tid);
-      if(!confirm(`Delete this tag? It will be removed from all people/positions${usedByRules ? ' and any rules referencing it will stop matching anything' : ''}.`)) return;
+      const usedByRules = state.schedules.some(s=>s.rules.some(r=>
+        r.person.value===tid || r.position.value===tid || (r.tags||[]).includes(tid) ||
+        (r.kind==='relative' && r.relative && (
+          (r.relative.otherPosition && r.relative.otherPosition.value===tid) ||
+          (r.relative.otherPerson && r.relative.otherPerson.value===tid)
+        ))
+      ));
+      if(!confirm(`Delete this tag? It will be removed from all people/positions/rules${usedByRules ? ' — some rules reference it and will stop matching anything' : ''}.`)) return;
       state.tags = state.tags.filter(t=>t.id!==tid);
       state.people.forEach(p=>{ p.tags = p.tags.filter(x=>x!==tid); });
       state.positions.forEach(p=>{ p.tags = p.tags.filter(x=>x!==tid); });
+      state.schedules.forEach(s=>{ s.rules.forEach(r=>{ r.tags = (r.tags||[]).filter(x=>x!==tid); }); });
       renderTagsTab(); renderAll();
     });
   });
@@ -1746,7 +2351,7 @@ function renderTagsTab(){
 function renderTimeTab(){
   const body = document.getElementById('modal-body');
   body.innerHTML = `
-    <div class="db-help-text">Times snap to 15‑minute slots. Shrinking the range will remove any assignments that fall outside it.</div>
+    <div class="db-help-text">Times snap to 15‑minute slots. The time range is shared by every schedule tab; shrinking it removes any assignments (in any tab) that fall outside it.</div>
     <div class="db-field-row">
       <div class="db-field"><label>Start time</label><input type="time" id="range-start" value="${minutesToTimeInput(state.settings.startMinutes)}" step="900"/></div>
       <div class="db-field"><label>End time</label><input type="time" id="range-end" value="${minutesToTimeInput(state.settings.endMinutes)}" step="900"/></div>
@@ -1763,7 +2368,10 @@ function renderTimeTab(){
     state.settings.startMinutes = startMin;
     state.settings.endMinutes = endMin;
     const totalSlots = Math.round((endMin-startMin)/15);
-    state.assignments = state.assignments.filter(a=>a.startSlot>=0 && a.startSlot+a.slotCount<=totalSlots);
+    state.schedules.forEach(s=>{
+      s.assignments = s.assignments.filter(a=>a.startSlot>=0 && a.startSlot+a.slotCount<=totalSlots);
+    });
+    state.assignments = activeSchedule().assignments;
     renderTimeTab(); renderAll();
   });
 }
@@ -1772,9 +2380,10 @@ function renderTimeTab(){
 function renderRulesTab(){
   const body = document.getElementById('modal-body');
   const editing = editingRuleId ? state.rules.find(r=>r.id===editingRuleId) : null;
+  let selectedRuleTagIds = new Set(editing ? (editing.tags||[]) : []);
 
   body.innerHTML = `
-    <div class="db-help-text">"Any time" on a required rule applies to every slot; "must be scheduled, any time" therefore means the match is required at every slot, while "cannot be scheduled, any time" means it's forbidden at every slot. Preferred rules generate faded suggestions on the chart instead of hard blocks.</div>
+    <div class="db-help-text">"Any time" on a required rule applies to every slot, so "must be scheduled, any time" means required at every slot, and "cannot be scheduled, any time" means forbidden at every slot. Preferred rules generate star suggestions instead of hard blocks. Relative rules compare an assignment to other assignments (sequence, pairing, repetition) rather than to a fixed time. Rules are specific to this schedule tab.</div>
     <div class="db-rule-builder">
       <h3>${editing ? 'Edit rule' : 'New rule'}</h3>
       <div class="db-field-row">
@@ -1783,6 +2392,9 @@ function renderRulesTab(){
         </div>
         <div class="db-field"><label>Effect</label>
           <select id="rb-effect"><option value="forbid">Cannot be scheduled</option><option value="require">Must be scheduled</option></select>
+        </div>
+        <div class="db-field"><label>Kind</label>
+          <select id="rb-kind"><option value="standard">Standard</option><option value="relative">Relative</option></select>
         </div>
         <div class="db-field checkbox"><input type="checkbox" id="rb-active" checked/><label>Active</label></div>
       </div>
@@ -1798,15 +2410,51 @@ function renderRulesTab(){
         </div>
         <div class="db-field" id="rb-position-value-wrap"><label>&nbsp;</label><select id="rb-position-value"></select></div>
       </div>
-      <div class="db-field-row">
+      <div class="db-field-row" id="rb-time-row">
         <div class="db-field"><label>Time</label>
           <select id="rb-slot-mode"><option value="any">Any time</option><option value="id">Specific slot</option><option value="range">Range</option></select>
         </div>
         <div class="db-field" id="rb-slot-value-wrap"><label>At</label><select id="rb-slot-value"></select></div>
         <div class="db-field" id="rb-slot-end-wrap" style="display:none;"><label>To</label><select id="rb-slot-end"></select></div>
       </div>
-      <div class="db-field-row">
-        <div class="db-field grow"><label>Tags (comma‑separated, optional)</label><input type="text" id="rb-tags" placeholder="e.g. skill, coverage"/></div>
+
+      <div class="db-relative-fields" id="rb-relative-section" style="display:none;">
+        <div class="db-field-row">
+          <div class="db-field"><label>Relative type</label>
+            <select id="rb-relative-type">
+              <option value="sequence">Before / after another position</option>
+              <option value="together">Same time &amp; place as another person</option>
+              <option value="consecutive">Times in a row (this schedule)</option>
+              <option value="crossSchedule">Schedules in a row</option>
+            </select>
+          </div>
+        </div>
+        <div class="db-field-row" id="rb-seq-fields" style="display:none;">
+          <div class="db-field"><label>Order</label>
+            <select id="rb-seq-order"><option value="after">After</option><option value="before">Before</option></select>
+          </div>
+          <div class="db-field"><label>Other position</label>
+            <select id="rb-seq-other-position-mode"><option value="any">Any position</option><option value="id">Specific position</option><option value="tag">Tag</option></select>
+          </div>
+          <div class="db-field" id="rb-seq-other-position-value-wrap"><label>&nbsp;</label><select id="rb-seq-other-position-value"></select></div>
+        </div>
+        <div class="db-field-row" id="rb-together-fields" style="display:none;">
+          <div class="db-field"><label>Other person</label>
+            <select id="rb-together-other-person-mode"><option value="any">Anyone</option><option value="id">Specific person</option><option value="tag">Tag</option></select>
+          </div>
+          <div class="db-field" id="rb-together-other-person-value-wrap"><label>&nbsp;</label><select id="rb-together-other-person-value"></select></div>
+        </div>
+        <div class="db-field-row" id="rb-consecutive-fields" style="display:none;">
+          <div class="db-field"><label>Max consecutive</label><input type="number" id="rb-consec-max" value="2" min="2" step="1"/></div>
+        </div>
+        <div class="db-field-row" id="rb-crossschedule-fields" style="display:none;">
+          <div class="db-field"><label>Max consecutive schedules</label><input type="number" id="rb-cross-max" value="2" min="2" step="1"/></div>
+        </div>
+        <div class="db-help-text" id="rb-relative-hint" style="margin-top:6px;"></div>
+      </div>
+
+      <div class="db-field-row" style="margin-top:10px;">
+        <div class="db-field grow"><label>Tags</label><div class="db-chip-set" id="rb-tags-chips"></div></div>
       </div>
       <div class="db-rule-preview"><span class="lbl">Preview</span><span id="rb-preview">—</span></div>
       <div class="db-field-row" style="margin-top:12px;">
@@ -1826,6 +2474,8 @@ function renderRulesTab(){
   const positionValueSel = document.getElementById('rb-position-value');
   const slotValueSel = document.getElementById('rb-slot-value');
   const slotEndSel = document.getElementById('rb-slot-end');
+  const kindSel = document.getElementById('rb-kind');
+  const relTypeSel = document.getElementById('rb-relative-type');
   const slots = getSlots();
 
   function fillPersonValueOptions(mode){
@@ -1849,36 +2499,129 @@ function renderRulesTab(){
     document.getElementById('rb-slot-end-wrap').style.display = mode==='range' ? 'flex' : 'none';
     document.getElementById('rb-slot-value-wrap').querySelector('label').textContent = mode==='range' ? 'From' : 'At';
   }
+  function fillOtherPositionValueOptions(mode){
+    const sel = document.getElementById('rb-seq-other-position-value');
+    if(mode==='id') sel.innerHTML = state.positions.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+    else if(mode==='tag') sel.innerHTML = state.tags.filter(t=>t.category==='position').map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+    else sel.innerHTML = '';
+    document.getElementById('rb-seq-other-position-value-wrap').style.display = mode==='any' ? 'none' : 'flex';
+  }
+  function fillOtherPersonValueOptions(mode){
+    const sel = document.getElementById('rb-together-other-person-value');
+    if(mode==='id') sel.innerHTML = state.people.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+    else if(mode==='tag') sel.innerHTML = state.tags.filter(t=>t.category==='person').map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+    else sel.innerHTML = '';
+    document.getElementById('rb-together-other-person-value-wrap').style.display = mode==='any' ? 'none' : 'flex';
+  }
+  function updateKindVisibility(){
+    const isRelative = kindSel.value==='relative';
+    document.getElementById('rb-time-row').style.display = isRelative ? 'none' : 'flex';
+    document.getElementById('rb-relative-section').style.display = isRelative ? 'block' : 'none';
+    if(isRelative) updateRelativeTypeVisibility();
+  }
+  function updateRelativeTypeVisibility(){
+    const t = relTypeSel.value;
+    document.getElementById('rb-seq-fields').style.display = t==='sequence' ? 'flex' : 'none';
+    document.getElementById('rb-together-fields').style.display = t==='together' ? 'flex' : 'none';
+    document.getElementById('rb-consecutive-fields').style.display = t==='consecutive' ? 'flex' : 'none';
+    document.getElementById('rb-crossschedule-fields').style.display = t==='crossSchedule' ? 'flex' : 'none';
+    const hints = {
+      sequence: 'Example: "No one can be at Cafeteria at any time after being at Garbage Duty." Position above is the one being newly scheduled; Other position is the one it must come before/after.',
+      together: 'Example: "Alice should be at the same time and place as Bob." Use Position above to restrict which shared position counts, or leave it as Any.',
+      consecutive: 'Example: "No one should be assigned a Physically demanding job twice in a row." Compares a person\u2019s own back-to-back assignments in this schedule.',
+      crossSchedule: 'Example: "Bob shouldn\u2019t have the same assignment for more than two schedules in a row." Compares the same time slot across consecutive schedule tabs, in their current order.',
+    };
+    document.getElementById('rb-relative-hint').textContent = hints[t] || '';
+  }
   fillSlotOptions();
 
   function buildRuleFromForm(){
-    const personMode = personModeSel.value, positionMode = positionModeSel.value, slotMode = slotModeSel.value;
+    const personMode = personModeSel.value, positionMode = positionModeSel.value;
     const person = personMode==='any' ? {mode:'any'} : {mode:personMode, value:personValueSel.value};
     const position = positionMode==='any' ? {mode:'any'} : {mode:positionMode, value:positionValueSel.value};
+    const kind = kindSel.value;
     let slot;
-    if(slotMode==='any') slot = {mode:'any'};
-    else if(slotMode==='id') slot = {mode:'id', value:Number(slotValueSel.value)};
-    else {
-      let start = Number(slotValueSel.value), end = Number(slotEndSel.value);
-      if(end<start){ const t=start; start=end; end=t; }
-      slot = {mode:'range', start, end};
+    if(kind==='relative'){
+      slot = {mode:'any'};
+    } else {
+      const slotMode = slotModeSel.value;
+      if(slotMode==='any') slot = {mode:'any'};
+      else if(slotMode==='id') slot = {mode:'id', value:Number(slotValueSel.value)};
+      else {
+        let start = Number(slotValueSel.value), end = Number(slotEndSel.value);
+        if(end<start){ const t2=start; start=end; end=t2; }
+        slot = {mode:'range', start, end};
+      }
     }
-    const tags = document.getElementById('rb-tags').value.split(',').map(s=>s.trim()).filter(Boolean);
+    let relative = null;
+    if(kind==='relative'){
+      const relType = relTypeSel.value;
+      if(relType==='sequence'){
+        const opMode = document.getElementById('rb-seq-other-position-mode').value;
+        relative = {
+          type:'sequence',
+          order: document.getElementById('rb-seq-order').value==='before' ? 'before' : 'after',
+          otherPosition: opMode==='any' ? {mode:'any'} : {mode:opMode, value:document.getElementById('rb-seq-other-position-value').value},
+        };
+      } else if(relType==='together'){
+        const opMode = document.getElementById('rb-together-other-person-mode').value;
+        relative = {
+          type:'together',
+          otherPerson: opMode==='any' ? {mode:'any'} : {mode:opMode, value:document.getElementById('rb-together-other-person-value').value},
+        };
+      } else if(relType==='consecutive'){
+        relative = { type:'consecutive', maxConsecutive: Math.max(2, Number(document.getElementById('rb-consec-max').value)||2) };
+      } else {
+        relative = { type:'crossSchedule', maxRepeat: Math.max(2, Number(document.getElementById('rb-cross-max').value)||2) };
+      }
+    }
     return {
+      kind,
       strength: document.getElementById('rb-strength').value,
       effect: document.getElementById('rb-effect').value,
       active: document.getElementById('rb-active').checked,
-      person, position, slot, tags
+      person, position, slot, relative,
+      tags: Array.from(selectedRuleTagIds),
     };
   }
   function updatePreview(){
     document.getElementById('rb-preview').textContent = ruleLabel(buildRuleFromForm());
   }
+  function renderTagChips(){
+    const ruleTags = state.tags.filter(t=>t.category==='rule');
+    const wrap = document.getElementById('rb-tags-chips');
+    wrap.innerHTML = ruleTags.map(t=>{
+      const on = selectedRuleTagIds.has(t.id);
+      const style = on ? `background:${t.highlightColor};color:${t.textColor};border-color:${t.highlightColor};` : '';
+      return `<span class="db-chip-toggle ${on?'on':''}" style="${style}" data-tag-id="${t.id}">${escapeHtml(t.name)}</span>`;
+    }).join('') || '<span class="db-empty-note" style="padding:0;">No rule tags yet — add some in the Tags tab.</span>';
+    wrap.querySelectorAll('.db-chip-toggle').forEach(chipEl=>{
+      chipEl.addEventListener('click', ()=>{
+        const tid = chipEl.dataset.tagId;
+        const t = state.tags.find(x=>x.id===tid);
+        if(selectedRuleTagIds.has(tid)){
+          selectedRuleTagIds.delete(tid);
+          chipEl.classList.remove('on');
+          chipEl.style.cssText = '';
+        } else {
+          selectedRuleTagIds.add(tid);
+          chipEl.classList.add('on');
+          chipEl.style.cssText = `background:${t.highlightColor};color:${t.textColor};border-color:${t.highlightColor};`;
+        }
+        updatePreview();
+      });
+    });
+  }
 
   personModeSel.addEventListener('change', (e)=>{ fillPersonValueOptions(e.target.value); updatePreview(); });
   positionModeSel.addEventListener('change', (e)=>{ fillPositionValueOptions(e.target.value); updatePreview(); });
   slotModeSel.addEventListener('change', (e)=>{ updateSlotVisibility(e.target.value); updatePreview(); });
-  ['rb-strength','rb-effect','rb-person-value','rb-position-value','rb-slot-value','rb-slot-end','rb-tags','rb-active'].forEach(id=>{
+  kindSel.addEventListener('change', ()=>{ updateKindVisibility(); updatePreview(); });
+  relTypeSel.addEventListener('change', ()=>{ updateRelativeTypeVisibility(); updatePreview(); });
+  document.getElementById('rb-seq-other-position-mode').addEventListener('change', (e)=>{ fillOtherPositionValueOptions(e.target.value); updatePreview(); });
+  document.getElementById('rb-together-other-person-mode').addEventListener('change', (e)=>{ fillOtherPersonValueOptions(e.target.value); updatePreview(); });
+  ['rb-strength','rb-effect','rb-person-value','rb-position-value','rb-slot-value','rb-slot-end','rb-active',
+   'rb-seq-order','rb-seq-other-position-value','rb-together-other-person-value','rb-consec-max','rb-cross-max'].forEach(id=>{
     const el = document.getElementById(id);
     el.addEventListener('change', updatePreview);
     el.addEventListener('input', updatePreview);
@@ -1898,22 +2641,59 @@ function renderRulesTab(){
     updateSlotVisibility(editing.slot.mode);
     if(editing.slot.mode==='id') slotValueSel.value = editing.slot.value;
     if(editing.slot.mode==='range'){ slotValueSel.value = editing.slot.start; slotEndSel.value = editing.slot.end; }
-    document.getElementById('rb-tags').value = (editing.tags||[]).join(', ');
+
+    kindSel.value = editing.kind || 'standard';
+    updateKindVisibility();
+    fillOtherPositionValueOptions('any');
+    fillOtherPersonValueOptions('any');
+    if(editing.kind==='relative' && editing.relative){
+      relTypeSel.value = editing.relative.type;
+      updateRelativeTypeVisibility();
+      if(editing.relative.type==='sequence'){
+        document.getElementById('rb-seq-order').value = editing.relative.order||'after';
+        const m = editing.relative.otherPosition ? editing.relative.otherPosition.mode : 'any';
+        document.getElementById('rb-seq-other-position-mode').value = m;
+        fillOtherPositionValueOptions(m);
+        if(m!=='any') document.getElementById('rb-seq-other-position-value').value = editing.relative.otherPosition.value;
+      } else if(editing.relative.type==='together'){
+        const m = editing.relative.otherPerson ? editing.relative.otherPerson.mode : 'any';
+        document.getElementById('rb-together-other-person-mode').value = m;
+        fillOtherPersonValueOptions(m);
+        if(m!=='any') document.getElementById('rb-together-other-person-value').value = editing.relative.otherPerson.value;
+      } else if(editing.relative.type==='consecutive'){
+        document.getElementById('rb-consec-max').value = editing.relative.maxConsecutive || 2;
+      } else if(editing.relative.type==='crossSchedule'){
+        document.getElementById('rb-cross-max').value = editing.relative.maxRepeat || 2;
+      }
+    }
   } else {
     fillPersonValueOptions('any');
     fillPositionValueOptions('any');
     updateSlotVisibility('any');
+    kindSel.value = 'standard';
+    updateKindVisibility();
+    relTypeSel.value = 'sequence';
+    fillOtherPositionValueOptions('any');
+    fillOtherPersonValueOptions('any');
   }
+  renderTagChips();
   updatePreview();
 
   document.getElementById('rb-submit').addEventListener('click', ()=>{
     const draft = buildRuleFromForm();
     if(draft.person.mode!=='any' && !draft.person.value){ alert('Choose a specific person or tag.'); return; }
     if(draft.position.mode!=='any' && !draft.position.value){ alert('Choose a specific position or tag.'); return; }
+    if(draft.kind==='relative'){
+      if(draft.relative.type==='sequence' && draft.relative.otherPosition.mode!=='any' && !draft.relative.otherPosition.value){ alert('Choose the other position for this sequence rule.'); return; }
+      if(draft.relative.type==='together' && draft.relative.otherPerson.mode!=='any' && !draft.relative.otherPerson.value){ alert('Choose the other person for this together rule.'); return; }
+    }
+    const wasEditing = !!editing;
     if(editing) Object.assign(editing, draft);
     else state.rules.push({ id:genId('rule'), ...draft });
     editingRuleId = null;
-    renderRulesTab(); renderAll();
+    if(wasEditing) closeSettings();
+    else renderRulesTab();
+    renderAll();
   });
   const cancelBtn = document.getElementById('rb-cancel');
   if(cancelBtn) cancelBtn.addEventListener('click', ()=>{ editingRuleId = null; renderRulesTab(); });
@@ -1939,7 +2719,39 @@ function renderRulesTab(){
 }
 
 /* ================================================================
-   EXCEL SAVE / LOAD
+   ADVANCED SETTINGS SAVE / LOAD (JSON: roster + tags + time range)
+   ================================================================ */
+function buildSettingsPayload(){
+  return { people: state.people, positions: state.positions, tags: state.tags, settings: state.settings };
+}
+function exportSettingsJson(){
+  try{
+    const payload = buildSettingsPayload();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `duty-board-settings-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    showToast('Settings saved.');
+  }catch(e){
+    console.error(e);
+    alert('Could not save settings: '+e.message);
+  }
+}
+async function importSettingsJson(file){
+  const text = await file.text();
+  const payload = JSON.parse(text);
+  if(payload.people) state.people = payload.people;
+  if(payload.positions) state.positions = payload.positions;
+  if(payload.tags) state.tags = payload.tags;
+  if(payload.settings) state.settings = payload.settings;
+  renderAll();
+  showToast('Settings loaded.');
+}
+
+/* ================================================================
+   EXCEL SAVE / LOAD (per schedule tab; loading adds a new tab)
    ================================================================ */
 function exportToExcel(){
   if(typeof XLSX==='undefined'){ alert('The spreadsheet library has not finished loading yet — try again in a moment.'); return; }
@@ -1970,11 +2782,19 @@ function exportToExcel(){
   ))), 'Tags');
 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.rules.map(r=>({
-    id:r.id, strength:r.strength, active:r.active, effect:r.effect,
+    id:r.id, strength:r.strength, active:r.active, effect:r.effect, kind:r.kind||'standard',
     personMode:r.person.mode, personValue:r.person.value||'',
     positionMode:r.position.mode, positionValue:r.position.value||'',
     slotMode:r.slot.mode,
     slotValue: r.slot.mode==='range' ? `${r.slot.start}-${r.slot.end}` : (r.slot.value!==undefined ? r.slot.value : ''),
+    relativeType: r.kind==='relative' && r.relative ? r.relative.type||'' : '',
+    relOtherPositionMode: r.kind==='relative' && r.relative && r.relative.otherPosition ? r.relative.otherPosition.mode : '',
+    relOtherPositionValue: r.kind==='relative' && r.relative && r.relative.otherPosition ? (r.relative.otherPosition.value||'') : '',
+    relOtherPersonMode: r.kind==='relative' && r.relative && r.relative.otherPerson ? r.relative.otherPerson.mode : '',
+    relOtherPersonValue: r.kind==='relative' && r.relative && r.relative.otherPerson ? (r.relative.otherPerson.value||'') : '',
+    relOrder: r.kind==='relative' && r.relative && r.relative.order ? r.relative.order : '',
+    relMaxConsecutive: r.kind==='relative' && r.relative && r.relative.maxConsecutive ? r.relative.maxConsecutive : '',
+    relMaxRepeat: r.kind==='relative' && r.relative && r.relative.maxRepeat ? r.relative.maxRepeat : '',
     tags:(r.tags||[]).join(','), note: ruleLabel(r)
   }))), 'Rules');
 
@@ -1982,7 +2802,8 @@ function exportToExcel(){
     ['startMinutes','endMinutes'], [state.settings.startMinutes, state.settings.endMinutes]
   ]), 'Settings');
 
-  XLSX.writeFile(wb, `duty-board-${new Date().toISOString().slice(0,10)}.xlsx`);
+  const sched = activeSchedule();
+  XLSX.writeFile(wb, `${(sched.name||'duty-board').replace(/[^a-z0-9-_]+/gi,'-')}.xlsx`);
   showToast('Schedule saved.');
 }
 
@@ -1997,7 +2818,7 @@ async function importFromExcel(file){
   }
   if(wb.Sheets['Tags']){
     state.tags = XLSX.utils.sheet_to_json(wb.Sheets['Tags']).map(r=>({
-      id:String(r.id), name:String(r.name), category:r.category==='position'?'position':'person',
+      id:String(r.id), name:String(r.name), category: r.category==='position' ? 'position' : r.category==='rule' ? 'rule' : 'person',
       highlightColor:r.highlightColor || '#eef1f5', textColor:r.textColor || '#647186'
     }));
   }
@@ -2015,25 +2836,44 @@ async function importFromExcel(file){
       tags:String(r.tags||'').split(',').map(s=>s.trim()).filter(Boolean)
     }));
   }
+
+  let newRules = [];
   if(wb.Sheets['Rules']){
-    state.rules = XLSX.utils.sheet_to_json(wb.Sheets['Rules']).map(r=>{
+    newRules = XLSX.utils.sheet_to_json(wb.Sheets['Rules']).map(r=>{
       let slot;
       if(r.slotMode==='range'){ const [a,b]=String(r.slotValue).split('-').map(Number); slot={mode:'range', start:a, end:b}; }
       else if(r.slotMode==='id'){ slot = {mode:'id', value:Number(r.slotValue)}; }
       else slot = {mode:'any'};
+
+      const kind = r.kind==='relative' ? 'relative' : 'standard';
+      let relative = null;
+      if(kind==='relative'){
+        const relType = r.relativeType || 'sequence';
+        relative = { type: relType };
+        if(relType==='sequence'){
+          relative.otherPosition = { mode: r.relOtherPositionMode||'any', value: r.relOtherPositionValue||null };
+          relative.order = r.relOrder==='before' ? 'before' : 'after';
+        } else if(relType==='together'){
+          relative.otherPerson = { mode: r.relOtherPersonMode||'any', value: r.relOtherPersonValue||null };
+        } else if(relType==='consecutive'){
+          relative.maxConsecutive = Number(r.relMaxConsecutive)||2;
+        } else if(relType==='crossSchedule'){
+          relative.maxRepeat = Number(r.relMaxRepeat)||2;
+        }
+      }
       return {
-        id:String(r.id), strength:r.strength==='preferred'?'preferred':'required',
+        id:String(r.id), kind, strength:r.strength==='preferred'?'preferred':'required',
         active: r.active===true || r.active==='TRUE' || r.active==='true',
         effect:r.effect==='require'?'require':'forbid',
         person:{ mode:r.personMode||'any', value:r.personValue||null },
         position:{ mode:r.positionMode||'any', value:r.positionValue||null },
-        slot,
+        slot, relative,
         tags:String(r.tags||'').split(',').map(s=>s.trim()).filter(Boolean)
       };
     });
   }
 
-  state.assignments = [];
+  let newAssignments = [];
   if(wb.Sheets['Schedule']){
     const rows = XLSX.utils.sheet_to_json(wb.Sheets['Schedule'], { header:1 });
     for(let r=1; r<rows.length; r++){
@@ -2047,22 +2887,25 @@ async function importFromExcel(file){
         const pos = state.positions.find(p=>p.name===posName);
         if(!pos) continue;
         const startSlot = col-1;
-        const alreadyCovered = state.assignments.some(a=>a.personId===person.id && assignmentOccupiesSlots(a).includes(startSlot));
+        const alreadyCovered = newAssignments.some(a=>a.personId===person.id && assignmentOccupiesSlots(a).includes(startSlot));
         if(alreadyCovered) continue;
-        state.assignments.push({ id:genId('asg'), personId:person.id, positionId:pos.id, startSlot, slotCount:positionDurationSlots(pos.id) });
+        newAssignments.push({ id:genId('asg'), personId:person.id, positionId:pos.id, startSlot, slotCount:positionDurationSlots(pos.id) });
       }
     }
   }
 
-  state.rejectedSuggestions = new Set();
-  renderAll();
-  showToast('Schedule loaded.');
+  const importedName = (file && file.name) ? file.name.replace(/\.xlsx$/i,'') : `Imported ${state.schedules.length+1}`;
+  const sched = createSchedule(importedName, { assignments:newAssignments, rules:newRules, rejectedSuggestions:new Set() });
+  setActiveSchedule(sched.id);
+  showToast('Schedule loaded as a new tab (rightmost).');
 }
 
 /* ================================================================
    INIT
    ================================================================ */
 function init(){
+  loadPersisted();
+
   document.getElementById('btn-settings').addEventListener('click', ()=>openSettings('people'));
   document.getElementById('btn-close-settings').addEventListener('click', closeSettings);
   document.getElementById('settings-overlay').addEventListener('click', (e)=>{ if(e.target.id==='settings-overlay') closeSettings(); });
@@ -2075,6 +2918,34 @@ function init(){
     const file = e.target.files[0];
     if(file) importFromExcel(file).catch(err=>{ console.error(err); alert('Could not read that file: '+err.message); });
     e.target.value = '';
+  });
+
+  document.getElementById('btn-settings-save').addEventListener('click', exportSettingsJson);
+  document.getElementById('btn-settings-load').addEventListener('click', ()=>document.getElementById('settings-file-input').click());
+  document.getElementById('settings-file-input').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(file) importSettingsJson(file).catch(err=>{ console.error(err); alert('Could not read that file: '+err.message); });
+    e.target.value = '';
+  });
+
+  document.getElementById('btn-toggle-tags').addEventListener('click', ()=>{
+    showPersonTags = !showPersonTags;
+    document.getElementById('btn-toggle-tags').textContent = `Person tags: ${showPersonTags ? 'on' : 'off'}`;
+    renderChart();
+  });
+
+  document.getElementById('btn-fullscreen').addEventListener('click', ()=>{
+    const el = document.getElementById('duty-board');
+    const requestFn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    const exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    try{
+      if(!document.fullscreenElement && requestFn) requestFn.call(el).catch(()=>{});
+      else if(document.fullscreenElement && exitFn) exitFn.call(document);
+    }catch(err){ /* fullscreen not supported in this environment */ }
+  });
+  document.addEventListener('fullscreenchange', ()=>{
+    const btn = document.getElementById('btn-fullscreen');
+    if(btn) btn.textContent = document.fullscreenElement ? '⤢' : '⛶';
   });
 
   ['rule-search','filter-person','filter-position','filter-time','filter-required','filter-preferred','filter-inactive'].forEach(id=>{
@@ -2091,13 +2962,5 @@ function init(){
 init();
 </script>
 ```
-
-
-### Paste in a template
-
-I want a constraint solver that will solve scheduling problems for several people over 15 min time slots. More people or positions can be added as needed. People and positions can be defined with various attributes used for constaints (e.g. "Male" and "Female" people, "Physically demanding" positions, etc.) that can be used to define rules. The program should support rules for people, positions, and time slots in any combination (e.g. "Person A cannot be scheduled for Position B during Time Slot C") or any generalization (e.g. Person A cannot have Position B, ever). Rules can be marked as required, preferred, or inactive (ignored during checks and solving), and the program will fill in the schedule as a table-like chart with time on the x-axis (at the top) and people on the y-axis (on the left) with all the assignments required by the required rules, and faded suggestions for the preferred rules. 
-The main schedule chart will be on the left, and a list of the most possibility-reducing decisions will be on the right, with the most possibility-reducing decisions at the top and any rules that are currently violated above them in the list with a red outline. Below both the main schedule chart and the list of decisions will be a list of all the rules, with the required rules at the top and the preferred rules below them. When a time slot is selected there should be a dropdown of all positions, with positions that align with preferred rules marked with a star and positions currently forbidden by required rules as grayed out, and when you hover your mouse over them the contradicting rule will be displayed as a hover window and the appropriate areas on the chart will be outlined in red. 
-The rules list should have search and filter options to display only rules that 1. deal with a time constraint, person constraint, or position constraint in general as a specific constraint (e.g. "Person A cannot be scheduled for Position B" has a person and a position being specifically constrained), 2. are required or preferred, and 3. rules that deal with specific times, people, or positions. There should be a gear icon for advanced settings that opens a menu from which users can define new positions, classifying tags, and rules. When positions are defined they are assigned a length of time which must be fit into the schedule (e.g. a position that is 30 minutes long will take up two 15 minute time slots and someone can't be scheduled for it for a single time slot). An implicit built-in rule is that no person can be scheduled for more than one position at a time, but a position can be scheduled for more than one person at a time unless it is checked as a "single-person" position when it is defined. Rules can also have tags that can be used to group them together for searching and filtering. The program should have a "solve" button that will attempt to fill in the schedule as much as possible while satisfying all required rules and as many preferred rules as possible. Positions should have color-coding options in the advanced settings that will be displayed in the main schedule chart, with faded versions of the colors displayed for preferred rules' suggestions that haven't been selected yet. If a suggestion is clicked on their should be a small popup with a "accept" and "reject button" -- if accepted the suggestion will be added to the schedule and the chart will be updated, and if rejected the suggestion will be removed visually from the chart (but the preferred rule that spurred the suggestion will remain in the rules list, unaffected).
-The default program should have 10:30 to 4:30 as the time range (24 time slots), but this can be changed in the advanced settings. The program should have save and load buttons that will save the current schedule as a formatted excel file and load a schedule from a formatted excel file, respectively.
 
 
