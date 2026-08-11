@@ -46,8 +46,8 @@ website:
         - text: "Data Exploration"
           file: exploration.qmd
         - text: "---"
-        - text: "Project 1"
-          file: Cleansing_Exploration/project1.qmd
+        - text: "Scheduler"
+          file: Cleansing_Exploration/scheduler.qmd
         - text: "---"
         - text: "Project 2"
           file: Cleansing_Exploration/project2.qmd

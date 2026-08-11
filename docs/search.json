@@ -26,7 +26,6 @@
     "section": "",
     "text": "Paste in a template\n\n\n\n\n Back to top",
     "crumbs": [
-      "Story Telling",
       "Project 2"
     ]
   },
@@ -220,7 +219,6 @@
     "section": "",
     "text": "Paste in a template\n\n\n\n\n Back to top",
     "crumbs": [
-      "Full Stack",
       "Project 1"
     ]
   },
@@ -259,7 +257,11 @@
     "href": "Cleansing_Exploration/scheduler.html",
     "title": "Scheduler project",
     "section": "",
-    "text": "Duty Board\n        Shift & Position Scheduler\n        10:30 AM – 4:30 PM · 15‑minute slots\n      \n    \n    \n    \n      Save .xlsx\n      Load .xlsx\n      \n      ▶ Solve\n      ⛶\n    \n  \n\n  \n  \n\n    \n    \n      \n        Schedule\n        \n      \n      \n        \n      \n      \n        Person tags: on\n      \n    \n\n    \n    \n      \n        Decisions\n        \n      \n      \n    \n\n  \n\n  \n  \n    Define positions, classifying tags, and rules — or change the schedule's time range.\n    ⚙ Advanced settings\n  \n\n  \n  \n    \n      Rules\n      \n    \n    \n      \n      Person\n      \n        Any\n        Not used\n        General (tag)\n        Specific\n      \n      Position\n      \n        Any\n        Not used\n        General (tag)\n        Specific\n      \n      Time\n      \n        Any\n        Not used\n        General (range)\n        Specific\n      \n       Required\n       Preferred\n       Show inactive\n    \n    \n  \n\n  \n  \n  \n\n  \n  \n    \n      \n        Advanced settings\n        \n          Save settings\n          Load settings\n          \n          ✕\n        \n      \n      \n        People\n        Positions\n        Tags\n        Rules\n        Time range\n      \n      \n    \n  \n\n\n\n\n\n\n Back to top"
+    "text": "Duty Board\n        Shift & Position Scheduler\n        10:30 AM – 4:30 PM · 15‑minute slots\n      \n    \n    \n    \n      Save .xlsx\n      Load .xlsx\n      \n      ▶ Solve\n      ⛶\n    \n  \n\n  \n  \n\n    \n    \n      \n        Schedule\n        \n      \n      \n        \n      \n      \n        Person tags: on\n      \n    \n\n    \n    \n      \n        Decisions\n        \n      \n      \n    \n\n  \n\n  \n  \n    Define positions, classifying tags, and rules — or change the schedule's time range.\n    ⚙ Advanced settings\n  \n\n  \n  \n    \n      Rules\n      \n    \n    \n      \n      Person\n      \n        Any\n        Not used\n        General (tag)\n        Specific\n      \n      Position\n      \n        Any\n        Not used\n        General (tag)\n        Specific\n      \n      Time\n      \n        Any\n        Not used\n        General (range)\n        Specific\n      \n       Required\n       Preferred\n       Show inactive\n    \n    \n  \n\n  \n  \n  \n\n  \n  \n    \n      \n        Advanced settings\n        \n          Save settings\n          Load settings\n          \n          ✕\n        \n      \n      \n        People\n        Positions\n        Tags\n        Rules\n        Time range\n      \n      \n    \n  \n\n\n\n\n\n\n Back to top",
+    "crumbs": [
+      "Data Exploration",
+      "Scheduler"
+    ]
   },
   {
     "objectID": "Cleansing_Exploration/project2.html",
@@ -344,7 +346,6 @@
     "section": "",
     "text": "Paste in a template\n\n\n\n\n Back to top",
     "crumbs": [
-      "Full Stack",
       "Project 2"
     ]
   },
@@ -400,7 +401,6 @@
     "section": "",
     "text": "Paste in a template\n\n\n\n\n Back to top",
     "crumbs": [
-      "Story Telling",
       "Project 1"
     ]
   },
@@ -411,7 +411,6 @@
     "section": "",
     "text": "Paste in a template\n\n\n\n\n Back to top",
     "crumbs": [
-      "Story Telling",
       "Project 3"
     ]
   }
