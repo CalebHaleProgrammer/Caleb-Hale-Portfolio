@@ -217,19 +217,25 @@ html, body{
   display:grid;
   grid-template-columns: minmax(0,1fr) 330px;
   gap: 18px;
-  align-items:start;
+  align-items:stretch;
 }
 .db-panel{
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
+  display:flex;
+  flex-direction:column;
+  min-height:0;
 }
 .db-panel-head{
   display:flex; align-items:center; justify-content:space-between;
+  gap:10px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
 }
+.db-panel-head .head-actions{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 .db-panel-head h2{
   font-family: var(--font-display);
   font-size: 15px;
@@ -242,7 +248,10 @@ html, body{
 .db-chart-scroll{
   overflow-x: auto;
   padding: 16px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
+.db-chart-scroll.full-view{ overflow-x: hidden; }
 .db-chart-grid{
   display:grid;
   grid-auto-rows: 40px;
@@ -250,6 +259,9 @@ html, body{
   width: max-content;
   min-width: 100%;
 }
+.db-chart-grid.full-view{ width: 100%; }
+#chart-panel:fullscreen{ background: var(--panel); padding: 12px; }
+#chart-panel:-webkit-full-screen{ background: var(--panel); padding: 12px; }
 .db-corner{
   position: sticky; left:0; z-index:5;
   background: var(--panel);
@@ -269,13 +281,17 @@ html, body{
   font-size: 10px;
   color: var(--muted);
   position:relative;
+  cursor:pointer;
 }
+.db-time-head:hover{ background: var(--accent-soft); }
 .db-time-head.hour-start{ border-left: 1px solid var(--border-strong); }
 .db-time-head .tick{
   position:absolute; top:0; bottom:0; left:0; width:1px;
 }
 .db-time-head span{ writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: .02em;}
 .db-time-head.hour-start span{ color: var(--ink); font-weight:600; }
+.db-lock-badge{ position:absolute; top:2px; right:2px; font-size:9px; line-height:1; }
+.db-row-label .db-lock-badge{ top:4px; right:4px; }
 
 .db-row-label{
   grid-column: 1;
@@ -295,8 +311,13 @@ html, body{
 .db-row-label .tags.tags-hidden{ display:none; }
 
 .db-chart-footer{
-  display:flex; align-items:center; gap:8px;
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
   padding: 8px 16px 14px 16px;
+  flex: 0 0 auto;
+}
+.db-chart-footer select{
+  padding:6px 9px; border:1px solid var(--border-strong); border-radius: var(--radius-sm);
+  font-size:12px; background:#fff; color: var(--ink);
 }
 
 .db-cell{
@@ -313,6 +334,12 @@ html, body{
   outline-offset: -2px;
   background: var(--danger-soft);
 }
+.db-cell.lock-preview, .db-block.lock-preview{
+  background: rgba(22,163,74,0.16) !important;
+  outline: 1px solid rgba(22,163,74,0.55);
+  outline-offset: -1px;
+}
+.db-time-head.lock-preview{ background: rgba(22,163,74,0.22); }
 
 .db-block{
   position:relative;
@@ -332,6 +359,12 @@ html, body{
 }
 .db-block.confirmed{ box-shadow: var(--shadow-card); }
 .db-block.rule-violated{ outline: 2px solid var(--danger); outline-offset: 1px; }
+.db-block .resize-handle{
+  position:absolute; top:0; right:0; bottom:0; width:9px;
+  cursor: ew-resize;
+}
+.db-block .resize-handle:hover{ background: rgba(255,255,255,0.4); }
+.db-block.resizing{ z-index: 12; }
 
 .db-suggestion-box{
   position:relative;
@@ -384,6 +417,13 @@ html, body{
 .db-option .dot{ width:9px; height:9px; border-radius:2px; flex-shrink:0; }
 .db-option .label{ flex:1; font-size:12.5px; }
 .db-option .dur{ font-family:var(--font-mono); font-size:10px; color:var(--faint); }
+.db-option .history-ratio{ font-family:var(--font-mono); font-size:10px; color:var(--faint); margin-left:4px; }
+.db-option-head-actions{ display:flex; align-items:center; gap:6px; }
+.db-option-lock-toggle{
+  border:1px solid var(--border-strong); background:#fff; border-radius: var(--radius-sm);
+  width:22px; height:22px; font-size:11px; color: var(--muted); flex-shrink:0;
+}
+.db-option-lock-toggle.on{ background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 .db-option.ok{ cursor:pointer; }
 .db-option.ok:hover{ background: var(--accent-soft); }
 .db-option.blocked{ color: var(--faint); cursor: not-allowed; background: repeating-linear-gradient(45deg, #f7f8fa, #f7f8fa 6px, #eef0f3 6px, #eef0f3 12px); }
@@ -415,7 +455,7 @@ html, body{
 .db-popup .row .btn{ flex:1; justify-content:center; }
 
 /* ---------------- Decisions panel ---------------- */
-.db-decisions-body{ padding: 12px; display:flex; flex-direction:column; gap:8px; max-height: 640px; overflow-y:auto;}
+.db-decisions-body{ padding: 12px; display:flex; flex-direction:column; gap:8px; flex:1 1 auto; min-height:0; overflow-y:auto;}
 .db-violation-card{
   border: 1.5px solid var(--danger);
   background: var(--danger-soft);
@@ -597,7 +637,16 @@ html, body{
 .db-field input[type="text"], .db-field input[type="number"], .db-field input[type="time"], .db-field select{
   padding: 7px 9px; border:1px solid var(--border-strong); border-radius: var(--radius-sm); font-size:12.5px; min-width: 140px;
 }
-.db-field input[type="color"]{ width:44px; height:32px; padding:2px; border:1px solid var(--border-strong); border-radius: var(--radius-sm); }
+.db-field input[type="color"]{ width:44px; height:32px; padding:2px; border:2px solid var(--border-strong); border-radius: var(--radius-sm); cursor:pointer; }
+.db-field input[type="color"]:hover{ border-color: var(--accent); }
+.db-color-field{ display:flex; align-items:center; gap:6px; }
+.db-color-field input[type="color"]{ width:36px; height:32px; padding:2px; border:2px solid var(--border-strong); border-radius: var(--radius-sm); cursor:pointer; flex-shrink:0; }
+.db-color-field input[type="color"]:hover{ border-color: var(--accent); }
+.db-hex-input{
+  width:92px; font-family: var(--font-mono); font-size:11.5px; text-transform:uppercase;
+  padding:6px 8px; border:2px solid var(--border-strong); border-radius: var(--radius-sm);
+}
+.db-hex-input:focus{ border-color: var(--accent); outline:none; }
 .db-field.checkbox{ flex-direction:row; align-items:center; gap:6px; }
 .db-field.checkbox label{ text-transform:none; font-family:var(--font-body); font-size:12.5px; }
 .db-field.grow{ flex:1; }
@@ -661,7 +710,7 @@ html, body{
       <button class="btn" id="btn-load" title="Load schedule from .xlsx">Load .xlsx</button>
       <input type="file" id="file-input" accept=".xlsx" style="display:none" />
       <button class="btn btn-primary" id="btn-solve" title="Fill in every currently-unsatisfied required rule. Preferred rules stay as faded suggestions.">▶ Solve</button>
-      <button class="btn btn-icon" id="btn-fullscreen" title="Toggle fullscreen">⛶</button>
+      <button class="btn btn-icon" id="btn-fullscreen" title="Scheduler fullscreen (chart, decisions, and rules)">⛶</button>
     </div>
   </header>
 
@@ -672,13 +721,18 @@ html, body{
     <section class="db-panel" id="chart-panel">
       <div class="db-panel-head">
         <h2>Schedule</h2>
-        <span class="db-panel-note" id="chart-range-note"></span>
+        <div class="head-actions">
+          <span class="db-panel-note" id="chart-range-note"></span>
+          <button class="btn btn-sm" id="btn-full-view" title="Scale the whole chart to fit without side-scrolling">Full view</button>
+          <button class="btn btn-icon" id="btn-chart-fullscreen" title="Fullscreen the chart (whole chart, scaled to fit)">⛶</button>
+        </div>
       </div>
       <div class="db-chart-scroll">
         <div class="db-chart-grid" id="chart-grid"></div>
       </div>
       <div class="db-chart-footer">
         <button class="btn btn-sm" id="btn-toggle-tags">Person tags: on</button>
+        <select id="hidden-people-select"><option value="">No people toggled off</option></select>
       </div>
     </section>
 
@@ -727,6 +781,10 @@ html, body{
         <option value="unused">Not used</option>
         <option value="general">General (range)</option>
         <option value="specific">Specific</option>
+      </select>
+      <span class="filter-group-label">Tag</span>
+      <select id="filter-rule-tag">
+        <option value="all">All tags</option>
       </select>
       <label class="chk"><input type="checkbox" id="filter-required" checked /> Required</label>
       <label class="chk"><input type="checkbox" id="filter-preferred" checked /> Preferred</label>
@@ -788,18 +846,18 @@ function escapeHtml(str){
 var state = {
   settings: { startMinutes: 10*60+30, endMinutes: 16*60+30 },
   people: [
-    { id:'p_alice', name:'Alice', tags:['tag_female','tag_bilingual'] },
-    { id:'p_bob',   name:'Bob',   tags:['tag_male'] },
-    { id:'p_carol', name:'Carol', tags:['tag_female'] },
-    { id:'p_dave',  name:'Dave',  tags:['tag_male'] },
-    { id:'p_eve',   name:'Eve',   tags:['tag_female','tag_bilingual'] },
+    { id:'p_alice', name:'Alice', tags:['tag_female','tag_bilingual'], hidden:false },
+    { id:'p_bob',   name:'Bob',   tags:['tag_male'], hidden:false },
+    { id:'p_carol', name:'Carol', tags:['tag_female'], hidden:false },
+    { id:'p_dave',  name:'Dave',  tags:['tag_male'], hidden:false },
+    { id:'p_eve',   name:'Eve',   tags:['tag_female','tag_bilingual'], hidden:false },
   ],
   positions: [
-    { id:'pos_frontdesk',    name:'Front Desk',    durationMinutes:15, singlePerson:false, color:'#2563eb', tags:[] },
-    { id:'pos_setup',        name:'Setup Crew',    durationMinutes:30, singlePerson:false, color:'#ea580c', tags:['tag_physical'] },
-    { id:'pos_registration', name:'Registration',  durationMinutes:15, singlePerson:true,  color:'#16a34a', tags:[] },
-    { id:'pos_techsupport',  name:'Tech Support',  durationMinutes:45, singlePerson:true,  color:'#7c3aed', tags:[] },
-    { id:'pos_breakrelief',  name:'Break Relief',  durationMinutes:15, singlePerson:false, color:'#db2777', tags:[] },
+    { id:'pos_frontdesk',    name:'Front Desk',    durationMin:15, durationMax:15, singlePerson:false, color:'#2563eb', tags:[] },
+    { id:'pos_setup',        name:'Setup Crew',    durationMin:30, durationMax:60, singlePerson:false, color:'#ea580c', tags:['tag_physical'] },
+    { id:'pos_registration', name:'Registration',  durationMin:15, durationMax:15, singlePerson:true,  color:'#16a34a', tags:[] },
+    { id:'pos_techsupport',  name:'Tech Support',  durationMin:45, durationMax:45, singlePerson:true,  color:'#7c3aed', tags:[] },
+    { id:'pos_breakrelief',  name:'Break Relief',  durationMin:15, durationMax:15, singlePerson:false, color:'#db2777', tags:[] },
   ],
   tags: [
     { id:'tag_male',      name:'Male',                 category:'person',   highlightColor:'#E4E7FB', textColor:'#3730A3' },
@@ -812,6 +870,7 @@ var state = {
     { id:'tag_language',  name:'Language',              category:'rule',     highlightColor:'#FEF3C7', textColor:'#92400E' },
     { id:'tag_fairness',  name:'Fairness',              category:'rule',     highlightColor:'#E4E7FB', textColor:'#3730A3' },
     { id:'tag_pairing',   name:'Pairing',               category:'rule',     highlightColor:'#DCFCE7', textColor:'#166534' },
+    { id:'tag_integrity', name:'Integrity',             category:'rule',     highlightColor:'#FEE2E2', textColor:'#991B1B' },
   ],
   schedules: [
     {
@@ -819,25 +878,31 @@ var state = {
       name: 'Schedule 1',
       assignments: [],
       rejectedSuggestions: new Set(),
+      lockedPeople: new Set(),
+      lockedSlots: new Set(),
+      lockedCells: new Set(),
       rules: [
-        { id:'rule_0', kind:'standard', strength:'required',  effect:'require', active:true,
+        { id:'rule_0', kind:'standard', strength:'required',  effect:'require', active:true, nickname:'',
           person:{mode:'id', value:'p_bob'}, position:{mode:'id', value:'pos_breakrelief'}, slot:{mode:'id', value:10}, tags:['tag_coverage'] },
-        { id:'rule_1', kind:'standard', strength:'required',  effect:'forbid',  active:true,
+        { id:'rule_1', kind:'standard', strength:'required',  effect:'forbid',  active:true, nickname:'',
           person:{mode:'id', value:'p_carol'}, position:{mode:'id', value:'pos_setup'}, slot:{mode:'any'}, tags:['tag_skill'] },
-        { id:'rule_2', kind:'standard', strength:'required',  effect:'require', active:true,
+        { id:'rule_2', kind:'standard', strength:'required',  effect:'require', active:true, nickname:'',
           person:{mode:'any'}, position:{mode:'id', value:'pos_registration'}, slot:{mode:'id', value:0}, tags:['tag_coverage'] },
-        { id:'rule_3', kind:'standard', strength:'preferred', effect:'forbid',  active:true,
+        { id:'rule_3', kind:'standard', strength:'preferred', effect:'forbid',  active:true, nickname:'',
           person:{mode:'tag', value:'tag_female'}, position:{mode:'tag', value:'tag_physical'}, slot:{mode:'any'}, tags:['tag_comfort'] },
-        { id:'rule_4', kind:'standard', strength:'preferred', effect:'require', active:true,
+        { id:'rule_4', kind:'standard', strength:'preferred', effect:'require', active:true, nickname:'',
           person:{mode:'id', value:'p_alice'}, position:{mode:'id', value:'pos_techsupport'}, slot:{mode:'id', value:4}, tags:['tag_skill'] },
-        { id:'rule_5', kind:'standard', strength:'preferred', effect:'require', active:true,
+        { id:'rule_5', kind:'standard', strength:'preferred', effect:'require', active:true, nickname:'',
           person:{mode:'tag', value:'tag_bilingual'}, position:{mode:'id', value:'pos_frontdesk'}, slot:{mode:'range', start:0, end:3}, tags:['tag_language'] },
-        { id:'rule_6', kind:'relative', strength:'preferred', effect:'require', active:true,
+        { id:'rule_6', kind:'relative', strength:'preferred', effect:'require', active:true, nickname:'',
           person:{mode:'id', value:'p_alice'}, position:{mode:'any'}, slot:{mode:'any'},
           relative:{ type:'together', otherPerson:{mode:'id', value:'p_bob'} }, tags:['tag_pairing'] },
-        { id:'rule_7', kind:'relative', strength:'required', effect:'forbid', active:true,
+        { id:'rule_7', kind:'relative', strength:'required', effect:'forbid', active:true, nickname:'',
           person:{mode:'any'}, position:{mode:'tag', value:'tag_physical'}, slot:{mode:'any'},
           relative:{ type:'consecutive', maxConsecutive:2 }, tags:['tag_fairness'] },
+        { id:'rule_8', kind:'relative', strength:'required', effect:'forbid', active:true, nickname:'No mutual swaps',
+          person:{mode:'any'}, position:{mode:'any'}, slot:{mode:'any'},
+          relative:{ type:'swap' }, tags:['tag_integrity'] },
       ],
     },
   ],
@@ -845,13 +910,22 @@ var state = {
   assignments: null,
   rules: null,
   rejectedSuggestions: null,
+  lockedPeople: null,
+  lockedSlots: null,
+  lockedCells: null,
 };
 state.assignments = state.schedules[0].assignments;
 state.rules = state.schedules[0].rules;
 state.rejectedSuggestions = state.schedules[0].rejectedSuggestions;
+state.lockedPeople = state.schedules[0].lockedPeople;
+state.lockedSlots = state.schedules[0].lockedSlots;
+state.lockedCells = state.schedules[0].lockedCells;
 
 var rulesFocusPersonId = null;
+var rulesFocusSlotIndex = null;
 var showPersonTags = true;
+var fullViewMode = false;
+var resizeDrag = null; // { assignmentId, startX, startSlotCount, cellWidth }
 
 const NEW_TAG_PALETTE = [
   {bg:'#E4E7FB', text:'#3730A3'}, {bg:'#F6E4F5', text:'#86198F'},
@@ -873,6 +947,9 @@ function setActiveSchedule(id){
   state.assignments = sched.assignments;
   state.rules = sched.rules;
   state.rejectedSuggestions = sched.rejectedSuggestions;
+  state.lockedPeople = sched.lockedPeople;
+  state.lockedSlots = sched.lockedSlots;
+  state.lockedCells = sched.lockedCells;
   renderAll();
   const overlay = document.getElementById('settings-overlay');
   if(overlay && overlay.style.display==='flex'){
@@ -887,16 +964,35 @@ function createSchedule(name, seed){
     assignments: (seed && seed.assignments) || [],
     rules: (seed && seed.rules) || [],
     rejectedSuggestions: (seed && seed.rejectedSuggestions) || new Set(),
+    lockedPeople: (seed && seed.lockedPeople) || new Set(),
+    lockedSlots: (seed && seed.lockedSlots) || new Set(),
+    lockedCells: (seed && seed.lockedCells) || new Set(),
   };
   state.schedules.push(sched);
   return sched;
 }
-function cloneActiveSchedule(){
+function cellKeyFor(personId, slotIndex){ return `${personId}|${slotIndex}`; }
+function isCellLocked(sched, personId, slotIndex){
+  return sched.lockedPeople.has(personId) || sched.lockedSlots.has(slotIndex) || sched.lockedCells.has(cellKeyFor(personId, slotIndex));
+}
+function cloneActiveSchedule(mode){
   const src = activeSchedule();
+  let assignments;
+  if(mode==='unlocked'){
+    assignments = src.assignments.filter(a=>{
+      const occ = assignmentOccupiesSlots(a);
+      return occ.some(s=>isCellLocked(src, a.personId, s));
+    }).map(a=>({ ...a, id:genId('asg') }));
+  } else {
+    assignments = src.assignments.map(a=>({ ...a, id:genId('asg') }));
+  }
   const cloned = createSchedule(`${src.name} (copy)`, {
-    assignments: src.assignments.map(a=>({ ...a, id:genId('asg') })),
+    assignments,
     rules: src.rules.map(r=>({ ...JSON.parse(JSON.stringify(r)), id:genId('rule') })),
     rejectedSuggestions: new Set(src.rejectedSuggestions),
+    lockedPeople: new Set(src.lockedPeople),
+    lockedSlots: new Set(src.lockedSlots),
+    lockedCells: new Set(src.lockedCells),
   });
   setActiveSchedule(cloned.id);
 }
@@ -930,6 +1026,7 @@ function persist(){
       schedules: state.schedules.map(s=>({
         id:s.id, name:s.name, assignments:s.assignments, rules:s.rules,
         rejectedSuggestions: Array.from(s.rejectedSuggestions),
+        lockedPeople: Array.from(s.lockedPeople), lockedSlots: Array.from(s.lockedSlots), lockedCells: Array.from(s.lockedCells),
       })),
       activeScheduleId: state.activeScheduleId,
     };
@@ -949,6 +1046,7 @@ function loadPersisted(){
     state.schedules = payload.schedules.map(s=>({
       id:s.id, name:s.name, assignments:s.assignments||[], rules:s.rules||[],
       rejectedSuggestions: new Set(s.rejectedSuggestions||[]),
+      lockedPeople: new Set(s.lockedPeople||[]), lockedSlots: new Set(s.lockedSlots||[]), lockedCells: new Set(s.lockedCells||[]),
     }));
     state.activeScheduleId = (payload.activeScheduleId && state.schedules.some(s=>s.id===payload.activeScheduleId))
       ? payload.activeScheduleId : state.schedules[0].id;
@@ -956,6 +1054,9 @@ function loadPersisted(){
     state.assignments = sched.assignments;
     state.rules = sched.rules;
     state.rejectedSuggestions = sched.rejectedSuggestions;
+    state.lockedPeople = sched.lockedPeople;
+    state.lockedSlots = sched.lockedSlots;
+    state.lockedCells = sched.lockedCells;
     return true;
   }catch(e){ console.warn('Could not load persisted Duty Board state', e); return false; }
 }
@@ -1000,13 +1101,40 @@ function tagChipHtml(tagId){
 }
 function positionDurationSlots(positionId){
   const pos = state.positions.find(p=>p.id===positionId);
-  return pos ? Math.max(1, Math.round(pos.durationMinutes/SLOT_MINUTES)) : 1;
+  return pos ? Math.max(1, Math.round((pos.durationMin!==undefined?pos.durationMin:pos.durationMinutes||15)/SLOT_MINUTES)) : 1;
+}
+function positionMinDurationSlots(positionId){ return positionDurationSlots(positionId); }
+function positionMaxDurationSlots(positionId){
+  const pos = state.positions.find(p=>p.id===positionId);
+  if(!pos) return 1;
+  const maxMin = pos.durationMax!==undefined ? pos.durationMax : (pos.durationMin!==undefined?pos.durationMin:pos.durationMinutes||15);
+  return Math.max(positionMinDurationSlots(positionId), Math.round(maxMin/SLOT_MINUTES));
 }
 function assignmentOccupiesSlots(a){ return range(a.startSlot, a.startSlot+a.slotCount-1); }
 
+/* How many of the schedules BEFORE the active one (in tab order) had this exact
+   person/position/startSlot assignment — used for the "2/4" hint in the assign dropdown. */
+function historicalRatio(personId, positionId, startSlot){
+  const activeIdx = state.schedules.findIndex(s=>s.id===state.activeScheduleId);
+  const preceding = state.schedules.slice(0, activeIdx);
+  if(preceding.length===0) return null;
+  const matches = preceding.filter(s=>s.assignments.some(a=>a.personId===personId && a.positionId===positionId && a.startSlot===startSlot)).length;
+  return { matches, total: preceding.length };
+}
+
 /* ---------------- Rule target matching ---------------- */
 function personMatchesTarget(target, personId){
-  if(!target || target.mode==='any') return true;
+  if(!target) return true;
+  if(target.mode==='any'){
+    const reqTags = target.requiredTags || [];
+    const prohTags = target.prohibitedTags || [];
+    if(reqTags.length===0 && prohTags.length===0) return true;
+    const p = state.people.find(p=>p.id===personId);
+    if(!p) return false;
+    if(!reqTags.every(t=>p.tags.includes(t))) return false;
+    if(prohTags.some(t=>p.tags.includes(t))) return false;
+    return true;
+  }
   if(target.mode==='id') return target.value===personId;
   if(target.mode==='tag'){ const p = state.people.find(p=>p.id===personId); return !!p && p.tags.includes(target.value); }
   return false;
@@ -1046,7 +1174,20 @@ function candidateStartSlotsForSlotTarget(target, durSlots, totalSlots){
 
 /* ---------------- Rule label generation ---------------- */
 function targetDescription(target, kind){
-  if(!target || target.mode==='any') return kind==='person' ? 'anyone' : 'any position';
+  if(!target) return kind==='person' ? 'anyone' : 'any position';
+  if(target.mode==='any'){
+    if(kind!=='person') return 'any position';
+    const reqTags = target.requiredTags || [], prohTags = target.prohibitedTags || [];
+    if(reqTags.length===0 && prohTags.length===0) return 'anyone';
+    const parts = [];
+    if(reqTags.length) parts.push(`tagged ${reqTags.map(t=>`"${tagName(t)}"`).join(' & ')}`);
+    if(prohTags.length) parts.push(`not tagged ${prohTags.map(t=>`"${tagName(t)}"`).join(' or ')}`);
+    const countRange = target.count || {min:1, max:1};
+    const countPhrase = (countRange.min===countRange.max)
+      ? `${countRange.min} ${countRange.min===1?'person':'people'}`
+      : `${countRange.min}–${countRange.max} people`;
+    return `${countPhrase} ${parts.join(', ')}`;
+  }
   if(target.mode==='id') return kind==='person' ? personName(target.value) : positionName(target.value);
   if(target.mode==='tag'){
     const t = state.tags.find(t=>t.id===target.value);
@@ -1090,6 +1231,9 @@ function ruleLabel(rule){
   if(rel.type==='crossSchedule'){
     const n = rel.maxRepeat || 2;
     return `${cap(p)} ${modal} repeat the same ${pos} assignment (same time slot) in ${n} consecutive schedules (viewing order).`;
+  }
+  if(rel.type==='swap'){
+    return `${cap(p)} cannot go from any position X to any position Y when anyone is coming from position Y to position X (no mutual swaps).`;
   }
   return `${cap(p)} ${rule.effect==='forbid'?'cannot':'must'} be scheduled for ${pos}, ${t}.`;
 }
@@ -1171,6 +1315,58 @@ function violatesCrossScheduleRule(rule, personId, positionId, startSlot, durSlo
   }
   return streak>=maxRepeat;
 }
+/* Does some OTHER person (excluding excludePersonId) have an assignment at fromPos
+   that ends before an assignment they also have at toPos begins? (i.e. that person
+   goes fromPos -> toPos, the mirror image of the candidate's transition.) */
+function hasOppositeTransition(excludePersonId, fromPos, toPos, excludeId){
+  const others = state.assignments.filter(a=>a.personId!==excludePersonId && a.id!==excludeId);
+  const fromAssignments = others.filter(a=>a.positionId===fromPos);
+  const toAssignments = others.filter(a=>a.positionId===toPos);
+  for(const f of fromAssignments){
+    const fEnd = f.startSlot+f.slotCount-1;
+    for(const t of toAssignments){
+      if(t.personId===f.personId && t.startSlot>fEnd) return true;
+    }
+  }
+  return false;
+}
+function violatesSwapRule(rule, personId, positionId, occupiedSlots, excludeId){
+  if(!personMatchesTarget(rule.person, personId)) return false;
+  const candStart = occupiedSlots[0], candEnd = occupiedSlots[occupiedSlots.length-1];
+  const myOthers = state.assignments.filter(a=>a.personId===personId && a.id!==excludeId);
+
+  // Candidate is the LATER leg (Y) of a P1 -> positionId transition for this person.
+  for(const a of myOthers){
+    const aEnd = a.startSlot+a.slotCount-1;
+    if(aEnd<candStart && a.positionId!==positionId){
+      if(hasOppositeTransition(personId, positionId, a.positionId, excludeId)) return true;
+    }
+  }
+  // Candidate is the EARLIER leg (X) of a positionId -> P2 transition for this person.
+  for(const a of myOthers){
+    if(a.startSlot>candEnd && a.positionId!==positionId){
+      if(hasOppositeTransition(personId, a.positionId, positionId, excludeId)) return true;
+    }
+  }
+  return false;
+}
+function findSwapCounterparts(personId, positionId, occupiedSlots, excludeId){
+  const candStart = occupiedSlots[0], candEnd = occupiedSlots[occupiedSlots.length-1];
+  const myOthers = state.assignments.filter(a=>a.personId===personId && a.id!==excludeId);
+  const involved = [];
+  for(const a of myOthers){
+    const aEnd = a.startSlot+a.slotCount-1;
+    if(aEnd<candStart && a.positionId!==positionId && hasOppositeTransition(personId, positionId, a.positionId, excludeId)){
+      involved.push(a.id);
+      state.assignments.filter(b=>b.personId!==personId && b.id!==excludeId && b.positionId===positionId).forEach(b=>{
+        const bEnd = b.startSlot+b.slotCount-1;
+        const hasReturn = state.assignments.some(c=>c.personId===b.personId && c.positionId===a.positionId && c.startSlot>bEnd);
+        if(hasReturn) involved.push(b.id);
+      });
+    }
+  }
+  return involved;
+}
 
 function describeHighlights(rule, personId, positionId, occupiedSlots){
   const out = { personIds:[], slots:[], assignmentIds:[], scheduleIds:[] };
@@ -1203,14 +1399,18 @@ function describeHighlights(rule, personId, positionId, occupiedSlots){
         a.personId===personId && a.positionId===positionId && a.startSlot===occupiedSlots[0] && a.slotCount===durSlots);
       if(match) out.scheduleIds.push(state.schedules[i].id); else break;
     }
+  } else if(rel.type==='swap'){
+    findSwapCounterparts(personId, positionId, occupiedSlots, null).forEach(id=>out.assignmentIds.push(id));
   }
   return out;
 }
 
 /* ---------------- Hard constraint checking ---------------- */
-function isValidPlacement(personId, positionId, startSlot){
+function isValidPlacement(personId, positionId, startSlot, opts){
+  opts = opts || {};
   const slots = getSlots();
-  const durSlots = positionDurationSlots(positionId);
+  const durSlots = opts.durSlots!==undefined ? opts.durSlots : positionDurationSlots(positionId);
+  const excludeId = opts.excludeAssignmentId;
   if(startSlot<0 || startSlot+durSlots>slots.length){
     const remain = Math.max(0, slots.length-startSlot)*SLOT_MINUTES;
     return { ok:false, reason:`Doesn't fit — needs ${durSlots*SLOT_MINUTES} min but only ${remain} min remain in the schedule.` };
@@ -1218,7 +1418,7 @@ function isValidPlacement(personId, positionId, startSlot){
   const occupied = range(startSlot, startSlot+durSlots-1);
 
   for(const s of occupied){
-    const conflict = state.assignments.find(a=>a.personId===personId && assignmentOccupiesSlots(a).includes(s));
+    const conflict = state.assignments.find(a=>a.id!==excludeId && a.personId===personId && assignmentOccupiesSlots(a).includes(s));
     if(conflict){
       return { ok:false, reason:`${personName(personId)} is already scheduled for ${positionName(conflict.positionId)} at ${slots[s].label}.`, conflictAssignmentId: conflict.id };
     }
@@ -1227,7 +1427,7 @@ function isValidPlacement(personId, positionId, startSlot){
   const pos = state.positions.find(p=>p.id===positionId);
   if(pos && pos.singlePerson){
     for(const s of occupied){
-      const conflict = state.assignments.find(a=>a.positionId===positionId && a.personId!==personId && assignmentOccupiesSlots(a).includes(s));
+      const conflict = state.assignments.find(a=>a.id!==excludeId && a.positionId===positionId && a.personId!==personId && assignmentOccupiesSlots(a).includes(s));
       if(conflict){
         return { ok:false, reason:`${pos.name} allows only one person at a time — already filled by ${personName(conflict.personId)} at ${slots[s].label}.`, conflictAssignmentId: conflict.id };
       }
@@ -1240,10 +1440,11 @@ function isValidPlacement(personId, positionId, startSlot){
     if(rule.kind==='relative'){
       const relType = rule.relative && rule.relative.type;
       let violated = false;
-      if(relType==='sequence') violated = violatesSequenceRule(rule, personId, positionId, occupied);
-      else if(relType==='together') violated = violatesTogetherRule(rule, personId, positionId, occupied);
-      else if(relType==='consecutive') violated = violatesConsecutiveRule(rule, personId, positionId, startSlot, durSlots);
+      if(relType==='sequence') violated = violatesSequenceRule(rule, personId, positionId, occupied, excludeId);
+      else if(relType==='together') violated = violatesTogetherRule(rule, personId, positionId, occupied, excludeId);
+      else if(relType==='consecutive') violated = violatesConsecutiveRule(rule, personId, positionId, startSlot, durSlots, excludeId);
       else if(relType==='crossSchedule') violated = violatesCrossScheduleRule(rule, personId, positionId, startSlot, durSlots);
+      else if(relType==='swap') violated = violatesSwapRule(rule, personId, positionId, occupied, excludeId);
       if(violated) return { ok:false, reason: ruleLabel(rule), rule, highlights: describeHighlights(rule, personId, positionId, occupied) };
       continue;
     }
@@ -1257,6 +1458,25 @@ function isValidPlacement(personId, positionId, startSlot){
     }
   }
   return { ok:true };
+}
+
+/* Validate resizing an EXISTING assignment to a new slot count (drag-to-resize). */
+function isValidResize(assignmentId, newSlotCount){
+  const a = state.assignments.find(x=>x.id===assignmentId);
+  if(!a) return { ok:false, reason:'Assignment not found.' };
+  const minSlots = positionMinDurationSlots(a.positionId);
+  const maxSlots = positionMaxDurationSlots(a.positionId);
+  if(newSlotCount<minSlots || newSlotCount>maxSlots){
+    return { ok:false, reason:`${positionName(a.positionId)} must be between ${minSlots*SLOT_MINUTES} and ${maxSlots*SLOT_MINUTES} minutes.` };
+  }
+  return isValidPlacement(a.personId, a.positionId, a.startSlot, { durSlots:newSlotCount, excludeAssignmentId:a.id });
+}
+function resizeAssignment(assignmentId, newSlotCount){
+  const check = isValidResize(assignmentId, newSlotCount);
+  if(!check.ok) return false;
+  const a = state.assignments.find(x=>x.id===assignmentId);
+  a.slotCount = newSlotCount;
+  return true;
 }
 
 /* ---------------- Preferred-rule matching (soft/suggestion side) ---------------- */
@@ -1317,6 +1537,7 @@ function computeViolations(){
         else if(relType==='together') violated = violatesTogetherRule(rule, a.personId, a.positionId, occ, a.id);
         else if(relType==='consecutive') violated = violatesConsecutiveRule(rule, a.personId, a.positionId, a.startSlot, a.slotCount, a.id);
         else if(relType==='crossSchedule') violated = violatesCrossScheduleRule(rule, a.personId, a.positionId, a.startSlot, a.slotCount);
+        else if(relType==='swap') violated = violatesSwapRule(rule, a.personId, a.positionId, occ, a.id);
         if(violated && rule.strength==='required') out.push({ rule, assignment:a, kind:'forbidden-but-scheduled' });
       }
       continue;
@@ -1334,12 +1555,20 @@ function computeViolations(){
       }
     } else if(rule.effect==='require' && rule.strength==='required'){
       const targets = targetSlotIndices(rule.slot, totalSlots);
+      const isAnyWithCount = rule.person && rule.person.mode==='any';
+      const countRange = isAnyWithCount ? (rule.person.count || {min:1, max:1}) : null;
       for(const s of targets){
-        const covered = state.assignments.some(a=>
-          personMatchesTarget(rule.person, a.personId) &&
-          positionMatchesTarget(rule.position, a.positionId) &&
-          assignmentOccupiesSlots(a).includes(s));
-        if(!covered) out.push({ rule, slot:s, kind:'uncovered' });
+        const matchingPeople = new Set(
+          state.assignments
+            .filter(a=>personMatchesTarget(rule.person, a.personId) && positionMatchesTarget(rule.position, a.positionId) && assignmentOccupiesSlots(a).includes(s))
+            .map(a=>a.personId)
+        );
+        if(isAnyWithCount){
+          if(matchingPeople.size < countRange.min) out.push({ rule, slot:s, kind:'uncovered' });
+          else if(matchingPeople.size > countRange.max) out.push({ rule, slot:s, kind:'overcapacity' });
+        } else if(matchingPeople.size < 1){
+          out.push({ rule, slot:s, kind:'uncovered' });
+        }
       }
     }
   }
@@ -1413,12 +1642,14 @@ function computeSuggestions(){
     }
 
     const targets = targetSlotIndices(rule.slot, totalSlots);
+    const isAnyWithCount = rule.person && rule.person.mode==='any';
+    const countMax = isAnyWithCount && rule.person.count ? rule.person.count.max : 1;
     for(const s of targets){
-      const covered = state.assignments.some(a=>
+      const matchingCount = state.assignments.filter(a=>
         personMatchesTarget(rule.person, a.personId) &&
         positionMatchesTarget(rule.position, a.positionId) &&
-        assignmentOccupiesSlots(a).includes(s));
-      if(covered) continue;
+        assignmentOccupiesSlots(a).includes(s)).length;
+      if(matchingCount>=countMax) continue;
       const people = state.people.filter(p=>personMatchesTarget(rule.person, p.id)).map(p=>p.id);
       const positions = state.positions.filter(p=>positionMatchesTarget(rule.position, p.id)).map(p=>p.id);
       for(const personId of people){
@@ -1526,13 +1757,36 @@ function renderAll(){
   syncDirectRequiredAssignments();
   document.getElementById('db-header-sub').textContent =
     `${formatTime(state.settings.startMinutes)} – ${formatTime(state.settings.endMinutes)} · ${getSlots().length} × 15-min slots`;
+  const visibleCount = state.people.filter(p=>!p.hidden).length;
   document.getElementById('chart-range-note').textContent =
-    `${state.people.length} people · ${state.positions.length} positions`;
+    `${visibleCount} people · ${state.positions.length} positions`;
   renderScheduleTabs();
   renderChart();
   renderDecisions();
   renderRules();
+  renderHiddenPeopleControl();
   persist();
+}
+
+function renderHiddenPeopleControl(){
+  const sel = document.getElementById('hidden-people-select');
+  if(!sel) return;
+  const hidden = state.people.filter(p=>p.hidden);
+  if(hidden.length===0){
+    sel.innerHTML = `<option value="">No people toggled off</option>`;
+    sel.disabled = true;
+    return;
+  }
+  sel.disabled = false;
+  sel.innerHTML = `<option value="">${hidden.length} toggled off — select to restore</option>` +
+    hidden.map(p=>`<option value="${p.id}">Restore ${escapeHtml(p.name)}</option>`).join('');
+  sel.onchange = ()=>{
+    if(sel.value){
+      const p = state.people.find(x=>x.id===sel.value);
+      if(p) p.hidden = false;
+      renderAll();
+    }
+  };
 }
 
 function renderScheduleTabs(){
@@ -1565,12 +1819,23 @@ function renderChart(){
   const grid = document.getElementById('chart-grid');
   grid.innerHTML = '';
   const slots = getSlots();
-  grid.style.gridTemplateColumns = `150px repeat(${slots.length}, 46px)`;
-  grid.style.gridTemplateRows = `48px repeat(${state.people.length}, 40px)`;
+  const visiblePeople = state.people.filter(p=>!p.hidden);
+  const sched = activeSchedule();
+
+  const scrollEl = document.querySelector('#chart-panel .db-chart-scroll');
+  if(scrollEl) scrollEl.classList.toggle('full-view', fullViewMode);
+  grid.classList.toggle('full-view', fullViewMode);
+  let colWidth = 46;
+  if(fullViewMode && scrollEl){
+    const available = scrollEl.clientWidth - 150 - 32;
+    if(available>0) colWidth = Math.max(10, Math.min(46, Math.floor(available / Math.max(1,slots.length))));
+  }
+  grid.style.gridTemplateColumns = `150px repeat(${slots.length}, ${fullViewMode ? `minmax(${colWidth}px, 1fr)` : `${colWidth}px`})`;
+  grid.style.gridTemplateRows = `48px repeat(${visiblePeople.length}, 40px)`;
 
   const corner = document.createElement('div');
   corner.className = 'db-corner';
-  corner.textContent = `${state.people.length} people`;
+  corner.textContent = `${visiblePeople.length} people`;
   grid.appendChild(corner);
 
   slots.forEach((s,i)=>{
@@ -1579,22 +1844,31 @@ function renderChart(){
     el.className = 'db-time-head' + (showLabel ? ' hour-start' : '');
     el.style.gridColumn = `${i+2}`;
     el.style.gridRow = '1';
-    el.title = s.label;
+    el.title = `${s.label} — click for options`;
+    el.dataset.slot = i;
     if(showLabel){
       const span = document.createElement('span');
       span.textContent = formatTimeShort(s.minutes);
       el.appendChild(span);
     }
+    if(sched.lockedSlots.has(i)){
+      const badge = document.createElement('span');
+      badge.className = 'db-lock-badge';
+      badge.textContent = '🔒';
+      el.appendChild(badge);
+    }
+    el.addEventListener('click', (e)=>openTimeHeadPopup(e, i));
     grid.appendChild(el);
   });
 
-  state.people.forEach((p,pi)=>{
+  visiblePeople.forEach((p,pi)=>{
     const label = document.createElement('div');
     label.className = 'db-row-label';
     label.style.gridColumn = '1';
     label.style.gridRow = `${pi+2}`;
     label.dataset.personId = p.id;
-    label.innerHTML = `<div class="name">${escapeHtml(p.name)}</div><div class="tags${showPersonTags?'':' tags-hidden'}">${p.tags.map(t=>tagChipHtml(t)).join('')}</div>`;
+    const lockBadge = sched.lockedPeople.has(p.id) ? '<span class="db-lock-badge">🔒</span>' : '';
+    label.innerHTML = `${lockBadge}<div class="name">${escapeHtml(p.name)}</div><div class="tags${showPersonTags?'':' tags-hidden'}">${p.tags.map(t=>tagChipHtml(t)).join('')}</div>`;
     label.addEventListener('click', (e)=>openPersonPopup(e, p.id));
     grid.appendChild(label);
 
@@ -1606,6 +1880,12 @@ function renderChart(){
       cell.dataset.person = p.id;
       cell.dataset.slot = si;
       cell.title = `${p.name} · ${s.label} — click to assign`;
+      if(sched.lockedCells.has(cellKeyFor(p.id, si)) && !sched.lockedPeople.has(p.id) && !sched.lockedSlots.has(si)){
+        const badge = document.createElement('span');
+        badge.className = 'db-lock-badge';
+        badge.textContent = '🔒';
+        cell.appendChild(badge);
+      }
       cell.addEventListener('click', (e)=>onCellClick(e, p.id, si));
       grid.appendChild(cell);
     });
@@ -1614,7 +1894,7 @@ function renderChart(){
   const violations = computeViolations();
 
   state.assignments.forEach(a=>{
-    const pi = state.people.findIndex(p=>p.id===a.personId);
+    const pi = visiblePeople.findIndex(p=>p.id===a.personId);
     if(pi<0) return;
     const pos = state.positions.find(p=>p.id===a.positionId);
     if(!pos) return;
@@ -1629,6 +1909,13 @@ function renderChart(){
     block.dataset.assignmentId = a.id;
     block.title = `${pos.name} · ${personName(a.personId)} · click to remove`;
     block.addEventListener('click', (e)=>{ e.stopPropagation(); openAssignmentPopup(e, a); });
+    if(pos.durationMin!==pos.durationMax){
+      const handle = document.createElement('div');
+      handle.className = 'resize-handle';
+      handle.title = `Drag to resize (${pos.durationMin}-${pos.durationMax} min)`;
+      handle.addEventListener('mousedown', (e)=>startResizeDrag(e, a.id));
+      block.appendChild(handle);
+    }
     grid.appendChild(block);
   });
 
@@ -1642,7 +1929,7 @@ function renderChart(){
   grouped.forEach((group, key)=>{
     const [personId, startSlotStr] = key.split('|');
     const startSlot = Number(startSlotStr);
-    const pi = state.people.findIndex(p=>p.id===personId);
+    const pi = visiblePeople.findIndex(p=>p.id===personId);
     if(pi<0) return;
     const maxDur = Math.max(...group.map(g=>g.durSlots));
     const box = document.createElement('div');
@@ -1665,6 +1952,51 @@ function renderChart(){
   });
 }
 
+/* ---------------- Drag-to-resize a position's in-schedule duration ---------------- */
+function startResizeDrag(e, assignmentId){
+  e.stopPropagation();
+  e.preventDefault();
+  const a = state.assignments.find(x=>x.id===assignmentId);
+  if(!a) return;
+  const block = document.querySelector(`.db-block[data-assignment-id="${assignmentId}"]`);
+  const rect = block ? block.getBoundingClientRect() : { width: 46*a.slotCount };
+  const perSlotWidth = (rect.width || 46*a.slotCount) / a.slotCount;
+  resizeDrag = { assignmentId, startX: e.clientX, startSlotCount: a.slotCount, perSlotWidth: perSlotWidth||46, lastValidSlotCount: a.slotCount };
+  if(block) block.classList.add('resizing');
+  document.addEventListener('mousemove', onResizeMouseMove);
+  document.addEventListener('mouseup', onResizeMouseUp);
+}
+function onResizeMouseMove(e){
+  if(!resizeDrag) return;
+  const a = state.assignments.find(x=>x.id===resizeDrag.assignmentId);
+  if(!a) return;
+  const deltaPx = e.clientX - resizeDrag.startX;
+  const deltaSlots = Math.round(deltaPx / resizeDrag.perSlotWidth);
+  const minSlots = positionMinDurationSlots(a.positionId);
+  const maxSlots = positionMaxDurationSlots(a.positionId);
+  let candidate = Math.max(minSlots, Math.min(maxSlots, resizeDrag.startSlotCount + deltaSlots));
+  const check = isValidResize(resizeDrag.assignmentId, candidate);
+  if(check.ok){
+    resizeDrag.lastValidSlotCount = candidate;
+    const block = document.querySelector(`.db-block[data-assignment-id="${resizeDrag.assignmentId}"]`);
+    if(block) block.style.gridColumn = `${a.startSlot+2} / span ${candidate}`;
+  }
+}
+function onResizeMouseUp(){
+  if(!resizeDrag) return;
+  const a = state.assignments.find(x=>x.id===resizeDrag.assignmentId);
+  const finalCount = resizeDrag.lastValidSlotCount;
+  document.removeEventListener('mousemove', onResizeMouseMove);
+  document.removeEventListener('mouseup', onResizeMouseUp);
+  resizeDrag = null;
+  if(a && finalCount!==a.slotCount) a.slotCount = finalCount;
+  renderAll();
+}
+
+function ruleNicknamePrefix(rule){
+  return rule.nickname ? `<strong>${escapeHtml(rule.nickname)}</strong> — ` : '';
+}
+
 function renderDecisions(){
   const body = document.getElementById('decisions-body');
   body.innerHTML = '';
@@ -1675,12 +2007,17 @@ function renderDecisions(){
     card.className = 'db-violation-card';
     const tag = document.createElement('span');
     tag.className = 'tag';
-    tag.textContent = v.kind==='forbidden-but-scheduled' ? 'Rule violated' : 'Required — unfilled';
+    tag.textContent = v.kind==='forbidden-but-scheduled' ? 'Rule violated'
+      : v.kind==='overcapacity' ? 'Required — over capacity' : 'Required — unfilled';
     const txt = document.createElement('div');
     txt.className = 'txt';
-    txt.textContent = v.kind==='forbidden-but-scheduled'
-      ? `${ruleLabel(v.rule)} But ${personName(v.assignment.personId)} is scheduled for ${positionName(v.assignment.positionId)} at ${getSlots()[v.assignment.startSlot].label}.`
-      : `${ruleLabel(v.rule)} Not yet covered at ${getSlots()[v.slot].label}.`;
+    if(v.kind==='forbidden-but-scheduled'){
+      txt.innerHTML = `${ruleNicknamePrefix(v.rule)}${escapeHtml(ruleLabel(v.rule))} But ${escapeHtml(personName(v.assignment.personId))} is scheduled for ${escapeHtml(positionName(v.assignment.positionId))} at ${getSlots()[v.assignment.startSlot].label}.`;
+    } else if(v.kind==='overcapacity'){
+      txt.innerHTML = `${ruleNicknamePrefix(v.rule)}${escapeHtml(ruleLabel(v.rule))} Too many people at ${getSlots()[v.slot].label}.`;
+    } else {
+      txt.innerHTML = `${ruleNicknamePrefix(v.rule)}${escapeHtml(ruleLabel(v.rule))} Not yet covered at ${getSlots()[v.slot].label}.`;
+    }
     card.appendChild(tag); card.appendChild(txt);
     card.addEventListener('click', ()=>{
       if(v.kind==='forbidden-but-scheduled') flashCell(v.assignment.personId, v.assignment.startSlot);
@@ -1759,8 +2096,9 @@ function flashCell(personId, slotIndex){
 /* ---------------- Rules list ---------------- */
 function matchesDimFilter(target, filterVal){
   if(filterVal==='all') return true;
-  if(filterVal==='unused') return target.mode==='any';
-  if(filterVal==='general') return target.mode==='tag' || target.mode==='range';
+  const isAnyRestricted = target.mode==='any' && (((target.requiredTags||[]).length) || ((target.prohibitedTags||[]).length));
+  if(filterVal==='unused') return target.mode==='any' && !isAnyRestricted;
+  if(filterVal==='general') return target.mode==='tag' || target.mode==='range' || isAnyRestricted;
   if(filterVal==='specific') return target.mode==='id';
   return true;
 }
@@ -1769,6 +2107,7 @@ function getFilteredRules(){
   const fPerson = document.getElementById('filter-person').value;
   const fPosition = document.getElementById('filter-position').value;
   const fTime = document.getElementById('filter-time').value;
+  const fRuleTag = document.getElementById('filter-rule-tag').value;
   const showRequired = document.getElementById('filter-required').checked;
   const showPreferred = document.getElementById('filter-preferred').checked;
   const showInactive = document.getElementById('filter-inactive').checked;
@@ -1780,15 +2119,19 @@ function getFilteredRules(){
     if(!matchesDimFilter(rule.person, fPerson)) return false;
     if(!matchesDimFilter(rule.position, fPosition)) return false;
     if(!matchesDimFilter(rule.slot, fTime)) return false;
+    if(fRuleTag!=='all' && !(rule.tags||[]).includes(fRuleTag)) return false;
     if(rulesFocusPersonId){
       const touchesFocus = personMatchesTarget(rule.person, rulesFocusPersonId) ||
         (rule.kind==='relative' && rule.relative && rule.relative.otherPerson && personMatchesTarget(rule.relative.otherPerson, rulesFocusPersonId));
       if(!touchesFocus) return false;
     }
+    if(rulesFocusSlotIndex!==null){
+      if(!slotMatchesTarget(rule.slot, rulesFocusSlotIndex)) return false;
+    }
     if(search){
       const tagText = (rule.tags||[]).map(tid=>tagName(tid)).join(' ');
-      const hay = (ruleLabel(rule) + ' ' + tagText).toLowerCase();
-      if(!hay.includes(search)) return false;
+      const hay = (rule.nickname||'') + ' ' + ruleLabel(rule) + ' ' + tagText;
+      if(!hay.toLowerCase().includes(search)) return false;
     }
     return true;
   });
@@ -1797,14 +2140,25 @@ function renderRules(){
   const body = document.getElementById('rules-body');
   body.innerHTML = '';
 
-  if(rulesFocusPersonId){
+  const ruleTagSel = document.getElementById('filter-rule-tag');
+  if(ruleTagSel){
+    const currentVal = ruleTagSel.value;
+    const ruleTags = state.tags.filter(t=>t.category==='rule');
+    ruleTagSel.innerHTML = `<option value="all">All tags</option>` + ruleTags.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+    if(ruleTags.some(t=>t.id===currentVal)) ruleTagSel.value = currentVal;
+  }
+
+  if(rulesFocusPersonId || rulesFocusSlotIndex!==null){
     const chip = document.createElement('div');
-    chip.style.cssText = 'margin-bottom:10px; font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:8px;';
-    chip.innerHTML = `Showing rules for <strong style="color:var(--ink);">${escapeHtml(personName(rulesFocusPersonId))}</strong>`;
+    chip.style.cssText = 'margin-bottom:10px; font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:8px; flex-wrap:wrap;';
+    const label = rulesFocusPersonId
+      ? `Showing rules for <strong style="color:var(--ink);">${escapeHtml(personName(rulesFocusPersonId))}</strong>`
+      : `Showing rules touching <strong style="color:var(--ink);">${getSlots()[rulesFocusSlotIndex].label}</strong>`;
+    chip.innerHTML = label;
     const clearBtn = document.createElement('button');
     clearBtn.className = 'btn btn-sm';
     clearBtn.textContent = 'Clear';
-    clearBtn.addEventListener('click', ()=>{ rulesFocusPersonId = null; renderRules(); });
+    clearBtn.addEventListener('click', ()=>{ rulesFocusPersonId = null; rulesFocusSlotIndex = null; renderRules(); });
     chip.appendChild(clearBtn);
     body.appendChild(chip);
   }
@@ -1852,7 +2206,8 @@ function renderRuleRow(rule, violations){
   }
 
   const main = document.createElement('div'); main.className = 'rule-main';
-  const txt = document.createElement('div'); txt.className = 'rule-text'; txt.textContent = ruleLabel(rule);
+  const txt = document.createElement('div'); txt.className = 'rule-text';
+  txt.innerHTML = `${ruleNicknamePrefix(rule)}${escapeHtml(ruleLabel(rule))}`;
   main.appendChild(txt);
   const meta = document.createElement('div'); meta.className = 'rule-meta';
   (rule.tags||[]).forEach(tid=>{
@@ -1961,7 +2316,8 @@ function positionOptionsFor(personId, slotIndex){
     const check = isValidPlacement(personId, pos.id, slotIndex);
     const durSlots = positionDurationSlots(pos.id);
     const prefMatches = check.ok ? preferredMatchesFor(personId, pos.id, slotIndex) : [];
-    return { position:pos, ok:check.ok, reason:check.reason, conflictAssignmentId:check.conflictAssignmentId, highlights:check.highlights, starred: prefMatches.length>0, durSlots };
+    const history = historicalRatio(personId, pos.id, slotIndex);
+    return { position:pos, ok:check.ok, reason:check.reason, conflictAssignmentId:check.conflictAssignmentId, highlights:check.highlights, starred: prefMatches.length>0, durSlots, history };
   });
 }
 
@@ -1976,14 +2332,30 @@ function openAssignDropdown(e, personId, slotIndex){
   const dd = document.createElement('div');
   dd.className = 'db-dropdown';
   const options = positionOptionsFor(personId, slotIndex);
-  dd.innerHTML = `<div class="db-dropdown-head">${escapeHtml(personName(personId))} · ${getSlots()[slotIndex].label}</div><div class="db-dropdown-list"></div>`;
+  const sched = activeSchedule();
+  const cellKey = cellKeyFor(personId, slotIndex);
+  const cellLocked = sched.lockedCells.has(cellKey);
+  dd.innerHTML = `<div class="db-dropdown-head db-option-head-actions">
+      <span>${escapeHtml(personName(personId))} · ${getSlots()[slotIndex].label}</span>
+      <button class="db-option-lock-toggle ${cellLocked?'on':''}" id="dd-lock-cell" title="${cellLocked?'Unlock this cell':'Lock this cell'}">🔒</button>
+    </div><div class="db-dropdown-list"></div>`;
+  dd.querySelector('#dd-lock-cell').addEventListener('click', ()=>{
+    if(sched.lockedCells.has(cellKey)) sched.lockedCells.delete(cellKey);
+    else sched.lockedCells.add(cellKey);
+    closeFloating();
+    renderAll();
+  });
   const list = dd.querySelector('.db-dropdown-list');
   options.forEach(opt=>{
     const row = document.createElement('div');
     row.className = 'db-option ' + (opt.ok ? 'ok' : 'blocked');
+    const durText = opt.position.durationMin===opt.position.durationMax
+      ? `${opt.position.durationMin}m` : `${opt.position.durationMin}-${opt.position.durationMax}m`;
+    const historyText = opt.history ? `<span class="history-ratio">${opt.history.matches}/${opt.history.total}</span>` : '';
     row.innerHTML = `<span class="dot" style="background:${opt.position.color}"></span>
       <span class="label">${escapeHtml(opt.position.name)}${opt.starred?' <span class="star-mark">★</span>':''}</span>
-      <span class="dur">${opt.position.durationMinutes}m</span>`;
+      ${historyText}
+      <span class="dur">${durText}</span>`;
     if(opt.ok){
       row.addEventListener('click', ()=>{
         state.assignments.push({ id:genId('asg'), personId, positionId:opt.position.id, startSlot:slotIndex, slotCount:opt.durSlots });
@@ -2042,13 +2414,21 @@ function openAssignmentPopup(e, a){
   const pop = document.createElement('div');
   pop.className = 'db-popup';
   const pos = state.positions.find(p=>p.id===a.positionId);
+  const sched = activeSchedule();
+  const cellKey = cellKeyFor(a.personId, a.startSlot);
+  const locked = sched.lockedCells.has(cellKey);
   pop.innerHTML = `<div class="title">${escapeHtml(pos ? pos.name : '?')} — ${escapeHtml(personName(a.personId))}</div>
     <div class="rule-hint">${getSlots()[a.startSlot].label} · ${a.slotCount*SLOT_MINUTES} min</div>
-    <div class="row"><button class="btn btn-sm btn-danger-outline" id="pop-remove">Remove</button></div>`;
+    <div class="row"><button class="btn btn-sm" id="pop-lock">${locked?'Unlock cell':'Lock cell'}</button><button class="btn btn-sm btn-danger-outline" id="pop-remove">Remove</button></div>`;
   layer.appendChild(pop);
   positionFloating(pop, rect);
   pop.querySelector('#pop-remove').addEventListener('click', ()=>{
     state.assignments = state.assignments.filter(x=>x.id!==a.id);
+    closeFloating(); renderAll();
+  });
+  pop.querySelector('#pop-lock').addEventListener('click', ()=>{
+    if(sched.lockedCells.has(cellKey)) sched.lockedCells.delete(cellKey);
+    else sched.lockedCells.add(cellKey);
     closeFloating(); renderAll();
   });
   registerCloser((ev)=>{ if(!pop.contains(ev.target)) closeFloating(); });
@@ -2061,10 +2441,13 @@ function openPersonPopup(e, personId){
   const pop = document.createElement('div');
   pop.className = 'db-popup';
   const person = state.people.find(p=>p.id===personId);
+  const sched = activeSchedule();
+  const locked = sched.lockedPeople.has(personId);
   const tagsHtml = person.tags.map(t=>tagChipHtml(t)).join(' ') || '<span class="db-empty-note" style="padding:0;">No tags</span>';
   pop.innerHTML = `<div class="title">${escapeHtml(person.name)}</div>
     <div class="rule-hint">${tagsHtml}</div>
-    <div class="row"><button class="btn btn-sm btn-primary" id="pop-show-rules" style="width:100%;">Show rules</button></div>`;
+    <div class="row"><button class="btn btn-sm" id="pop-lock-person">${locked?'Unlock row':'Lock row'}</button><button class="btn btn-sm" id="pop-toggle-person">Toggle person</button></div>
+    <div class="row" style="margin-top:6px;"><button class="btn btn-sm btn-primary" id="pop-show-rules" style="width:100%;">Show rules</button></div>`;
   layer.appendChild(pop);
   positionFloating(pop, rect);
   pop.querySelector('#pop-show-rules').addEventListener('click', ()=>{
@@ -2074,7 +2457,65 @@ function openPersonPopup(e, personId){
     const panel = document.getElementById('rules-panel');
     if(panel.scrollIntoView) panel.scrollIntoView({ behavior:'smooth', block:'start' });
   });
+  pop.querySelector('#pop-lock-person').addEventListener('click', ()=>{
+    if(sched.lockedPeople.has(personId)) sched.lockedPeople.delete(personId);
+    else sched.lockedPeople.add(personId);
+    closeFloating(); renderAll();
+  });
+  pop.querySelector('#pop-toggle-person').addEventListener('click', ()=>{
+    person.hidden = true;
+    closeFloating(); renderAll();
+  });
   registerCloser((ev)=>{ if(!pop.contains(ev.target)) closeFloating(); });
+}
+
+function openTimeHeadPopup(e, slotIndex){
+  closeFloating();
+  const layer = document.getElementById('floating-layer');
+  const rect = e.currentTarget.getBoundingClientRect();
+  const sched = activeSchedule();
+  const locked = sched.lockedSlots.has(slotIndex);
+  const pop = document.createElement('div');
+  pop.className = 'db-popup';
+  pop.innerHTML = `<div class="title">${getSlots()[slotIndex].label}</div>
+    <div class="row"><button class="btn btn-sm" id="pop-lock-time" style="width:100%;">${locked?'Unlock column':'Lock column'}</button></div>
+    <div class="row" style="margin-top:6px;"><button class="btn btn-sm btn-primary" id="pop-show-time-rules" style="width:100%;">Show rules for this time</button></div>`;
+  layer.appendChild(pop);
+  positionFloating(pop, rect);
+  pop.querySelector('#pop-lock-time').addEventListener('click', ()=>{
+    if(sched.lockedSlots.has(slotIndex)) sched.lockedSlots.delete(slotIndex);
+    else sched.lockedSlots.add(slotIndex);
+    closeFloating(); renderAll();
+  });
+  pop.querySelector('#pop-show-time-rules').addEventListener('click', ()=>{
+    rulesFocusSlotIndex = slotIndex;
+    closeFloating();
+    renderRules();
+    const panel = document.getElementById('rules-panel');
+    if(panel.scrollIntoView) panel.scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+  registerCloser((ev)=>{ if(!pop.contains(ev.target)) closeFloating(); });
+}
+
+function previewLockedForClone(){
+  const sched = activeSchedule();
+  document.querySelectorAll('.db-row-label').forEach(el=>{
+    if(sched.lockedPeople.has(el.dataset.personId)) el.classList.add('lock-preview');
+  });
+  document.querySelectorAll('.db-time-head[data-slot]').forEach(el=>{
+    if(sched.lockedSlots.has(Number(el.dataset.slot))) el.classList.add('lock-preview');
+  });
+  document.querySelectorAll('.db-cell').forEach(el=>{
+    const pid = el.dataset.person, s = Number(el.dataset.slot);
+    if(isCellLocked(sched, pid, s)) el.classList.add('lock-preview');
+  });
+  document.querySelectorAll('.db-block.confirmed').forEach(el=>{
+    const a = state.assignments.find(x=>x.id===el.dataset.assignmentId);
+    if(a && assignmentOccupiesSlots(a).some(s=>isCellLocked(sched, a.personId, s))) el.classList.add('lock-preview');
+  });
+}
+function clearLockPreview(){
+  document.querySelectorAll('.lock-preview').forEach(el=>el.classList.remove('lock-preview'));
 }
 
 function openTabMenu(e, scheduleId){
@@ -2083,10 +2524,14 @@ function openTabMenu(e, scheduleId){
   const rect = e.currentTarget.getBoundingClientRect();
   const menu = document.createElement('div');
   menu.className = 'db-tab-menu';
-  menu.innerHTML = `<button id="tab-clone">Clone as new</button><button id="tab-delete" class="danger">Delete</button>`;
+  menu.innerHTML = `<button id="tab-clone-all">Clone all</button><button id="tab-clone-unlocked">Clone unlocked</button><button id="tab-delete" class="danger">Delete</button>`;
   layer.appendChild(menu);
   positionFloating(menu, rect);
-  menu.querySelector('#tab-clone').addEventListener('click', ()=>{ closeFloating(); cloneActiveSchedule(); });
+  menu.querySelector('#tab-clone-all').addEventListener('click', ()=>{ closeFloating(); cloneActiveSchedule('all'); });
+  const unlockedBtn = menu.querySelector('#tab-clone-unlocked');
+  unlockedBtn.addEventListener('click', ()=>{ clearLockPreview(); closeFloating(); cloneActiveSchedule('unlocked'); });
+  unlockedBtn.addEventListener('mouseenter', previewLockedForClone);
+  unlockedBtn.addEventListener('mouseleave', clearLockPreview);
   menu.querySelector('#tab-delete').addEventListener('click', ()=>{
     closeFloating();
     if(confirm('Delete this schedule tab? This cannot be undone.')) deleteSchedule(scheduleId);
@@ -2181,22 +2626,39 @@ function renderPeopleTab(){
 }
 
 /* ---- Positions tab ---- */
+function wireColorHexPair(colorId, hexId, defaultValue){
+  const colorEl = document.getElementById(colorId);
+  const hexEl = document.getElementById(hexId);
+  if(!colorEl || !hexEl) return;
+  if(defaultValue){ colorEl.value = defaultValue; hexEl.value = defaultValue; }
+  else hexEl.value = colorEl.value;
+  colorEl.addEventListener('input', ()=>{ hexEl.value = colorEl.value; });
+  hexEl.addEventListener('change', ()=>{
+    if(/^#[0-9a-fA-F]{6}$/.test(hexEl.value)) colorEl.value = hexEl.value;
+    else hexEl.value = colorEl.value;
+  });
+}
+
 function renderPositionsTab(){
   const body = document.getElementById('modal-body');
   const posTags = state.tags.filter(t=>t.category==='position');
   body.innerHTML = `
-    <div class="db-help-text">Positions occupy consecutive 15‑minute slots based on their duration. "Single‑person" positions can only hold one person at a time; otherwise multiple people can share a position at once. Shared by every schedule tab.</div>
+    <div class="db-help-text">Positions occupy consecutive 15‑minute slots. Give a position a duration range and its blocks on the chart can be dragged wider or narrower within that range. "Single‑person" positions can only hold one person at a time; otherwise multiple people can share a position at once. Shared by every schedule tab.</div>
     <table class="db-mini-table">
-      <thead><tr><th>Name</th><th>Duration</th><th>Single‑person</th><th>Color</th><th>Tags</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th>Min dur.</th><th>Max dur.</th><th>Single‑person</th><th>Color</th><th>Tags</th><th></th></tr></thead>
       <tbody id="positions-tbody"></tbody>
     </table>
     <div class="db-field-row" style="margin-top:14px;">
       <div class="db-field"><label>New position name</label><input type="text" id="new-position-name" placeholder="e.g. Greeter"/></div>
-      <div class="db-field"><label>Duration (min)</label><input type="number" id="new-position-duration" value="15" min="15" step="15"/></div>
-      <div class="db-field"><label>Color</label><input type="color" id="new-position-color" value="#3b6fd6"/></div>
+      <div class="db-field"><label>Min duration (min)</label><input type="number" id="new-position-duration-min" value="15" min="15" step="15"/></div>
+      <div class="db-field"><label>Max duration (min)</label><input type="number" id="new-position-duration-max" value="15" min="15" step="15"/></div>
+      <div class="db-field"><label>Color</label>
+        <div class="db-color-field"><input type="color" id="new-position-color"/><input type="text" id="new-position-color-hex" class="db-hex-input"/></div>
+      </div>
       <div class="db-field checkbox"><input type="checkbox" id="new-position-single"/><label>Single‑person</label></div>
       <button class="btn btn-primary" id="add-position-btn">Add position</button>
     </div>`;
+  wireColorHexPair('new-position-color', 'new-position-color-hex', '#3b6fd6');
   const tbody = document.getElementById('positions-tbody');
   state.positions.forEach(pos=>{
     const tr = document.createElement('tr');
@@ -2206,19 +2668,32 @@ function renderPositionsTab(){
       return `<span class="db-chip-toggle ${on?'on':''}" style="${style}" data-position="${pos.id}" data-tag="${t.id}">${escapeHtml(t.name)}</span>`;
     }).join('');
     tr.innerHTML = `<td>${escapeHtml(pos.name)}</td>
-      <td><input type="number" min="15" step="15" value="${pos.durationMinutes}" data-dur="${pos.id}" style="width:70px;padding:5px 7px;border:1px solid var(--border-strong);border-radius:5px;"/></td>
+      <td><input type="number" min="15" step="15" value="${pos.durationMin}" data-dur-min="${pos.id}" style="width:64px;padding:5px 7px;border:1px solid var(--border-strong);border-radius:5px;"/></td>
+      <td><input type="number" min="15" step="15" value="${pos.durationMax}" data-dur-max="${pos.id}" style="width:64px;padding:5px 7px;border:1px solid var(--border-strong);border-radius:5px;"/></td>
       <td><input type="checkbox" data-single="${pos.id}" ${pos.singlePerson?'checked':''}/></td>
-      <td><input type="color" value="${pos.color}" data-color="${pos.id}"/></td>
+      <td><div class="db-color-field"><input type="color" value="${pos.color}" data-color="${pos.id}"/><input type="text" value="${pos.color}" class="db-hex-input" data-color-hex="${pos.id}"/></div></td>
       <td><div class="db-chip-set">${tagsHtml || '<span class="db-empty-note" style="padding:0;">no position tags defined</span>'}</div></td>
       <td><button class="db-icon-btn" data-del-position="${pos.id}">🗑</button></td>`;
     tbody.appendChild(tr);
   });
-  tbody.querySelectorAll('[data-dur]').forEach(inp=>{
+  function clampDuration(pos){
+    pos.durationMin = Math.max(15, Math.round(pos.durationMin/15)*15);
+    pos.durationMax = Math.max(pos.durationMin, Math.round(pos.durationMax/15)*15);
+  }
+  tbody.querySelectorAll('[data-dur-min]').forEach(inp=>{
     inp.addEventListener('change', ()=>{
-      const pos = state.positions.find(p=>p.id===inp.dataset.dur);
-      const v = Math.max(15, Math.round(Number(inp.value)/15)*15);
-      pos.durationMinutes = v; inp.value = v;
-      renderAll();
+      const pos = state.positions.find(p=>p.id===inp.dataset.durMin);
+      pos.durationMin = Number(inp.value)||15;
+      clampDuration(pos);
+      renderPositionsTab(); renderAll();
+    });
+  });
+  tbody.querySelectorAll('[data-dur-max]').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const pos = state.positions.find(p=>p.id===inp.dataset.durMax);
+      pos.durationMax = Number(inp.value)||15;
+      clampDuration(pos);
+      renderPositionsTab(); renderAll();
     });
   });
   tbody.querySelectorAll('[data-single]').forEach(inp=>{
@@ -2229,7 +2704,20 @@ function renderPositionsTab(){
   });
   tbody.querySelectorAll('[data-color]').forEach(inp=>{
     inp.addEventListener('input', ()=>{
-      state.positions.find(p=>p.id===inp.dataset.color).color = inp.value;
+      const pos = state.positions.find(p=>p.id===inp.dataset.color);
+      pos.color = inp.value;
+      const hexTwin = tbody.querySelector(`[data-color-hex="${pos.id}"]`);
+      if(hexTwin) hexTwin.value = inp.value;
+      renderAll();
+    });
+  });
+  tbody.querySelectorAll('[data-color-hex]').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const pos = state.positions.find(p=>p.id===inp.dataset.colorHex);
+      if(!/^#[0-9a-fA-F]{6}$/.test(inp.value)){ inp.value = pos.color; return; }
+      pos.color = inp.value;
+      const swatchTwin = tbody.querySelector(`[data-color="${pos.id}"]`);
+      if(swatchTwin) swatchTwin.value = inp.value;
       renderAll();
     });
   });
@@ -2255,10 +2743,11 @@ function renderPositionsTab(){
   document.getElementById('add-position-btn').addEventListener('click', ()=>{
     const name = document.getElementById('new-position-name').value.trim();
     if(!name) return;
-    const dur = Math.max(15, Math.round(Number(document.getElementById('new-position-duration').value)/15)*15);
+    const durationMin = Math.max(15, Math.round(Number(document.getElementById('new-position-duration-min').value)/15)*15);
+    const durationMax = Math.max(durationMin, Math.round(Number(document.getElementById('new-position-duration-max').value)/15)*15);
     const color = document.getElementById('new-position-color').value;
     const single = document.getElementById('new-position-single').checked;
-    state.positions.push({ id:genId('pos'), name, durationMinutes:dur, singlePerson:single, color, tags:[] });
+    state.positions.push({ id:genId('pos'), name, durationMin, durationMax, singlePerson:single, color, tags:[] });
     renderPositionsTab(); renderAll();
   });
 }
@@ -2278,10 +2767,16 @@ function renderTagsTab(){
       <div class="db-field"><label>Applies to</label>
         <select id="new-tag-category"><option value="person">People</option><option value="position">Positions</option><option value="rule">Rules</option></select>
       </div>
-      <div class="db-field"><label>Highlight</label><input type="color" id="new-tag-highlight" value="${palette.bg}"/></div>
-      <div class="db-field"><label>Text</label><input type="color" id="new-tag-text" value="${palette.text}"/></div>
+      <div class="db-field"><label>Highlight</label>
+        <div class="db-color-field"><input type="color" id="new-tag-highlight"/><input type="text" id="new-tag-highlight-hex" class="db-hex-input"/></div>
+      </div>
+      <div class="db-field"><label>Text</label>
+        <div class="db-color-field"><input type="color" id="new-tag-text"/><input type="text" id="new-tag-text-hex" class="db-hex-input"/></div>
+      </div>
       <button class="btn btn-primary" id="add-tag-btn">Add tag</button>
     </div>`;
+  wireColorHexPair('new-tag-highlight', 'new-tag-highlight-hex', palette.bg);
+  wireColorHexPair('new-tag-text', 'new-tag-text-hex', palette.text);
   const categoryLabel = c => c==='person' ? 'People' : c==='position' ? 'Positions' : 'Rules';
   const tbody = document.getElementById('tags-tbody');
   state.tags.forEach(t=>{
@@ -2293,8 +2788,8 @@ function renderTagsTab(){
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${escapeHtml(t.name)}</td>
       <td>${categoryLabel(t.category)}</td>
-      <td><input type="color" value="${t.highlightColor}" data-tag-highlight="${t.id}"/></td>
-      <td><input type="color" value="${t.textColor}" data-tag-text="${t.id}"/></td>
+      <td><div class="db-color-field"><input type="color" value="${t.highlightColor}" data-tag-highlight="${t.id}"/><input type="text" value="${t.highlightColor}" class="db-hex-input" data-tag-highlight-hex="${t.id}"/></div></td>
+      <td><div class="db-color-field"><input type="color" value="${t.textColor}" data-tag-text="${t.id}"/><input type="text" value="${t.textColor}" class="db-hex-input" data-tag-text-hex="${t.id}"/></div></td>
       <td><span class="db-tag-pill" id="tag-preview-${t.id}" style="background:${t.highlightColor};color:${t.textColor};">${escapeHtml(t.name)}</span></td>
       <td>${usageCount}</td>
       <td><button class="db-icon-btn" data-del-tag="${t.id}">🗑</button></td>`;
@@ -2306,6 +2801,20 @@ function renderTagsTab(){
       t.highlightColor = inp.value;
       const preview = document.getElementById(`tag-preview-${t.id}`);
       if(preview) preview.style.background = inp.value;
+      const hexTwin = tbody.querySelector(`[data-tag-highlight-hex="${t.id}"]`);
+      if(hexTwin) hexTwin.value = inp.value;
+      renderAll();
+    });
+  });
+  tbody.querySelectorAll('[data-tag-highlight-hex]').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const t = state.tags.find(x=>x.id===inp.dataset.tagHighlightHex);
+      if(!/^#[0-9a-fA-F]{6}$/.test(inp.value)){ inp.value = t.highlightColor; return; }
+      t.highlightColor = inp.value;
+      const preview = document.getElementById(`tag-preview-${t.id}`);
+      if(preview) preview.style.background = inp.value;
+      const swatchTwin = tbody.querySelector(`[data-tag-highlight="${t.id}"]`);
+      if(swatchTwin) swatchTwin.value = inp.value;
       renderAll();
     });
   });
@@ -2315,6 +2824,20 @@ function renderTagsTab(){
       t.textColor = inp.value;
       const preview = document.getElementById(`tag-preview-${t.id}`);
       if(preview) preview.style.color = inp.value;
+      const hexTwin = tbody.querySelector(`[data-tag-text-hex="${t.id}"]`);
+      if(hexTwin) hexTwin.value = inp.value;
+      renderAll();
+    });
+  });
+  tbody.querySelectorAll('[data-tag-text-hex]').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const t = state.tags.find(x=>x.id===inp.dataset.tagTextHex);
+      if(!/^#[0-9a-fA-F]{6}$/.test(inp.value)){ inp.value = t.textColor; return; }
+      t.textColor = inp.value;
+      const preview = document.getElementById(`tag-preview-${t.id}`);
+      if(preview) preview.style.color = inp.value;
+      const swatchTwin = tbody.querySelector(`[data-tag-text="${t.id}"]`);
+      if(swatchTwin) swatchTwin.value = inp.value;
       renderAll();
     });
   });
@@ -2383,9 +2906,12 @@ function renderRulesTab(){
   let selectedRuleTagIds = new Set(editing ? (editing.tags||[]) : []);
 
   body.innerHTML = `
-    <div class="db-help-text">"Any time" on a required rule applies to every slot, so "must be scheduled, any time" means required at every slot, and "cannot be scheduled, any time" means forbidden at every slot. Preferred rules generate star suggestions instead of hard blocks. Relative rules compare an assignment to other assignments (sequence, pairing, repetition) rather than to a fixed time. Rules are specific to this schedule tab.</div>
+    <div class="db-help-text">"Any time" on a required rule applies to every slot, so "must be scheduled, any time" means required at every slot, and "cannot be scheduled, any time" means forbidden at every slot. Preferred rules generate star suggestions instead of hard blocks. Relative rules compare an assignment to other assignments (sequence, pairing, repetition, swaps) rather than to a fixed time. Rules are specific to this schedule tab.</div>
     <div class="db-rule-builder">
       <h3>${editing ? 'Edit rule' : 'New rule'}</h3>
+      <div class="db-field-row">
+        <div class="db-field grow"><label>Nickname (optional)</label><input type="text" id="rb-nickname" placeholder="e.g. No mutual swaps"/></div>
+      </div>
       <div class="db-field-row">
         <div class="db-field"><label>Strength</label>
           <select id="rb-strength"><option value="required">Required</option><option value="preferred">Preferred</option></select>
@@ -2403,6 +2929,17 @@ function renderRulesTab(){
           <select id="rb-person-mode"><option value="any">Anyone</option><option value="id">Specific person</option><option value="tag">Tag</option></select>
         </div>
         <div class="db-field" id="rb-person-value-wrap"><label>&nbsp;</label><select id="rb-person-value"></select></div>
+      </div>
+      <div class="db-field-row" id="rb-anyone-fields" style="display:none;">
+        <div class="db-field grow"><label>Required tags (must have all)</label><div class="db-chip-set" id="rb-anyone-required-chips"></div></div>
+        <div class="db-field grow"><label>Prohibited tags (must have none)</label><div class="db-chip-set" id="rb-anyone-prohibited-chips"></div></div>
+        <div class="db-field" id="rb-anyone-count-wrap"><label>Count (min–max)</label>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="number" id="rb-anyone-count-min" value="1" min="1" step="1" style="width:60px;padding:7px 9px;border:1px solid var(--border-strong);border-radius:5px;"/>
+            <span style="color:var(--muted);">to</span>
+            <input type="number" id="rb-anyone-count-max" value="1" min="1" step="1" style="width:60px;padding:7px 9px;border:1px solid var(--border-strong);border-radius:5px;"/>
+          </div>
+        </div>
       </div>
       <div class="db-field-row">
         <div class="db-field"><label>Position</label>
@@ -2426,6 +2963,7 @@ function renderRulesTab(){
               <option value="together">Same time &amp; place as another person</option>
               <option value="consecutive">Times in a row (this schedule)</option>
               <option value="crossSchedule">Schedules in a row</option>
+              <option value="swap">Mutual swap (X→Y while someone else Y→X)</option>
             </select>
           </div>
         </div>
@@ -2483,6 +3021,13 @@ function renderRulesTab(){
     else if(mode==='tag') personValueSel.innerHTML = state.tags.filter(t=>t.category==='person').map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
     else personValueSel.innerHTML = '';
     document.getElementById('rb-person-value-wrap').style.display = mode==='any' ? 'none' : 'flex';
+    updateAnyoneFieldsVisibility();
+  }
+  function updateAnyoneFieldsVisibility(){
+    const isAnyone = personModeSel.value==='any';
+    document.getElementById('rb-anyone-fields').style.display = isAnyone ? 'flex' : 'none';
+    const effectSel = document.getElementById('rb-effect');
+    document.getElementById('rb-anyone-count-wrap').style.display = (isAnyone && effectSel && effectSel.value==='require') ? 'flex' : 'none';
   }
   function fillPositionValueOptions(mode){
     if(mode==='id') positionValueSel.innerHTML = state.positions.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
@@ -2530,14 +3075,49 @@ function renderRulesTab(){
       together: 'Example: "Alice should be at the same time and place as Bob." Use Position above to restrict which shared position counts, or leave it as Any.',
       consecutive: 'Example: "No one should be assigned a Physically demanding job twice in a row." Compares a person\u2019s own back-to-back assignments in this schedule.',
       crossSchedule: 'Example: "Bob shouldn\u2019t have the same assignment for more than two schedules in a row." Compares the same time slot across consecutive schedule tabs, in their current order.',
+      swap: 'Example: "No mutual swaps" — nobody can go from position X to position Y while someone else goes from Y to X. Applies across any pair of positions; no extra fields needed.',
     };
     document.getElementById('rb-relative-hint').textContent = hints[t] || '';
   }
   fillSlotOptions();
 
+  let selectedRequiredTagIds = new Set(editing && editing.person.mode==='any' ? (editing.person.requiredTags||[]) : []);
+  let selectedProhibitedTagIds = new Set(editing && editing.person.mode==='any' ? (editing.person.prohibitedTags||[]) : []);
+  function renderAnyoneTagPicker(wrapId, selectedSet){
+    const personTags = state.tags.filter(t=>t.category==='person');
+    const wrap = document.getElementById(wrapId);
+    wrap.innerHTML = personTags.map(t=>{
+      const on = selectedSet.has(t.id);
+      const style = on ? `background:${t.highlightColor};color:${t.textColor};border-color:${t.highlightColor};` : '';
+      return `<span class="db-chip-toggle ${on?'on':''}" style="${style}" data-tag-id="${t.id}">${escapeHtml(t.name)}</span>`;
+    }).join('') || '<span class="db-empty-note" style="padding:0;">No person tags yet.</span>';
+    wrap.querySelectorAll('.db-chip-toggle').forEach(chipEl=>{
+      chipEl.addEventListener('click', ()=>{
+        const tid = chipEl.dataset.tagId;
+        const t = state.tags.find(x=>x.id===tid);
+        if(selectedSet.has(tid)){
+          selectedSet.delete(tid); chipEl.classList.remove('on'); chipEl.style.cssText = '';
+        } else {
+          selectedSet.add(tid); chipEl.classList.add('on');
+          chipEl.style.cssText = `background:${t.highlightColor};color:${t.textColor};border-color:${t.highlightColor};`;
+        }
+        updatePreview();
+      });
+    });
+  }
+
   function buildRuleFromForm(){
     const personMode = personModeSel.value, positionMode = positionModeSel.value;
     const person = personMode==='any' ? {mode:'any'} : {mode:personMode, value:personValueSel.value};
+    if(personMode==='any'){
+      person.requiredTags = Array.from(selectedRequiredTagIds);
+      person.prohibitedTags = Array.from(selectedProhibitedTagIds);
+      person.count = {
+        min: Math.max(1, Number(document.getElementById('rb-anyone-count-min').value)||1),
+        max: Math.max(1, Number(document.getElementById('rb-anyone-count-max').value)||1),
+      };
+      if(person.count.max<person.count.min) person.count.max = person.count.min;
+    }
     const position = positionMode==='any' ? {mode:'any'} : {mode:positionMode, value:positionValueSel.value};
     const kind = kindSel.value;
     let slot;
@@ -2571,12 +3151,15 @@ function renderRulesTab(){
         };
       } else if(relType==='consecutive'){
         relative = { type:'consecutive', maxConsecutive: Math.max(2, Number(document.getElementById('rb-consec-max').value)||2) };
-      } else {
+      } else if(relType==='crossSchedule'){
         relative = { type:'crossSchedule', maxRepeat: Math.max(2, Number(document.getElementById('rb-cross-max').value)||2) };
+      } else {
+        relative = { type:'swap' };
       }
     }
     return {
       kind,
+      nickname: document.getElementById('rb-nickname').value.trim(),
       strength: document.getElementById('rb-strength').value,
       effect: document.getElementById('rb-effect').value,
       active: document.getElementById('rb-active').checked,
@@ -2618,22 +3201,29 @@ function renderRulesTab(){
   slotModeSel.addEventListener('change', (e)=>{ updateSlotVisibility(e.target.value); updatePreview(); });
   kindSel.addEventListener('change', ()=>{ updateKindVisibility(); updatePreview(); });
   relTypeSel.addEventListener('change', ()=>{ updateRelativeTypeVisibility(); updatePreview(); });
+  document.getElementById('rb-effect').addEventListener('change', ()=>{ updateAnyoneFieldsVisibility(); updatePreview(); });
   document.getElementById('rb-seq-other-position-mode').addEventListener('change', (e)=>{ fillOtherPositionValueOptions(e.target.value); updatePreview(); });
   document.getElementById('rb-together-other-person-mode').addEventListener('change', (e)=>{ fillOtherPersonValueOptions(e.target.value); updatePreview(); });
-  ['rb-strength','rb-effect','rb-person-value','rb-position-value','rb-slot-value','rb-slot-end','rb-active',
-   'rb-seq-order','rb-seq-other-position-value','rb-together-other-person-value','rb-consec-max','rb-cross-max'].forEach(id=>{
+  ['rb-strength','rb-person-value','rb-position-value','rb-slot-value','rb-slot-end','rb-active',
+   'rb-seq-order','rb-seq-other-position-value','rb-together-other-person-value','rb-consec-max','rb-cross-max',
+   'rb-anyone-count-min','rb-anyone-count-max'].forEach(id=>{
     const el = document.getElementById(id);
     el.addEventListener('change', updatePreview);
     el.addEventListener('input', updatePreview);
   });
 
   if(editing){
+    document.getElementById('rb-nickname').value = editing.nickname || '';
     document.getElementById('rb-strength').value = editing.strength;
     document.getElementById('rb-effect').value = editing.effect;
     document.getElementById('rb-active').checked = editing.active;
     personModeSel.value = editing.person.mode;
     fillPersonValueOptions(editing.person.mode);
     if(editing.person.mode!=='any') personValueSel.value = editing.person.value;
+    if(editing.person.mode==='any' && editing.person.count){
+      document.getElementById('rb-anyone-count-min').value = editing.person.count.min;
+      document.getElementById('rb-anyone-count-max').value = editing.person.count.max;
+    }
     positionModeSel.value = editing.position.mode;
     fillPositionValueOptions(editing.position.mode);
     if(editing.position.mode!=='any') positionValueSel.value = editing.position.value;
@@ -2676,6 +3266,9 @@ function renderRulesTab(){
     fillOtherPositionValueOptions('any');
     fillOtherPersonValueOptions('any');
   }
+  updateAnyoneFieldsVisibility();
+  renderAnyoneTagPicker('rb-anyone-required-chips', selectedRequiredTagIds);
+  renderAnyoneTagPicker('rb-anyone-prohibited-chips', selectedProhibitedTagIds);
   renderTagChips();
   updatePreview();
 
@@ -2757,9 +3350,10 @@ function exportToExcel(){
   if(typeof XLSX==='undefined'){ alert('The spreadsheet library has not finished loading yet — try again in a moment.'); return; }
   const wb = XLSX.utils.book_new();
   const slots = getSlots();
+  const visiblePeople = state.people.filter(p=>!p.hidden);
 
   const header = ['Person', ...slots.map(s=>s.label)];
-  const rows = state.people.map(p=>{
+  const rows = visiblePeople.map(p=>{
     const row = [p.name];
     for(const s of slots){
       const a = state.assignments.find(a=>a.personId===p.id && assignmentOccupiesSlots(a).includes(s.index));
@@ -2769,12 +3363,12 @@ function exportToExcel(){
   });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([header, ...rows]), 'Schedule');
 
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.people.map(p=>(
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(visiblePeople.map(p=>(
     { id:p.id, name:p.name, tags:p.tags.join(',') }
   ))), 'People');
 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.positions.map(p=>(
-    { id:p.id, name:p.name, durationMinutes:p.durationMinutes, singlePerson:p.singlePerson, color:p.color, tags:p.tags.join(',') }
+    { id:p.id, name:p.name, durationMin:p.durationMin, durationMax:p.durationMax, singlePerson:p.singlePerson, color:p.color, tags:p.tags.join(',') }
   ))), 'Positions');
 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.tags.map(t=>(
@@ -2782,8 +3376,12 @@ function exportToExcel(){
   ))), 'Tags');
 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.rules.map(r=>({
-    id:r.id, strength:r.strength, active:r.active, effect:r.effect, kind:r.kind||'standard',
+    id:r.id, nickname:r.nickname||'', strength:r.strength, active:r.active, effect:r.effect, kind:r.kind||'standard',
     personMode:r.person.mode, personValue:r.person.value||'',
+    personRequiredTags: r.person.mode==='any' ? (r.person.requiredTags||[]).join(',') : '',
+    personProhibitedTags: r.person.mode==='any' ? (r.person.prohibitedTags||[]).join(',') : '',
+    personCountMin: r.person.mode==='any' && r.person.count ? r.person.count.min : '',
+    personCountMax: r.person.mode==='any' && r.person.count ? r.person.count.max : '',
     positionMode:r.position.mode, positionValue:r.position.value||'',
     slotMode:r.slot.mode,
     slotValue: r.slot.mode==='range' ? `${r.slot.start}-${r.slot.end}` : (r.slot.value!==undefined ? r.slot.value : ''),
@@ -2804,7 +3402,7 @@ function exportToExcel(){
 
   const sched = activeSchedule();
   XLSX.writeFile(wb, `${(sched.name||'duty-board').replace(/[^a-z0-9-_]+/gi,'-')}.xlsx`);
-  showToast('Schedule saved.');
+  showToast('Schedule saved (people toggled off were excluded).');
 }
 
 async function importFromExcel(file){
@@ -2824,17 +3422,21 @@ async function importFromExcel(file){
   }
   if(wb.Sheets['People']){
     state.people = XLSX.utils.sheet_to_json(wb.Sheets['People']).map(r=>({
-      id:String(r.id), name:String(r.name),
+      id:String(r.id), name:String(r.name), hidden:false,
       tags:String(r.tags||'').split(',').map(s=>s.trim()).filter(Boolean)
     }));
   }
   if(wb.Sheets['Positions']){
-    state.positions = XLSX.utils.sheet_to_json(wb.Sheets['Positions']).map(r=>({
-      id:String(r.id), name:String(r.name), durationMinutes:Number(r.durationMinutes)||15,
-      singlePerson: r.singlePerson===true || r.singlePerson==='TRUE' || r.singlePerson==='true',
-      color:r.color || '#3b6fd6',
-      tags:String(r.tags||'').split(',').map(s=>s.trim()).filter(Boolean)
-    }));
+    state.positions = XLSX.utils.sheet_to_json(wb.Sheets['Positions']).map(r=>{
+      const dMin = Number(r.durationMin!==undefined ? r.durationMin : r.durationMinutes) || 15;
+      const dMax = Number(r.durationMax!==undefined ? r.durationMax : dMin) || dMin;
+      return {
+        id:String(r.id), name:String(r.name), durationMin:dMin, durationMax:Math.max(dMin,dMax),
+        singlePerson: r.singlePerson===true || r.singlePerson==='TRUE' || r.singlePerson==='true',
+        color:r.color || '#3b6fd6',
+        tags:String(r.tags||'').split(',').map(s=>s.trim()).filter(Boolean)
+      };
+    });
   }
 
   let newRules = [];
@@ -2860,12 +3462,19 @@ async function importFromExcel(file){
         } else if(relType==='crossSchedule'){
           relative.maxRepeat = Number(r.relMaxRepeat)||2;
         }
+        // 'swap' has no extra fields
+      }
+      const person = { mode:r.personMode||'any', value:r.personValue||null };
+      if(person.mode==='any'){
+        person.requiredTags = String(r.personRequiredTags||'').split(',').map(s=>s.trim()).filter(Boolean);
+        person.prohibitedTags = String(r.personProhibitedTags||'').split(',').map(s=>s.trim()).filter(Boolean);
+        if(r.personCountMin!==undefined && r.personCountMin!=='') person.count = { min:Number(r.personCountMin)||1, max:Number(r.personCountMax)||1 };
       }
       return {
-        id:String(r.id), kind, strength:r.strength==='preferred'?'preferred':'required',
+        id:String(r.id), nickname:String(r.nickname||''), kind, strength:r.strength==='preferred'?'preferred':'required',
         active: r.active===true || r.active==='TRUE' || r.active==='true',
         effect:r.effect==='require'?'require':'forbid',
-        person:{ mode:r.personMode||'any', value:r.personValue||null },
+        person,
         position:{ mode:r.positionMode||'any', value:r.positionValue||null },
         slot, relative,
         tags:String(r.tags||'').split(',').map(s=>s.trim()).filter(Boolean)
@@ -2934,21 +3543,40 @@ function init(){
     renderChart();
   });
 
-  document.getElementById('btn-fullscreen').addEventListener('click', ()=>{
-    const el = document.getElementById('duty-board');
+  document.getElementById('btn-full-view').addEventListener('click', ()=>{
+    fullViewMode = !fullViewMode;
+    document.getElementById('btn-full-view').textContent = fullViewMode ? 'Full view: on' : 'Full view';
+    renderChart();
+  });
+
+  function toggleFullscreenOn(elId){
+    const el = document.getElementById(elId);
     const requestFn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
     const exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
     try{
       if(!document.fullscreenElement && requestFn) requestFn.call(el).catch(()=>{});
       else if(document.fullscreenElement && exitFn) exitFn.call(document);
     }catch(err){ /* fullscreen not supported in this environment */ }
+  }
+  document.getElementById('btn-fullscreen').addEventListener('click', ()=>toggleFullscreenOn('duty-board'));
+  document.getElementById('btn-chart-fullscreen').addEventListener('click', ()=>{
+    if(!document.fullscreenElement){
+      fullViewMode = true;
+      document.getElementById('btn-full-view').textContent = 'Full view: on';
+      renderChart();
+    }
+    toggleFullscreenOn('chart-panel');
   });
   document.addEventListener('fullscreenchange', ()=>{
-    const btn = document.getElementById('btn-fullscreen');
-    if(btn) btn.textContent = document.fullscreenElement ? '⤢' : '⛶';
+    const fsBtn = document.getElementById('btn-fullscreen');
+    const chartFsBtn = document.getElementById('btn-chart-fullscreen');
+    const fsEl = document.fullscreenElement;
+    if(fsBtn) fsBtn.textContent = (fsEl && fsEl.id==='duty-board') ? '⤢' : '⛶';
+    if(chartFsBtn) chartFsBtn.textContent = (fsEl && fsEl.id==='chart-panel') ? '⤢' : '⛶';
+    renderChart();
   });
 
-  ['rule-search','filter-person','filter-position','filter-time','filter-required','filter-preferred','filter-inactive'].forEach(id=>{
+  ['rule-search','filter-person','filter-position','filter-time','filter-rule-tag','filter-required','filter-preferred','filter-inactive'].forEach(id=>{
     const el = document.getElementById(id);
     el.addEventListener('input', renderRules);
     el.addEventListener('change', renderRules);
@@ -2962,5 +3590,3 @@ function init(){
 init();
 </script>
 ```
-
-

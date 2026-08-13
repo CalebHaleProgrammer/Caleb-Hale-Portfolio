@@ -78,11 +78,11 @@ website:
         - text: "Machine Learning"
           file: ml.qmd
         - text: "---"
-        - text: "Prometheus Architecture"
-          file: Machine_Learning/Prometheus.qmd
+        - text: "Prometheus UI"
+          file: Machine_Learning/Prometheus_UI.qmd
         - text: "---"
-        - text: "Project 2"
-          file: Machine_Learning/project2.qmd
+        - text: "Prometheus Architecture"
+          file: Machine_Learning/Prometheus_doc.qmd
         - text: "---"
         - text: "Project 3"
           file: Machine_Learning/project3.qmd

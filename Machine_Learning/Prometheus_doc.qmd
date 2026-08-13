@@ -27,7 +27,7 @@ execute:
 
 
 ## Overview
-The Prometheus' Architecture is a foundational framework for a metamathematical reasoning system. It is designed to contain the expressive power of ZFC set theory while bridging the reasoning levels of rigorous mathematical logic and human-level reasoning. The architecture is built upon a set of primitives and constructions that allow for the representation and manipulation of mathematical objects and concepts.
+The Prometheus' Architecture is a foundational framework for a metamathematical reasoning system. It is designed to contain the expressive power of ZFC set theory while bridging the reasoning levels of rigorous mathematical logic and human-level reasoning. The architecture is built upon a set of primitives and constructions that allow for the representation and manipulation of mathematical objects and concepts, with the goal of creating a system that creates models for the world around it.
 
 ## To Do and Future Work
 ### Top Priority
@@ -38,18 +38,16 @@ The Prometheus' Architecture is a foundational framework for a metamathematical 
 * Define axioms for predicates, including quantifiers and logical connectives (and, or, not, implies, etc.) and how they relate to the custom set types (constant, variable-constant, variable).
 * Define incomplete extensional definitions with unknown unknowns, and how they relate to the custom set types (constant, variable-constant, variable). Note: define as an unknown that aligns with known (an unknown from the category of possibilities defined by a known detail). Only unknown unknowns with no known details are impossible to define.
 * Define attributes by their relationships to other objects and their possible values, and explore abstraction with attributes and how they relate to the custom set types (constant, variable-constant, variable).
+
 ### Next Priority
 
 * Define axioms for functions, including injective, surjective, bijective, and other properties
-
 * Define axioms for the custom set types (constant, variable-constant, variable) and their relationships to each other and to standard set theory.
-
-
 * Explore tests for determining cardinality of sets, including finite, countably infinite, and uncountably infinite sets (allowing explicit exhaustive enumeration of possibilities for sufficiently small finite sets).
 
 
 ## Program Structure
-Mathematical objects exist (primarily as sets) within a graph structure, with relationships and operations between them. ...
+Mathematical objects exist (primarily as sets) within a graph structure, with relationships and operations between them. Deductive reasoning (logical inference) is done via mathematical rules, which can model all the number systems and strategies useful for inductive/statistical reasoning. ...
 
 ## Primitives
 * Sets (constant, variable-constant, and variable. The program will attempt to classify everything in terms of constant or variable sets)
@@ -57,58 +55,90 @@ Mathematical objects exist (primarily as sets) within a graph structure, with re
   + Variable-constant type set: {}VC (represents a possibility space of an unknown single object)
   + Variable type set: {}V (represents a collection of objects as an abstraction over all members of the collection)
 * [^1][Rust primitives](https://claude.ai/chat/491db745-dce3-4b0c-8d09-138aeda0d09b)
-    + String
+    + Character/String
     + Integer
     + Boolean
     + etc.
-  + sub-item 2
-    - sub-sub-item 1
+  <!-- + sub-item
+    - sub-sub-item -->
 
 [^1]: "primitive" as endpoints of reducing evaluation, but conceptually reducible. They are computationally treated as primitives, but not logically.
 
 ## Constructions and equivalencies:
 
+::::: {.panel-tabset}
+
 ### Standard set theory foundation constructions, with constant sets:
-::: {}
-* Intersection
-: A∩B = {x | x∈A and x∈B}C
-* Union
-: A∪B = {x | x∈A or x∈B}C
-* Power Set
-: 𝒫(A) = {X | X⊆A}C
-* Predicate Subset
-: {x | P(x)}C = {x | x∈A and P(x)}C
-* Cartesian Product
-: A×B = {(a,b) | a∈A and b∈B}C
-* Function Mapping
-: f(A) = {f(x) | x∈A}C
+:::{}
+* Intersection      &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; A∩B = {x | x∈A and x∈B}C
+* Union             &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; A∪B = {x | x∈A or x∈B}C
+* Power Set         &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 𝒫(A) = {X | X⊆A}C
+* Predicate Subset  &nbsp; &nbsp; &nbsp; &nbsp; {x | P(x)}C = {x | x∈A and P(x)}C
+* Cartesian Product &nbsp; &nbsp;&nbsp; A×B = {(a,b) | a∈A and b∈B}C
+* Function Mapping  &nbsp; &nbsp;&nbsp; f(A) = {f(x) | x∈A}C
 :::
 
+::: {.list-grid}
+- **Intersection**
+  - $A \cap B = \{x \mid x \in A \text{ and } x \in B\}C$
+
+- **Union**
+  - $A \cup B = \{x \mid x \in A \text{ or } x \in B\}C$
+
+- **Power Set**
+  - $\mathcal{P}(A) = \{X \mid X \subseteq A\}C$
+
+- **Predicate Subset**
+  - $\{x \mid P(x)\}C = \{x \mid x \in A \text{ and } P(x)\}C$
+
+- **Cartesian Product**
+  - $A \times B = \{(a,b) \mid a \in A \text{ and } b \in B\}C$
+
+- **Function Mapping**
+  - $f(A) = \{f(x) \mid x \in A\}C$
+:::
+
+```{css, echo=false}
+.list-grid {
+  display: grid;
+  grid-template-columns: minmax(160px, auto) 1fr;
+  gap: 0.5rem 2rem;
+  margin-left: 1.5rem;
+}
+.list-grid > ul {
+  display: contents; /* Flattens the markdown list into grid items */
+}
+.list-grid > ul > li {
+  display: contents; /* Makes the term and sub-item grid columns */
+}
+```
+
+
 As well as extending set theory formulations that build up set theory constructively:
-* Disjoint Union
-: A⊎B = {AX{0}C ∪ BX{1}C}C
-* Relation
-: R⊆A×B = { (a,b) | a∈A and b∈B }C
-* Function
-: f:A→B = { (a,b) | a∈A and b∈B and f(a)=b }C [^2]
+
+:::{}
+* Disjoint Union    A⊎B = {AX{0}C ∪ BX{1}C}C
+* Relation          R⊆A×B = { (a,b) | a∈A and b∈B }C
+* Function          f:A→B = { (a,b) | a∈A and b∈B and f(a)=b }C [^2]
 * etc.
+:::
 
 [^2]: with the additional constraint that for all a∈A, there exists a unique b∈B such that (a,b)∈f; that is, one input maps to only one output
 
 ### Ambiguity and Possibility constructions, with variable-constant sets:
-* Impossibility: 
-: NA = {}VC 
-* Tautology/Single possibility: 
-: x = {x}VC
-* Possibility compilation: 
-: {A={...}VC, B={...}VC}VC = {AUB}VC
-* Ambiguous Component:
-: f({...}VC) = {f(...)}VC -- A VC set with type X members can be used as a component in any construction, object method, or operation that requires a type X member. Operation and object method results will be a VC set as a collection of evaluation outcomes for each member. E.g. {3, 4}%3 = {0,1} E.g. length({“12”, 12}) = {2, NA}
+* **Impossibility:          NA = {}VC**
+* Tautology:             x = {x}VC
+: A single possibility must be the true value
+* Possibility compilation {A={...}VC, B={...}VC}VC = {AUB}VC
+: If two sets of possibilities are possible, then any of the possibilities from either set are possible
+* Ambiguous Component:    f({...}VC) = {f(...)}VC
+: A VC set with type X members can be used as a component in any construction, object method, or operation that requires a type X member. Operation and object method results will be a VC set as a collection of evaluation outcomes for each member. E.g. {3, 4}%3 = {0,1} E.g. length({“12”, 12}) = {2, NA}
 
 
 ### Abstraction with variable sets:
 
 
+:::::
 
 Also, for any set that can be validly constructed as one type of set, its intension is valid for the other types of sets. E.g. {1,2,3}C ⇔ {1,2,3}VC ⇔ {1,2,3}V. 
 

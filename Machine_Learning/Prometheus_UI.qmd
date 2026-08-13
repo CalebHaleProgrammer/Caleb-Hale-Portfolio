@@ -1,0 +1,51 @@
+---
+title: "Prometheus UI Prototype"
+subtitle: "Visual Programming Interface - Client Report"
+author: "Caleb Hale"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+
+---
+
+## Prometheus UI Prototype
+
+### Overview
+
+This document contains a prototype visual programming interface with drag-and-drop block manipulation, zoom/pan navigation, edge panels for directional preferences, and a settings panel. The core goal is to demonstrate the UI performance before connecting it to a backend program.
+
+### How It Works
+
+1. **Build Blocks** - Located in the bottom toolbar, blocks can be dragged onto the canvas
+2. **Connections** - Blocks have input/output slots; dragging one block onto another creates connections
+3. **Zoom & Pan** - Scroll to zoom, click-drag background to pan
+4. **Edge Panels** - Four directional panels (left/right/top/bottom) that track objects dragged toward them
+5. **Settings** - Gear icon in bottom-right for customization
+
+### Features
+
+- Multiple block types with different shapes and slot configurations
+- Color-coded connection lines between blocks
+- Zoomable canvas with smooth scaling
+- Pan by clicking and dragging the background
+- Edge panels show directional preferences when objects are dragged toward them
+- Settings panel for adjusting zoom speed, minimum size, spacing, etc.
+
+### Known Limitations
+
+- This is a UI prototype - no backend program connection yet
+- Block types and slots are basic; will expand with backend integration
+- No persistence of the workspace state
