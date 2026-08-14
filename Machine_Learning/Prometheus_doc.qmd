@@ -145,9 +145,90 @@ Also, for any set that can be validly constructed as one type of set, its intens
 
 ## Starting Axioms and Template Structures:
 ### Axioms
+* **Axiom of Intensionality** By definition, any two sets with the same intension are the same object. Since x=x always, pairing this with the axiom of extensionality means the object(s) has the same elements (as itself). "==" is used to denote not only equality but identicality, which might be expressed as equality in every equivalence relation, or every possible measure.
+: ∀x ∀y (x.intension = y.intension → x == y)
+* **Axiom of Extensionality** Two sets are equal if and only if they have exactly the same elements.
+: ∀x ∀y (∀z (z ∈ x ↔ z ∈ y) → x = y)
+
+---
+**3.1 Axiom of Extensionality**  
+
+**3.2 Axiom of Foundation (Regularity)**  
+∀x (∃y (y ∈ x) → ∃y (y ∈ x ∧ ∀z ¬(z ∈ y ∧ z ∈ x)))
+**3.3 Axiom Schema of Separation (Specification)**  
+For every formula φ(x, w₁, …, wₙ) in which y is not free:  
+∀w₁ … ∀wₙ ∀A ∃B ∀x (x ∈ B ↔ (x ∈ A ∧ φ(x, w₁, …, wₙ)))
+**3.4 Axiom of Pairing**  
+∀u ∀v ∃p ∀w (w ∈ p ↔ (w = u ∨ w = v))
+**3.5 Axiom of Union**  
+∀C ∃U ∀x (x ∈ U ↔ ∃S (S ∈ C ∧ x ∈ S))
+**3.6 Axiom of Power Set**  
+∀X ∃P ∀Y (Y ∈ P ↔ ∀z (z ∈ Y → z ∈ X))
+**3.7 Axiom of Infinity**  
+∃I (∅ ∈ I ∧ ∀x (x ∈ I → x ∪ {x} ∈ I))
+**3.8 Axiom Schema of Replacement**  
+For every formula φ(x, y, w₁, …, wₙ):  
+∀w₁ … ∀wₙ ∀A (∀x ∈ A ∃!y φ(x, y, …) → ∃B ∀x ∈ A ∃y ∈ B φ(x, y, …))
+**3.9 Axiom of Choice**  
+∀C (∅ ∉ C → ∃f (f is a function ∧ dom(f) = C ∧ ∀S ∈ C (f(S) ∈ S)))
+**3.10 Empty Set / Set Existence** (often listed for emphasis)  
+∃x ∀y ¬(y ∈ x)  
+  or simply  
+∃x (x = x)
+
+* **Empty Set.** ∀x ∈ {}C is false.
+* **Constant Membership.** For any (of the three types of) set X ∈ C and element e, either e ∈ X or e ∉ X (law of excluded middle for membership).
+* **Ambiguous Membership.** {x1, x2, ..., xn}CV ∈ X means that one of the xi is a member of X, but we don't know which one: x1 ∈ X or x2 ∈ X or ... or xn ∈ X. 
+* **Abstract Membership.** {x1, x2, ..., xn}V ∈ X means that all of the xi are members of X: x1 ∈ X and x2 ∈ X and ... and xn ∈ X. Alternately, the extension of the variable set interpretted as a constant set is a subset: {x1, x2, ..., xn}C ⊆ X.
+* **Constant Extensionality.** For any (of the three types of) sets A, B: A = B ⟺ ∀x (x ∈ A ↔ x ∈ B). For C, this means the constant sets are identical — they contain exactly the same elements in their extension. For VC, this means the possibility spaces are identical — they contain exactly the same set of possible values. For V, they abstract over the same collection of members.
+* **Proposition Formation.** Any well-formed formula P(x) evaluates to a truth value {True, False} for each x in its domain. Note that {}VC denotes impossibility, or NA. When this represents possibilities that could evaluate to True, it may implie the falsity of a proposition, but it is not a truth value itself and must be treated in context.
+* **Boolean Logic** -- **Needs further exploring with**
+ + Binary/Bivalent (for universal **Logic Predicates**, see note below)
+  - Negation ¬φ — True when φ is False, False when φ is True
+  - Conjunction φ ∧ ψ — True precisely when both φ and ψ are True.
+  - Disjunction φ ∨ ψ — True precisely when at least one of φ, ψ is True (inclusive).
+  - Implication φ → ψ — equivalent to ¬φ ∨ ψ; False only when φ is True and ψ is False.
+  - Biconditional φ ↔ ψ — equivalent to (φ → ψ) ∧ (ψ → φ).
+ + Trinary/Trivalent (for general logic and **Set Predicates** that might not be defined, see note below)
+  - Negation ¬φ — "True or NA" when φ is False, "False or NA" when φ is True, "True or False" when φ is NA. These values, "X" and "Y", are expressed as a possibility state with a variable-constant set: {X, Y}VC. They are not to be confused with the compound propositions, e.g. True OR False, which would be True.
+  - Conjunction φ ∧ ψ — True precisely when both φ and ψ are True. NA when at least one is NA (inclusive). Otherwise False.
+  - Disjunction φ ∨ ψ — True precisely when at least one of φ, ψ is True (inclusive). False otherwise (NAs give as much information as False)
+  - Implication φ → ψ — **Needs refinement**. 
+    - If equivalent to ¬φ ∨ ψ; then True if ψ is True or φ is False, otherwise False when φ is True (like binary logic), but {True, False}VC when φ is NA. 
+    - If not strictly equivalent to ¬φ ∨ ψ; then φ being NA might more appropriately be NA.
+  false only when φ is true and ψ is false.
+  - Biconditional φ ↔ ψ — equivalent to (φ → ψ) ∧ (ψ → φ), presumably. 
+    - I think should evaluate as False unless both inputs are True or both inputs are False, intuitively.
+    - Using the definition of ¬φ ∨ ψ for implication and the biconditional as a conjunction of two implications, it should be True when the inputs match as either True or False, otherwise if one of the inputs is True, then False (the same as before), but when one input is NA and the other is not True (False or NA), then the output is True/False, {True, False}VC.
+    - Using a conjunction of implications not strictly equivalent to ¬φ ∨ ψ, (instead defining φ → ψ as NA when φ is NA) then φ ↔ ψ is NA when at least one input is NA (inclusive), otherwise it is the same as the binary biconditional.
+ + **Reminder:** non-sets are treated as constants, and the result of an operation with a VC is a VC of the outputs of the operation. If this results in a single member within the VC, recall the rule {x}VC = x.
+* **Logical Inference** -- **Needs further exploring with**
+  + Modus Ponens: given P and P->Q, infer Q
+  + Modus Tollens: given !Q and P->Q, infer !P (for binary, double-check for Set Predicates)
+  + Generalization: given φ, infer ∀x φ (research "free-variable restrictions")
+  + Equality Rules:
+   - reflexivity, symmetry, transitivity, and substitution of equals
+  
+  
+* **Quantifiers, including Bound as Shorthand**
+ + Universal Quantifier: ∀x φ(x) — “for every x, φ(x) holds.”
+ + Existential Quantifier: ∃x φ(x) — “there exists at least one x such that φ(x) holds.”
+ + Unique Existence:  ∃!x φ(x) — abbreviation for ∃x (φ(x) ∧ ∀y (φ(y) → y = x)) — "there exists an x such that φ(x) holds and any y for which φ(y) holds is equal to x", so x is the only unique object that satisfies φ.
+ + Bounded quantifiers are convenient abbreviations:
+  - ∀x ∈ A φ(x) means ∀x (x ∈ A → φ(x))
+  - ∃x ∈ A φ(x) means ∃x (x ∈ A ∧ φ(x))
 
 
-### Starting Template Structures
+
+
+### Starting Template Structures (minimal building blocks, rules, or strategies)
+* Empty set (all three set types): {}C, {}VC, {}V (this last one I'm not sure about -- it might be logically valid but not very meaningful or useful...). Empty Set is supposedly derivable from the axioms of Infinity and Separation. 
+* Unknown specific object: {x∈X}VC defines an unknown object from the collection X, allowing definition from limited information. {x∉{}C}VC defines an unknown object that isn't in the empty set, allowing the definition of a completely unknown object.
+* Unknown abstract object: {x∈X}V defines a representation of any/all objects from the collection X, allowing definition from limited information. {x∉{}C}V defines the most extreme abstraction, representing any and all objects.
+
+
+
+### Drafting
 Progression Axioms:
 1. Some first object exists (e.g., 0)
 2. Every object has a successor, which is also an object.
@@ -171,9 +252,16 @@ pdf pg 37
 
 Peanos' Axioms and/or Frege's Axioms
 Predicates as functions that map to truth values
+Propositions are membership evaluations on predicates. Both are constants (a function and a truth value for a membership of that function). Explore how to define logical connectives with predicates: AND, OR, NOT, IMPLIES.
+
+Need to decide on these suggestions: 
+**A19. Quantifier Axioms.** ∀x ∈ X P(x) is true iff P(x) holds for all x ∈ X. ∃x ∈ X P(x) is true iff there exists at least one x ∈ X such that P(x).
+**A21. Incomplete Extensionality.** If X is defined by an incomplete specification S, then X ∈ VC where the VC contains all objects consistent with S and no others. The more details in S, the smaller the VC.
+
 
 ## Misc Notes:
 * Set-typing; indicates membership of a constant or subsetting of constant-variable or variable sets in relation to the Constant "type" set. Useful for defining allowed domains and behaviors. Adds "types" but in a more intuitive approach, allowing a term to belong to multiple types. X is of settype A means: X is a Constant as a member of A or X is either a VC set or variable set as a subset of A.
+* **Note on Predicates** A predicate as defined as a truth-value-mapping function can return three values for a given evaluation: True (input maps to True), False (input maps to False), or NA (input is not in the domain), unless the domain of a predicate includes all objects. This latter option is when this notion of predicate aligns with the classical first-order predicate requirement of evaluating to exactly either True or False. Layering an additional mapping that brings NA to False, or adding that mapping functionality to a conditional in the predicate definition can yield a first-order-compatible True/False predicate. These might be termed **Set Predicates** and **Logic Predicates** respectively (again, both are sets encoding truth-value functions, but one has a limited domain and the other is universal).
 
 ## Walkthrough and Examples
 
