@@ -4223,7 +4223,8 @@ window.Quarto = {
   <li><a href="#starting-axioms-and-template-structures" id="toc-starting-axioms-and-template-structures">Starting Axioms and Template Structures:</a>
   <ul>
   <li><a href="#axioms" id="toc-axioms">Axioms</a></li>
-  <li><a href="#starting-template-structures" id="toc-starting-template-structures">Starting Template Structures</a></li>
+  <li><a href="#starting-template-structures-minimal-building-blocks-rules-or-strategies" id="toc-starting-template-structures-minimal-building-blocks-rules-or-strategies">Starting Template Structures (minimal building blocks, rules, or strategies)</a></li>
+  <li><a href="#drafting" id="toc-drafting">Drafting</a></li>
   </ul></li>
   <li><a href="#misc-notes" id="toc-misc-notes">Misc Notes:</a></li>
   <li><a href="#walkthrough-and-examples" id="toc-walkthrough-and-examples">Walkthrough and Examples</a></li>
@@ -4252,6 +4253,7 @@ window.Quarto = {
 <li>Define axioms for functions, including injective, surjective, bijective, and other properties</li>
 <li>Define axioms for the custom set types (constant, variable-constant, variable) and their relationships to each other and to standard set theory.</li>
 <li>Explore tests for determining cardinality of sets, including finite, countably infinite, and uncountably infinite sets (allowing explicit exhaustive enumeration of possibilities for sufficiently small finite sets).</li>
+<li>Explore Modus Ponens and Tollens with possible trinary implication and biconditional definitions</li>
 </ul>
 </section>
 </section>
@@ -4323,16 +4325,6 @@ window.Quarto = {
 </ul>
 </div>
 <p><code>{css, echo=false} .list-grid {   display: grid;   grid-template-columns: minmax(160px, auto) 1fr;   gap: 0.5rem 2rem;   margin-left: 1.5rem; } .list-grid &gt; ul {   display: contents; /* Flattens the markdown list into grid items */ } .list-grid &gt; ul &gt; li {   display: contents; /* Makes the term and sub-item grid columns */ }</code></p>
-<div>
-<ul>
-<li><div class="line-block">Intersection A∩B = {x | x∈A and x∈B}C</div></li>
-<li><div class="line-block">Union A∪B = {x | x∈A or x∈B}C</div></li>
-<li><div class="line-block">Power Set 𝒫(A) = {X | X⊆A}C</div></li>
-<li><div class="line-block">Predicate Subset {x | P(x)}C = {x | x∈A and P(x)}C</div></li>
-<li><div class="line-block">Cartesian Product A×B = {(a,b) | a∈A and b∈B}C</div></li>
-<li><div class="line-block">Function Mapping f(A) = {f(x) | x∈A}C</div></li>
-</ul>
-</div>
 <p>As well as extending set theory formulations that build up set theory constructively:</p>
 <div>
 <ul>
@@ -4345,9 +4337,9 @@ window.Quarto = {
 </div>
 <div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
 <ul>
-<li>Impossibility: NA = {}VC</li>
+<li><strong>Impossibility: NA = {}VC</strong></li>
 <li><dl>
-<dt>Tautology/: x = {x}VC</dt>
+<dt>Tautology: x = {x}VC</dt>
 <dd>
 A single possibility must be the true value
 </dd>
@@ -4377,22 +4369,111 @@ A VC set with type X members can be used as a component in any construction, obj
 <h2 class="anchored" data-anchor-id="starting-axioms-and-template-structures">Starting Axioms and Template Structures:</h2>
 <section id="axioms" class="level3">
 <h3 class="anchored" data-anchor-id="axioms">Axioms</h3>
+<ul>
+<li><dl>
+<dt><strong>Axiom of Intensionality</strong> By definition, any two sets with the same intension are the same object. Since x=x always, pairing this with the axiom of extensionality means the object(s) has the same elements (as itself). “==” is used to denote not only equality but identicality, which might be expressed as equality in every equivalence relation, or every possible measure.</dt>
+<dd>
+∀x ∀y (x.intension = y.intension → x == y)
+</dd>
+</dl></li>
+<li><dl>
+<dt><strong>Axiom of Extensionality</strong> Two sets are equal if and only if they have exactly the same elements.</dt>
+<dd>
+∀x ∀y (∀z (z ∈ x ↔︎ z ∈ y) → x = y)
+</dd>
+</dl></li>
+<li><strong>Axiom of Foundation (Regularity)</strong> No non-empty set S contains any set that contains members of themself (S). Prevents direct self-containment, looping chains of self-containment, and infinite chains of membership. <strong>Need to explore</strong> ∀x (∃y (y ∈ x) → ∃y (y ∈ x ∧ ∀z ¬(z ∈ y ∧ z ∈ x))) Equivalently: ∀x(x/{} → ∃y∈ x(y ∩ x = {}))</li>
+<li><strong>Axiom Schema of Separation (Specification)</strong> A property-defined subset of a set forms a set. For every formula φ(x, w₁, …, wₙ) in which y is not free:<br>
+∀w₁ … ∀wₙ ∀A ∃B ∀x (x ∈ B ↔︎ (x ∈ A ∧ φ(x, w₁, …, wₙ)))</li>
+<li><strong>Axiom of Pairing</strong> You can define a set that contains exactly two existing sets as members. ∀u ∀v ∃p ∀w (w ∈ p ↔︎ (w = u ∨ w = v))</li>
+<li><strong>Axiom of Union</strong> You can define a set as the members of the member-sets in a set of sets. Defines a n-operand version of the Union operation. ∀C ∃U ∀x (x ∈ U ↔︎ ∃S (S ∈ C ∧ x ∈ S))</li>
+<li><strong>Axiom of Power Set</strong> You can define a set of all the subsets of an existing set. ∀X ∃P ∀Y (Y ∈ P ↔︎ ∀z (z ∈ Y → z ∈ X))</li>
+<li><strong>Axiom of Infinity</strong> There is a set that contains every layer of set: {}, {{}}, {{{}}}, etc., represents inductive sets. The smallest such set (the intersection of all inductive sets) is the set ω of natural numbers in the von Neumann representation. ∃I (∅ ∈ I ∧ ∀x (x ∈ I → x ∪ {x} ∈ I))</li>
+<li><strong>Axiom Schema of Replacement</strong> The result of mapping each element of a set with a function produces a new set. Implies Separation? For every formula φ(x, y, w₁, …, wₙ):<br>
+∀w₁ … ∀wₙ ∀A (∀x ∈ A ∃!y φ(x, y, …) → ∃B ∀x ∈ A ∃y ∈ B φ(x, y, …))</li>
+</ul>
+<p><strong>3.9 Axiom of Choice</strong><br>
+∀C (∅ ∉ C → ∃f (f is a function ∧ dom(f) = C ∧ ∀S ∈ C (f(S) ∈ S))) <strong>3.10 Empty Set / Set Existence</strong> (often listed for emphasis)<br>
+∃x ∀y ¬(y ∈ x)<br>
+  or simply<br>
+∃x (x = x)</p>
+<ul>
+<li><strong>Empty Set.</strong> ∀x ∈ {}C is false.</li>
+<li><strong>Constant Membership.</strong> For any (of the three types of) set X ∈ C and element e, either e ∈ X or e ∉ X (law of excluded middle for membership).</li>
+<li><strong>Ambiguous Membership.</strong> {x1, x2, …, xn}CV ∈ X means that one of the xi is a member of X, but we don’t know which one: x1 ∈ X or x2 ∈ X or … or xn ∈ X.</li>
+<li><strong>Abstract Membership.</strong> {x1, x2, …, xn}V ∈ X means that all of the xi are members of X: x1 ∈ X and x2 ∈ X and … and xn ∈ X. Alternately, the extension of the variable set interpretted as a constant set is a subset: {x1, x2, …, xn}C ⊆ X.</li>
+<li><strong>Constant Extensionality.</strong> For any (of the three types of) sets A, B: A = B ⟺ ∀x (x ∈ A ↔︎ x ∈ B). For C, this means the constant sets are identical — they contain exactly the same elements in their extension. For VC, this means the possibility spaces are identical — they contain exactly the same set of possible values. For V, they abstract over the same collection of members.</li>
+<li><strong>Proposition Formation.</strong> Any well-formed formula P(x) evaluates to a truth value {True, False} for each x in its domain. Note that {}VC denotes impossibility, or NA. When this represents possibilities that could evaluate to True, it may implie the falsity of a proposition, but it is not a truth value itself and must be treated in context.</li>
+<li><strong>Boolean Logic</strong> – <strong>Needs further exploring with</strong> See the Template Structure for the other part.</li>
+<li>Binary/Bivalent (for universal <strong>Logic Predicates</strong>, see note on Predicates below)</li>
+<li>Negation ¬φ — True when φ is False, False when φ is True</li>
+<li>Conjunction φ ∧ ψ — True precisely when both φ and ψ are True.</li>
+<li>Disjunction φ ∨ ψ — True precisely when at least one of φ, ψ is True (inclusive).</li>
+<li>Implication φ → ψ — equivalent to ¬φ ∨ ψ; False only when φ is True and ψ is False.</li>
+<li>Biconditional φ ↔︎ ψ — equivalent to (φ → ψ) ∧ (ψ → φ).</li>
+<li><strong>Reminder:</strong> non-sets are treated as constants, and the result of an operation with a VC is a VC of the outputs of the operation. If this results in a single member within the VC, recall the rule {x}VC = x.</li>
+<li><strong>Logical Inference</strong> – <strong>Needs further exploring with</strong>
+<ul>
+<li>Modus Ponens: given P and P→Q, infer Q</li>
+<li>Modus Tollens: given !Q and P→Q, infer ¬P (for binary, double-check for Set Predicates)</li>
+<li>Generalization: given φ, infer ∀x φ (research “free-variable restrictions”)</li>
+<li>Equality Rules:</li>
+<li>reflexivity, symmetry, transitivity, and substitution of equals</li>
+</ul></li>
+<li><strong>Quantifiers, including Bound as Shorthand</strong></li>
+<li>Universal Quantifier: ∀x φ(x) — “for every x, φ(x) holds.”</li>
+<li>Existential Quantifier: ∃x φ(x) — “there exists at least one x such that φ(x) holds.”</li>
+<li>Unique Existence: ∃!x φ(x) — abbreviation for ∃x (φ(x) ∧ ∀y (φ(y) → y = x)) — “there exists an x such that φ(x) holds and any y for which φ(y) holds is equal to x”, so x is the only unique object that satisfies φ.</li>
+<li>Bounded quantifiers are convenient abbreviations:</li>
+<li>∀x ∈ A φ(x) means ∀x (x ∈ A → φ(x))</li>
+<li>∃x ∈ A φ(x) means ∃x (x ∈ A ∧ φ(x))</li>
+<li><strong>Note</strong> Predicate Quantifiers check for Truth values unless specified (“P(x) holds”=“P(x) is True”, “P(x) does not hold”=“P(x) is not True”=“P(x) is False or NA”, whereas “P(x) is False” is True only when the value is False, and is False when the value is either True or NA)</li>
+</ul>
 </section>
-<section id="starting-template-structures" class="level3">
-<h3 class="anchored" data-anchor-id="starting-template-structures">Starting Template Structures</h3>
+<section id="starting-template-structures-minimal-building-blocks-rules-or-strategies" class="level3">
+<h3 class="anchored" data-anchor-id="starting-template-structures-minimal-building-blocks-rules-or-strategies">Starting Template Structures (minimal building blocks, rules, or strategies)</h3>
+<ul>
+<li>Empty set (all three set types): {}C, {}VC, {}V (this last one I’m not sure about – it might be logically valid but not very meaningful or useful…). Empty Set is supposedly derivable from the axioms of Infinity and Separation.</li>
+<li>Unknown specific object: {x∈X}VC defines an unknown object from the collection X, allowing definition from limited information. {x∉{}C}VC defines an unknown object that isn’t in the empty set, allowing the definition of a completely unknown object.</li>
+<li>Unknown abstract object: {x∈X}V defines a representation of any/all objects from the collection X, allowing definition from limited information. {x∉{}C}V defines the most extreme abstraction, representing any and all objects.</li>
+<li><strong>Boolean Logic</strong> – <strong>Needs further exploring with</strong> See the Axioms list for the other part.</li>
+<li>Trinary/Trivalent (for general logic and <strong>Set Predicates</strong> that might not be defined, see note on Predicates below)</li>
+<li>Negation ¬φ — “True or NA” when φ is False, “False or NA” when φ is True, “True or False” when φ is NA. These values, “X” and “Y”, are expressed as a possibility state with a variable-constant set: {X, Y}VC. They are not to be confused with the compound propositions, e.g. True OR False, which would be True.</li>
+<li>Conjunction φ ∧ ψ — True precisely when both φ and ψ are True. NA when at least one is NA (inclusive). Otherwise False.</li>
+<li>Disjunction φ ∨ ψ — True precisely when at least one of φ, ψ is True (inclusive). False otherwise (NAs give as much information as False)</li>
+<li>Implication φ → ψ — <strong>Needs refinement</strong>.
+<ul>
+<li>If equivalent to ¬φ ∨ ψ; then True if ψ is True or φ is False, otherwise False when φ is True (like binary logic), but {True, False}VC when φ is NA.</li>
+<li>If not strictly equivalent to ¬φ ∨ ψ; then φ being NA might more appropriately be NA. false only when φ is true and ψ is false.</li>
+</ul></li>
+<li>Biconditional φ ↔︎ ψ — equivalent to (φ → ψ) ∧ (ψ → φ), presumably.
+<ul>
+<li>I think should evaluate as False unless both inputs are True or both inputs are False, intuitively.</li>
+<li>Using the definition of ¬φ ∨ ψ for implication and the biconditional as a conjunction of two implications, it should be True when the inputs match as either True or False, otherwise if one of the inputs is True, then False (the same as before), but when one input is NA and the other is not True (False or NA), then the output is True/False, {True, False}VC.</li>
+<li>Using a conjunction of implications not strictly equivalent to ¬φ ∨ ψ, (instead defining φ → ψ as NA when φ is NA) then φ ↔︎ ψ is NA when at least one input is NA (inclusive), otherwise it is the same as the binary biconditional.</li>
+</ul></li>
+<li><strong>For Now, this system will use all of the above</strong>. The different implications and biconditionals will be available as proposition/rules, but none of the trinary alternatives will be considered “True” axiomatically until further notice. We should remember that NA is not ambiguity or an unknown value like {True, False}VC – NA is a non-answer, the absence of an answer, used when a question is ill-formed or something doesn’t have a truth value.</li>
+<li><strong>Reminder:</strong> non-sets are treated as constants, and the result of an operation with a VC is a VC of the outputs of the operation. If this results in a single member within the VC, recall the rule {x}VC = x.</li>
+</ul>
+</section>
+<section id="drafting" class="level3">
+<h3 class="anchored" data-anchor-id="drafting">Drafting</h3>
 <p>Progression Axioms: 1. Some first object exists (e.g., 0) 2. Every object has a successor, which is also an object. 3. No two objects have the same successor 4. The first object is not the successor of any object. 5. If a property is possessed by the first object and also by the successor of every object that has that property, then it is possessed by all objects (including classifications and memberships).</p>
 <p>This is a generalization of Peano’s Axioms: 1. 0 is a number. 2. Every number has a successor, which is also a number. 3. No two numbers have the same successor 4. 0 is not the successor of any number. 5. If a property is possessed by 0 and also by the successor of every number that has that property, then it is possessed by all numbers. * Endless sequence of unique numbers (via 2 and 3) that don’t loop (via 4), which includes all numbers (via 5). * “Ordinal arithmetic” – m+n is defined using m+0=m and m+(n+1)=S(m+n), reducing recursion. Defines addition and equivalents for progressions.</p>
 <ul>
 <li>Some mechanism of mapping between sets to compare their cardinality, allowing the definition of numbers as equivalence classes of sets with equal cardinality. (One-one relation identification with the two sets as domain and codomain.) pdf pg 37</li>
 </ul>
 <p>[Number as defined by collection of equivalence classes of sets with equal cardinality]</p>
-<p>Peanos’ Axioms and/or Frege’s Axioms Predicates as functions that map to truth values</p>
+<p>Peanos’ Axioms and/or Frege’s Axioms Predicates as functions that map to truth values Propositions are membership evaluations on predicates. Both are constants (a function and a truth value for a membership of that function). Explore how to define logical connectives with predicates: AND, OR, NOT, IMPLIES.</p>
+<p>Need to decide on these suggestions: <strong>A19. Quantifier Axioms.</strong> ∀x ∈ X P(x) is true iff P(x) holds for all x ∈ X. ∃x ∈ X P(x) is true iff there exists at least one x ∈ X such that P(x). <strong>A21. Incomplete Extensionality.</strong> If X is defined by an incomplete specification S, then X ∈ VC where the VC contains all objects consistent with S and no others. The more details in S, the smaller the VC.</p>
 </section>
 </section>
 <section id="misc-notes" class="level2">
 <h2 class="anchored" data-anchor-id="misc-notes">Misc Notes:</h2>
 <ul>
 <li>Set-typing; indicates membership of a constant or subsetting of constant-variable or variable sets in relation to the Constant “type” set. Useful for defining allowed domains and behaviors. Adds “types” but in a more intuitive approach, allowing a term to belong to multiple types. X is of settype A means: X is a Constant as a member of A or X is either a VC set or variable set as a subset of A.</li>
+<li><strong>Note on Predicates</strong> A predicate as defined as a truth-value-mapping function can return three values for a given evaluation: True (input maps to True), False (input maps to False), or NA (input is not in the domain), unless the domain of a predicate includes all objects. This latter option is when this notion of predicate aligns with the classical first-order predicate requirement of evaluating to exactly either True or False. Layering an additional mapping that brings NA to False, or adding that mapping functionality to a conditional in the predicate definition can yield a first-order-compatible True/False predicate. These might be termed <strong>Set Predicates</strong> and <strong>Logic Predicates</strong> respectively (again, both are sets encoding truth-value functions, but one has a limited domain and the other is universal).</li>
+<li><strong>Note on Existence</strong> To exist as an idea, an object need only exist with a definition in memory – this could include any concept in theory – and sets are defined by intension. So the set of all numbers greater than 3 and less than 2 exists as a concept, but it has no extension. Thus, most colloquial language on existence refers to the extension of a set, and the idea of something – even something abstract like an idea – existing is dealing with the membership of the extension. Unicorns, for instance, exist as an idea, and being logically consistent (as far as being a horse with a horn is concerned), the extension can be non-empty, including all possible fictional unicorns (such as fictional characters) or real unicorns (if surgery, genetic engineering, or unexpected circumstance permitted a nonfictional example). The statement “unicorns aren’t real”, would then be best understood as a statement with an implied restriction of scope to the known physical universe, within which the intension has no extension (to the author’s knowledge). Thus, conceptual (by intensional definition), theoretical (by general extensional definition), and specific (by extensional definition restricted by scope) existence can be considered.</li>
 </ul>
 </section>
 <section id="walkthrough-and-examples" class="level2">
