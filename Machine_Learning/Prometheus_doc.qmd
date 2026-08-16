@@ -30,6 +30,7 @@ execute:
 The Prometheus' Architecture is a foundational framework for a metamathematical reasoning system. It is designed to contain the expressive power of ZFC set theory while bridging the reasoning levels of rigorous mathematical logic and human-level reasoning. The architecture is built upon a set of primitives and constructions that allow for the representation and manipulation of mathematical objects and concepts, with the goal of creating a system that creates models for the world around it.
 
 ## To Do and Future Work
+::::: {.panel-tabset}
 ### Top Priority
 * Explore the "environment" concept with Claude to understand how a program might be an agent according to my perspective, and how to implement this in Prometheus.
 
@@ -45,6 +46,7 @@ The Prometheus' Architecture is a foundational framework for a metamathematical 
 * Define axioms for the custom set types (constant, variable-constant, variable) and their relationships to each other and to standard set theory.
 * Explore tests for determining cardinality of sets, including finite, countably infinite, and uncountably infinite sets (allowing explicit exhaustive enumeration of possibilities for sufficiently small finite sets).
 * Explore Modus Ponens and Tollens with possible trinary implication and biconditional definitions 
+:::::
 
 
 ## Program Structure
