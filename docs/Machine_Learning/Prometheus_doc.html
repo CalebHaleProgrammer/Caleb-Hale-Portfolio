@@ -4212,11 +4212,7 @@ window.Quarto = {
    
   <ul>
   <li><a href="#overview" id="toc-overview">Overview</a></li>
-  <li><a href="#to-do-and-future-work" id="toc-to-do-and-future-work">To Do and Future Work</a>
-  <ul>
-  <li><a href="#top-priority" id="toc-top-priority">Top Priority</a></li>
-  <li><a href="#next-priority" id="toc-next-priority">Next Priority</a></li>
-  </ul></li>
+  <li><a href="#to-do-and-future-work" id="toc-to-do-and-future-work">To Do and Future Work</a></li>
   <li><a href="#program-structure" id="toc-program-structure">Program Structure</a></li>
   <li><a href="#primitives" id="toc-primitives">Primitives</a></li>
   <li><a href="#constructions-and-equivalencies" id="toc-constructions-and-equivalencies">Constructions and equivalencies:</a></li>
@@ -4236,8 +4232,10 @@ window.Quarto = {
 </section>
 <section id="to-do-and-future-work" class="level2">
 <h2 class="anchored" data-anchor-id="to-do-and-future-work">To Do and Future Work</h2>
-<section id="top-priority" class="level3">
-<h3 class="anchored" data-anchor-id="top-priority">Top Priority</h3>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href>Top Priority</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href>Next Priority</a></li></ul>
+<div class="tab-content">
+<div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
 <ul>
 <li><p>Explore the “environment” concept with Claude to understand how a program might be an agent according to my perspective, and how to implement this in Prometheus.</p></li>
 <li><p>Finalize axioms for numbers systems, (e.g., Peano’s axioms, Frege’s axioms)</p></li>
@@ -4246,16 +4244,17 @@ window.Quarto = {
 <li><p>Define incomplete extensional definitions with unknown unknowns, and how they relate to the custom set types (constant, variable-constant, variable). Note: define as an unknown that aligns with known (an unknown from the category of possibilities defined by a known detail). Only unknown unknowns with no known details are impossible to define.</p></li>
 <li><p>Define attributes by their relationships to other objects and their possible values, and explore abstraction with attributes and how they relate to the custom set types (constant, variable-constant, variable).</p></li>
 </ul>
-</section>
-<section id="next-priority" class="level3">
-<h3 class="anchored" data-anchor-id="next-priority">Next Priority</h3>
+</div>
+<div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
 <ul>
 <li>Define axioms for functions, including injective, surjective, bijective, and other properties</li>
 <li>Define axioms for the custom set types (constant, variable-constant, variable) and their relationships to each other and to standard set theory.</li>
 <li>Explore tests for determining cardinality of sets, including finite, countably infinite, and uncountably infinite sets (allowing explicit exhaustive enumeration of possibilities for sufficiently small finite sets).</li>
 <li>Explore Modus Ponens and Tollens with possible trinary implication and biconditional definitions</li>
 </ul>
-</section>
+</div>
+</div>
+</div>
 </section>
 <section id="program-structure" class="level2">
 <h2 class="anchored" data-anchor-id="program-structure">Program Structure</h2>
@@ -4283,9 +4282,9 @@ window.Quarto = {
 <section id="constructions-and-equivalencies" class="level2">
 <h2 class="anchored" data-anchor-id="constructions-and-equivalencies">Constructions and equivalencies:</h2>
 <div class="tabset-margin-container"></div><div class="panel-tabset">
-<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href>Standard set theory foundation constructions, with constant sets:</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href>Ambiguity and Possibility constructions, with variable-constant sets:</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-3" role="tab" aria-controls="tabset-1-3" aria-selected="false" href>Abstraction with variable sets:</a></li></ul>
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-2-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-1" role="tab" aria-controls="tabset-2-1" aria-selected="true" href>Standard set theory foundation constructions, with constant sets:</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-2" role="tab" aria-controls="tabset-2-2" aria-selected="false" href>Ambiguity and Possibility constructions, with variable-constant sets:</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-3" role="tab" aria-controls="tabset-2-3" aria-selected="false" href>Abstraction with variable sets:</a></li></ul>
 <div class="tab-content">
-<div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
+<div id="tabset-2-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-2-1-tab">
 <div>
 <ul>
 <li>Intersection                   A∩B = {x | x∈A and x∈B}C</li>
@@ -4335,7 +4334,7 @@ window.Quarto = {
 </ul>
 </div>
 </div>
-<div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
+<div id="tabset-2-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-2-tab">
 <ul>
 <li><strong>Impossibility: NA = {}VC</strong></li>
 <li><dl>
@@ -4358,7 +4357,7 @@ A VC set with type X members can be used as a component in any construction, obj
 </dl></li>
 </ul>
 </div>
-<div id="tabset-1-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-3-tab">
+<div id="tabset-2-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-3-tab">
 
 </div>
 </div>
@@ -4427,7 +4426,7 @@ A VC set with type X members can be used as a component in any construction, obj
 <li>Bounded quantifiers are convenient abbreviations:</li>
 <li>∀x ∈ A φ(x) means ∀x (x ∈ A → φ(x))</li>
 <li>∃x ∈ A φ(x) means ∃x (x ∈ A ∧ φ(x))</li>
-<li><strong>Note</strong> Predicate Quantifiers check for Truth values unless specified (“P(x) holds”=“P(x) is True”, “P(x) does not hold”=“P(x) is not True”=“P(x) is False or NA”, whereas “P(x) is False” is True only when the value is False, and is False when the value is either True or NA)</li>
+<li><strong>Note</strong> Predicate Quantifiers check for “Truth” values unless specified (“P(x) holds”=“P(x) is True”, “P(x) does not hold”=“P(x) is not True”=“P(x) is False or NA”, whereas “P(x) is False” is True only when the value is False, and is False when the value is either True or NA)</li>
 </ul>
 </section>
 <section id="starting-template-structures-minimal-building-blocks-rules-or-strategies" class="level3">

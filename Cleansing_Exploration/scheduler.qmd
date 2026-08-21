@@ -169,6 +169,8 @@ html, body{
 .db-tab.active{ background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .db-tab.dragging{ opacity: .4; }
 .db-tab .idx{ font-family: var(--font-mono); font-size:10px; opacity:.7; }
+.db-tab .tab-clone-of{ font-size:10.5px; color: var(--faint); font-weight:400; margin-left:2px; }
+.db-tab.active .tab-clone-of{ color: rgba(255,255,255,0.7); }
 .db-tab-menu{
   position: fixed; z-index: 65;
   background: var(--panel);
@@ -1017,6 +1019,7 @@ function createSchedule(name, seed){
   const sched = {
     id: genId('sched'),
     name: name || `Schedule ${state.schedules.length+1}`,
+    clonedFromName: (seed && seed.clonedFromName) || null,
     assignments: (seed && seed.assignments) || [],
     rules: (seed && seed.rules) || [],
     rejectedSuggestions: (seed && seed.rejectedSuggestions) || new Set(),
@@ -1031,6 +1034,18 @@ function cellKeyFor(personId, slotIndex){ return `${personId}|${slotIndex}`; }
 function isCellLocked(sched, personId, slotIndex){
   return sched.lockedPeople.has(personId) || sched.lockedSlots.has(slotIndex) || sched.lockedCells.has(cellKeyFor(personId, slotIndex));
 }
+function formatCloneDate(d){
+  d = d || new Date();
+  return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()%100}`;
+}
+function generateCloneName(){
+  const base = formatCloneDate();
+  const existing = state.schedules.map(s=>s.name);
+  if(!existing.includes(base)) return base;
+  let n = 2;
+  while(existing.includes(`${base} (${n})`)) n++;
+  return `${base} (${n})`;
+}
 function cloneActiveSchedule(mode){
   const src = activeSchedule();
   let assignments;
@@ -1042,7 +1057,8 @@ function cloneActiveSchedule(mode){
   } else {
     assignments = src.assignments.map(a=>({ ...a, id:genId('asg') }));
   }
-  const cloned = createSchedule(`${src.name} (copy)`, {
+  const cloned = createSchedule(generateCloneName(), {
+    clonedFromName: src.name,
     assignments,
     rules: src.rules.map(r=>({ ...JSON.parse(JSON.stringify(r)), id:genId('rule') })),
     rejectedSuggestions: new Set(src.rejectedSuggestions),
@@ -1080,7 +1096,7 @@ function persist(){
     const payload = {
       people: state.people, positions: state.positions, tags: state.tags, settings: state.settings,
       schedules: state.schedules.map(s=>({
-        id:s.id, name:s.name, assignments:s.assignments, rules:s.rules,
+        id:s.id, name:s.name, clonedFromName: s.clonedFromName || null, assignments:s.assignments, rules:s.rules,
         rejectedSuggestions: Array.from(s.rejectedSuggestions),
         lockedPeople: Array.from(s.lockedPeople), lockedSlots: Array.from(s.lockedSlots), lockedCells: Array.from(s.lockedCells),
       })),
@@ -1100,7 +1116,7 @@ function loadPersisted(){
     state.tags = payload.tags || [];
     state.settings = payload.settings || state.settings;
     state.schedules = payload.schedules.map(s=>({
-      id:s.id, name:s.name, assignments:s.assignments||[], rules:s.rules||[],
+      id:s.id, name:s.name, clonedFromName: s.clonedFromName || null, assignments:s.assignments||[], rules:s.rules||[],
       rejectedSuggestions: new Set(s.rejectedSuggestions||[]),
       lockedPeople: new Set(s.lockedPeople||[]), lockedSlots: new Set(s.lockedSlots||[]), lockedCells: new Set(s.lockedCells||[]),
     }));
@@ -1851,6 +1867,77 @@ function shuffleArray(arr){
   return a;
 }
 
+/* Tiles every remaining empty slot (respecting locks when asked) with some valid
+   position, preferring options that also satisfy preferred rules, so "fill unlocked"
+   and "fill all" leave no gaps — only required-rule placement is exempt from this. */
+function fillAllGaps(sched, respectLocks){
+  const slots = getSlots();
+  const visiblePeople = shuffleArray(state.people.filter(p=>!p.hidden));
+  let placed = 0;
+  for(const person of visiblePeople){
+    let s = 0;
+    while(s < slots.length){
+      const occupied = state.assignments.some(a=>a.personId===person.id && assignmentOccupiesSlots(a).includes(s));
+      const locked = respectLocks && isCellLocked(sched, person.id, s);
+      if(occupied || locked){ s++; continue; }
+
+      const options = [];
+      for(const pos of state.positions){
+        const durChoices = new Set([positionDurationSlots(pos.id), positionMinDurationSlots(pos.id)]);
+        for(const durSlots of durChoices){
+          if(s+durSlots>slots.length) continue;
+          if(respectLocks && range(s, s+durSlots-1).some(sl=>isCellLocked(sched, person.id, sl))) continue;
+          const check = isValidPlacement(person.id, pos.id, s, { durSlots });
+          if(check.ok) options.push({ positionId: pos.id, durSlots, prefScore: preferredMatchesFor(person.id, pos.id, s).length });
+        }
+      }
+      if(options.length===0){ s++; continue; }
+      const maxScore = Math.max(...options.map(o=>o.prefScore));
+      const best = shuffleArray(options.filter(o=>o.prefScore===maxScore));
+      const chosen = best[0];
+      state.assignments.push({ id:genId('asg'), personId:person.id, positionId:chosen.positionId, startSlot:s, slotCount:chosen.durSlots });
+      placed++;
+      s += chosen.durSlots;
+    }
+  }
+  return placed;
+}
+
+/* After fillAllGaps, some leftover gaps can be smaller than every position's minimum
+   duration and so can never be filled by a brand-new assignment. Where the block
+   immediately before such a gap has room to grow (its position has a duration range),
+   extend it to absorb the gap instead of leaving an unfillable hole. */
+function absorbTinyGaps(sched, respectLocks){
+  const slots = getSlots();
+  let absorbed = 0;
+  for(const person of state.people.filter(p=>!p.hidden)){
+    let s = 0;
+    while(s < slots.length){
+      const occupied = state.assignments.some(a=>a.personId===person.id && assignmentOccupiesSlots(a).includes(s));
+      const locked = respectLocks && isCellLocked(sched, person.id, s);
+      if(occupied || locked){ s++; continue; }
+      let gapEnd = s;
+      while(gapEnd<slots.length){
+        const occ2 = state.assignments.some(a=>a.personId===person.id && assignmentOccupiesSlots(a).includes(gapEnd));
+        const lock2 = respectLocks && isCellLocked(sched, person.id, gapEnd);
+        if(occ2 || lock2) break;
+        gapEnd++;
+      }
+      const gapLen = gapEnd-s;
+      const before = state.assignments.find(a=>a.personId===person.id && a.startSlot+a.slotCount===s);
+      if(before){
+        const newCount = before.slotCount+gapLen;
+        if(isValidResize(before.id, newCount).ok){
+          resizeAssignment(before.id, newCount);
+          absorbed++;
+        }
+      }
+      s = gapEnd;
+    }
+  }
+  return absorbed;
+}
+
 function solve(mode){
   mode = mode || 'required';
   const sched = activeSchedule();
@@ -1912,11 +1999,17 @@ function solve(mode){
     }
   }
 
+  let gapsFilled = 0, gapsAbsorbed = 0;
+  if(mode==='unlocked' || mode==='all'){
+    gapsFilled = fillAllGaps(sched, respectLocks);
+    gapsAbsorbed = absorbTinyGaps(sched, respectLocks);
+  }
+
   const remaining = getUnsatisfiedRequiredCoverage().length;
   renderAll();
   const modeLabel = mode==='required' ? 'Fill required' : mode==='unlocked' ? 'Fill unlocked' : 'Fill all';
   let msg = `${modeLabel} — placed ${filled} required assignment${filled===1?'':'s'}`;
-  if(mode!=='required') msg += ` and ${prefFilled} preferred assignment${prefFilled===1?'':'s'}`;
+  if(mode!=='required') msg += `, ${prefFilled} preferred assignment${prefFilled===1?'':'s'}, and filled ${gapsFilled} more slot${gapsFilled===1?'':'s'}${gapsAbsorbed?` (${gapsAbsorbed} tiny gap${gapsAbsorbed===1?'':'s'} absorbed by widening neighboring blocks)`:''}`;
   msg += '.';
   msg += remaining ? ` ${remaining} required instance${remaining===1?'':'s'} still can't be satisfied — see red items in Decisions.` : ' All required rules satisfied.';
   if(mode==='required') msg += ' Preferred-rule suggestions are shown as stars — click one to accept.';
@@ -1992,7 +2085,8 @@ function renderScheduleTabs(){
     tab.dataset.scheduleId = sched.id;
     tab.draggable = true;
     tab.title = sched.id===state.activeScheduleId ? 'Click for clone/delete options' : `Switch to ${sched.name}`;
-    tab.innerHTML = `<span class="idx">${idx+1}</span><span class="name">${escapeHtml(sched.name)}</span>`;
+    const cloneOfHtml = sched.clonedFromName ? `<span class="tab-clone-of">(clone of ${escapeHtml(sched.clonedFromName)})</span>` : '';
+    tab.innerHTML = `<span class="idx">${idx+1}</span><span class="name">${escapeHtml(sched.name)}</span>${cloneOfHtml}`;
     tab.addEventListener('click', (e)=>{
       if(sched.id===state.activeScheduleId) openTabMenu(e, sched.id);
       else setActiveSchedule(sched.id);
@@ -2877,7 +2971,7 @@ function openTabMenu(e, scheduleId){
   const rect = e.currentTarget.getBoundingClientRect();
   const menu = document.createElement('div');
   menu.className = 'db-tab-menu';
-  menu.innerHTML = `<button id="tab-rename">Rename</button><button id="tab-clone-all">Clone all</button><button id="tab-clone-unlocked">Clone unlocked</button><button id="tab-delete" class="danger">Delete</button>`;
+  menu.innerHTML = `<button id="tab-rename">Rename</button><button id="tab-clone-all">Clone all</button><button id="tab-clone-unlocked">Clone locked</button><button id="tab-delete" class="danger">Delete</button>`;
   layer.appendChild(menu);
   positionFloating(menu, rect);
   menu.querySelector('#tab-rename').addEventListener('click', ()=>{

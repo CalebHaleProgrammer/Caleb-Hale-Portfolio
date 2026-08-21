@@ -73,7 +73,8 @@ Mathematical objects exist (primarily as sets) within a graph structure, with re
 
 ### Standard set theory foundation constructions, with constant sets:
 :::{}
-* Intersection      &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; A∩B = {x | x∈A and x∈B}C
+* Intersection      &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; $A \cap B = \{x \mid x \in A \text{ and } x \in B\}C$
+A∩B = {x | x∈A and x∈B}C
 * Union             &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; A∪B = {x | x∈A or x∈B}C
 * Power Set         &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 𝒫(A) = {X | X⊆A}C
 * Predicate Subset  &nbsp; &nbsp; &nbsp; &nbsp; {x | P(x)}C = {x | x∈A and P(x)}C
@@ -100,21 +101,6 @@ Mathematical objects exist (primarily as sets) within a graph structure, with re
 - **Function Mapping**
   - $f(A) = \{f(x) \mid x \in A\}C$
 :::
-
-```{css, echo=false}
-.list-grid {
-  display: grid;
-  grid-template-columns: minmax(160px, auto) 1fr;
-  gap: 0.5rem 2rem;
-  margin-left: 1.5rem;
-}
-.list-grid > ul {
-  display: contents; /* Flattens the markdown list into grid items */
-}
-.list-grid > ul > li {
-  display: contents; /* Makes the term and sub-item grid columns */
-}
-```
 
 
 As well as extending set theory formulations that build up set theory constructively:
@@ -147,6 +133,7 @@ Also, for any set that can be validly constructed as one type of set, its intens
 
 
 ## Starting Axioms and Template Structures:
+::::: {.panel-tabset}
 ### Axioms
 * **Axiom of Intensionality** By definition, any two sets with the same intension are the same object. Since x=x always, pairing this with the axiom of extensionality means the object(s) has the same elements (as itself). "==" is used to denote not only equality but identicality, which might be expressed as equality in every equivalence relation, or every possible measure.
 : ∀x ∀y (x.intension = y.intension → x == y)
@@ -261,6 +248,7 @@ Need to decide on these suggestions:
 **A19. Quantifier Axioms.** ∀x ∈ X P(x) is true iff P(x) holds for all x ∈ X. ∃x ∈ X P(x) is true iff there exists at least one x ∈ X such that P(x).
 **A21. Incomplete Extensionality.** If X is defined by an incomplete specification S, then X ∈ VC where the VC contains all objects consistent with S and no others. The more details in S, the smaller the VC.
 
+:::::
 
 ## Misc Notes:
 * Set-typing; indicates membership of a constant or subsetting of constant-variable or variable sets in relation to the Constant "type" set. Useful for defining allowed domains and behaviors. Adds "types" but in a more intuitive approach, allowing a term to belong to multiple types. X is of settype A means: X is a Constant as a member of A or X is either a VC set or variable set as a subset of A.
