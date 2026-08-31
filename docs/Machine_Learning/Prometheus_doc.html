@@ -4216,14 +4216,8 @@ window.Quarto = {
   <li><a href="#program-structure" id="toc-program-structure">Program Structure</a></li>
   <li><a href="#primitives" id="toc-primitives">Primitives</a></li>
   <li><a href="#constructions-and-equivalencies" id="toc-constructions-and-equivalencies">Constructions and equivalencies:</a></li>
-  <li><a href="#starting-axioms-and-template-structures" id="toc-starting-axioms-and-template-structures">Starting Axioms and Template Structures:</a>
-  <ul>
-  <li><a href="#axioms" id="toc-axioms">Axioms</a></li>
-  <li><a href="#starting-template-structures-minimal-building-blocks-rules-or-strategies" id="toc-starting-template-structures-minimal-building-blocks-rules-or-strategies">Starting Template Structures (minimal building blocks, rules, or strategies)</a></li>
-  <li><a href="#drafting" id="toc-drafting">Drafting</a></li>
-  </ul></li>
+  <li><a href="#starting-axioms-and-template-structures" id="toc-starting-axioms-and-template-structures">Starting Axioms and Template Structures:</a></li>
   <li><a href="#misc-notes" id="toc-misc-notes">Misc Notes:</a></li>
-  <li><a href="#walkthrough-and-examples" id="toc-walkthrough-and-examples">Walkthrough and Examples</a></li>
   </ul>
 </nav>
 <section id="overview" class="level2">
@@ -4287,7 +4281,7 @@ window.Quarto = {
 <div id="tabset-2-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-2-1-tab">
 <div>
 <ul>
-<li>Intersection                   A∩B = {x | x∈A and x∈B}C</li>
+<li>Intersection                   <span class="math inline">A \cap B = \{x \mid x \in A \text{ and } x \in B\}C</span> A∩B = {x | x∈A and x∈B}C</li>
 <li>Union                                 A∪B = {x | x∈A or x∈B}C</li>
 <li>Power Set                        𝒫(A) = {X | X⊆A}C</li>
 <li>Predicate Subset         {x | P(x)}C = {x | x∈A and P(x)}C</li>
@@ -4323,7 +4317,6 @@ window.Quarto = {
 </ul></li>
 </ul>
 </div>
-<p><code>{css, echo=false} .list-grid {   display: grid;   grid-template-columns: minmax(160px, auto) 1fr;   gap: 0.5rem 2rem;   margin-left: 1.5rem; } .list-grid &gt; ul {   display: contents; /* Flattens the markdown list into grid items */ } .list-grid &gt; ul &gt; li {   display: contents; /* Makes the term and sub-item grid columns */ }</code></p>
 <p>As well as extending set theory formulations that build up set theory constructively:</p>
 <div>
 <ul>
@@ -4366,8 +4359,10 @@ A VC set with type X members can be used as a component in any construction, obj
 </section>
 <section id="starting-axioms-and-template-structures" class="level2">
 <h2 class="anchored" data-anchor-id="starting-axioms-and-template-structures">Starting Axioms and Template Structures:</h2>
-<section id="axioms" class="level3">
-<h3 class="anchored" data-anchor-id="axioms">Axioms</h3>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-3-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-1" role="tab" aria-controls="tabset-3-1" aria-selected="true" href>Axioms</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-3-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-2" role="tab" aria-controls="tabset-3-2" aria-selected="false" href>Starting Template Structures (minimal building blocks, rules, or strategies)</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-3-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-3" role="tab" aria-controls="tabset-3-3" aria-selected="false" href>Drafting</a></li></ul>
+<div class="tab-content">
+<div id="tabset-3-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-3-1-tab">
 <ul>
 <li><dl>
 <dt><strong>Axiom of Intensionality</strong> By definition, any two sets with the same intension are the same object. Since x=x always, pairing this with the axiom of extensionality means the object(s) has the same elements (as itself). “==” is used to denote not only equality but identicality, which might be expressed as equality in every equivalence relation, or every possible measure.</dt>
@@ -4428,9 +4423,8 @@ A VC set with type X members can be used as a component in any construction, obj
 <li>∃x ∈ A φ(x) means ∃x (x ∈ A ∧ φ(x))</li>
 <li><strong>Note</strong> Predicate Quantifiers check for “Truth” values unless specified (“P(x) holds”=“P(x) is True”, “P(x) does not hold”=“P(x) is not True”=“P(x) is False or NA”, whereas “P(x) is False” is True only when the value is False, and is False when the value is either True or NA)</li>
 </ul>
-</section>
-<section id="starting-template-structures-minimal-building-blocks-rules-or-strategies" class="level3">
-<h3 class="anchored" data-anchor-id="starting-template-structures-minimal-building-blocks-rules-or-strategies">Starting Template Structures (minimal building blocks, rules, or strategies)</h3>
+</div>
+<div id="tabset-3-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-3-2-tab">
 <ul>
 <li>Empty set (all three set types): {}C, {}VC, {}V (this last one I’m not sure about – it might be logically valid but not very meaningful or useful…). Empty Set is supposedly derivable from the axioms of Infinity and Separation.</li>
 <li>Unknown specific object: {x∈X}VC defines an unknown object from the collection X, allowing definition from limited information. {x∉{}C}VC defines an unknown object that isn’t in the empty set, allowing the definition of a completely unknown object.</li>
@@ -4454,9 +4448,8 @@ A VC set with type X members can be used as a component in any construction, obj
 <li><strong>For Now, this system will use all of the above</strong>. The different implications and biconditionals will be available as proposition/rules, but none of the trinary alternatives will be considered “True” axiomatically until further notice. We should remember that NA is not ambiguity or an unknown value like {True, False}VC – NA is a non-answer, the absence of an answer, used when a question is ill-formed or something doesn’t have a truth value.</li>
 <li><strong>Reminder:</strong> non-sets are treated as constants, and the result of an operation with a VC is a VC of the outputs of the operation. If this results in a single member within the VC, recall the rule {x}VC = x.</li>
 </ul>
-</section>
-<section id="drafting" class="level3">
-<h3 class="anchored" data-anchor-id="drafting">Drafting</h3>
+</div>
+<div id="tabset-3-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-3-3-tab">
 <p>Progression Axioms: 1. Some first object exists (e.g., 0) 2. Every object has a successor, which is also an object. 3. No two objects have the same successor 4. The first object is not the successor of any object. 5. If a property is possessed by the first object and also by the successor of every object that has that property, then it is possessed by all objects (including classifications and memberships).</p>
 <p>This is a generalization of Peano’s Axioms: 1. 0 is a number. 2. Every number has a successor, which is also a number. 3. No two numbers have the same successor 4. 0 is not the successor of any number. 5. If a property is possessed by 0 and also by the successor of every number that has that property, then it is possessed by all numbers. * Endless sequence of unique numbers (via 2 and 3) that don’t loop (via 4), which includes all numbers (via 5). * “Ordinal arithmetic” – m+n is defined using m+0=m and m+(n+1)=S(m+n), reducing recursion. Defines addition and equivalents for progressions.</p>
 <ul>
@@ -4465,18 +4458,36 @@ A VC set with type X members can be used as a component in any construction, obj
 <p>[Number as defined by collection of equivalence classes of sets with equal cardinality]</p>
 <p>Peanos’ Axioms and/or Frege’s Axioms Predicates as functions that map to truth values Propositions are membership evaluations on predicates. Both are constants (a function and a truth value for a membership of that function). Explore how to define logical connectives with predicates: AND, OR, NOT, IMPLIES.</p>
 <p>Need to decide on these suggestions: <strong>A19. Quantifier Axioms.</strong> ∀x ∈ X P(x) is true iff P(x) holds for all x ∈ X. ∃x ∈ X P(x) is true iff there exists at least one x ∈ X such that P(x). <strong>A21. Incomplete Extensionality.</strong> If X is defined by an incomplete specification S, then X ∈ VC where the VC contains all objects consistent with S and no others. The more details in S, the smaller the VC.</p>
-</section>
+</div>
+</div>
+</div>
 </section>
 <section id="misc-notes" class="level2">
 <h2 class="anchored" data-anchor-id="misc-notes">Misc Notes:</h2>
 <ul>
-<li>Set-typing; indicates membership of a constant or subsetting of constant-variable or variable sets in relation to the Constant “type” set. Useful for defining allowed domains and behaviors. Adds “types” but in a more intuitive approach, allowing a term to belong to multiple types. X is of settype A means: X is a Constant as a member of A or X is either a VC set or variable set as a subset of A.</li>
-<li><strong>Note on Predicates</strong> A predicate as defined as a truth-value-mapping function can return three values for a given evaluation: True (input maps to True), False (input maps to False), or NA (input is not in the domain), unless the domain of a predicate includes all objects. This latter option is when this notion of predicate aligns with the classical first-order predicate requirement of evaluating to exactly either True or False. Layering an additional mapping that brings NA to False, or adding that mapping functionality to a conditional in the predicate definition can yield a first-order-compatible True/False predicate. These might be termed <strong>Set Predicates</strong> and <strong>Logic Predicates</strong> respectively (again, both are sets encoding truth-value functions, but one has a limited domain and the other is universal).</li>
-<li><strong>Note on Existence</strong> To exist as an idea, an object need only exist with a definition in memory – this could include any concept in theory – and sets are defined by intension. So the set of all numbers greater than 3 and less than 2 exists as a concept, but it has no extension. Thus, most colloquial language on existence refers to the extension of a set, and the idea of something – even something abstract like an idea – existing is dealing with the membership of the extension. Unicorns, for instance, exist as an idea, and being logically consistent (as far as being a horse with a horn is concerned), the extension can be non-empty, including all possible fictional unicorns (such as fictional characters) or real unicorns (if surgery, genetic engineering, or unexpected circumstance permitted a nonfictional example). The statement “unicorns aren’t real”, would then be best understood as a statement with an implied restriction of scope to the known physical universe, within which the intension has no extension (to the author’s knowledge). Thus, conceptual (by intensional definition), theoretical (by general extensional definition), and specific (by extensional definition restricted by scope) existence can be considered.</li>
+<li><p>Set-typing; indicates membership of a constant or subsetting of constant-variable or variable sets in relation to the Constant “type” set. Useful for defining allowed domains and behaviors. Adds “types” but in a more intuitive approach, allowing a term to belong to multiple types. X is of settype A means: X is a Constant as a member of A or X is either a VC set or variable set as a subset of A.</p></li>
+<li><p><strong>Note on Predicates</strong> A predicate as defined as a truth-value-mapping function can return three values for a given evaluation: True (input maps to True), False (input maps to False), or NA (input is not in the domain), unless the domain of a predicate includes all objects. This latter option is when this notion of predicate aligns with the classical first-order predicate requirement of evaluating to exactly either True or False. Layering an additional mapping that brings NA to False, or adding that mapping functionality to a conditional in the predicate definition can yield a first-order-compatible True/False predicate. These might be termed <strong>Set Predicates</strong> and <strong>Logic Predicates</strong> respectively (again, both are sets encoding truth-value functions, but one has a limited domain and the other is universal).</p></li>
+<li><p><strong>Note on Existence</strong> To exist as an idea, an object need only exist with a definition in memory – this could include any concept in theory – and sets are defined by intension. So the set of all numbers greater than 3 and less than 2 exists as a concept, but it has no extension. Thus, most colloquial language on existence refers to the extension of a set, and the idea of something – even something abstract like an idea – existing is dealing with the membership of the extension. Unicorns, for instance, exist as an idea, and being logically consistent (as far as being a horse with a horn is concerned), the extension can be non-empty, including all possible fictional unicorns (such as fictional characters) or real unicorns (if surgery, genetic engineering, or unexpected circumstance permitted a nonfictional example). The statement “unicorns aren’t real”, would then be best understood as a statement with an implied restriction of scope to the known physical universe, within which the intension has no extension (to the author’s knowledge). Thus, conceptual (by intensional definition), theoretical (by general extensional definition), and specific (by extensional definition restricted by scope) existence can be considered.</p></li>
+<li><p>Equivalence Relations are Reflexive (A-A), Symmetric (A-B &lt;-&gt; B-A), and Transitive (A-B &amp; B-C -&gt; A-C)</p></li>
+<li><p>Partial Order is Relation that’s Reflexive, Transitive, and Antisymmetric (A&lt;=B and B&lt;=A -&gt; A=B) *Is this relative to an equivalence relation (two objects are the same value), or is it a statement of two objects being the same (creating an implication that there cannot be two objects with the same value)?</p></li>
+<li><p>A total order (or linear order) is a partial order where every pair of distinct elements can be compared</p></li>
+<li><p>Domain theory uses partial orders and directed sets. A directed set is a collection where any two elements have an upper bound in the collection. Every directed set must have a least upper bound (supremum) in the domain. This captures the idea that infinite approximations converge to a limit.</p></li>
+<li><p>Continuous functions: Functions between domains that preserve the approximation structure - if you have better approximations to inputs, you get better approximations to outputs. Formally, they preserve suprema of directed sets.</p></li>
+<li><p>Scott topology: A special topology (way of defining “open sets”) on domains where the open sets are precisely those preserved by taking suprema of directed sets. This makes continuous functions in the domain sense correspond to continuous functions in the topological sense.</p></li>
+<li><p>System switching will be an advanced mechanic added in later. For now, I want to make sure basic propositional logic, FO predicate logic and set theory can be instantiated, sufficient to define relations, finite and infinite systems of objects (like the natural numbers), basic arithmetic, etc.</p></li>
+<li><p>This system should in large part be inspired by (and perhaps structured as a compilation of) various existing logical programs, but should have as a key design aspect the process and goal of using mathematical principles to classify and model inputs and data patterns, e.g. seeing that words correspond to patterns that could be mapped to values and an operation in a system so that “one plus one equals” aligns with “1+1=” and “two” aligns with “2” in usage patterns. The system should be very clear about what is and what isn’t, so the above example could be mapped to a wide range of systems (without knowledge of standard English or math notation), but the more information provided narrows down the patterns of what “one plus one equals” could mean. Also progressions vs number systems vs the natural numbers would be notable distinctions for the user – progressions can be defined using a few axioms, number systems would be a bit trickier to define rigorously, and the natural numbers would be a progression that aligns with the specific values that we’d want for standard math, maybe expressible in terms of set ordinals, e.g. Von Neumann ordinals (idk if this really indicates the natural numbers inherently even though it works pretty intuitively as a representation of them once you learn about them).</p></li>
+<li><p>Cox’s theorem (the classical justification for why probability theory is the unique consistent extension of Boolean logic to degrees of plausibility)</p></li>
+<li><p>On unifying ZFC + category theory + topos theory into one foundation:</p></li>
+<li><p><strong>ETCS</strong> (Elementary Theory of the Category of Sets) — Lawvere, 1964. Axiomatizes “the category of Sets” using purely categorical primitives: it’s a topos that is additionally well-pointed, has choice, and has a natural numbers object (which forces it to be Boolean/classical). This is probably the best template if you want the combined-foundations approach (option a) rather than the single-abstract-foundation approach (option b).</p></li>
+<li><p>Logical framework architecture — a small trusted meta-calculus (typically a dependently-typed core) serves as the “abstract foundation,” and each target system (propositional logic, FOL, set theory, category theory, topos theory) is represented as an object logic — an encoding living inside that kernel, via “judgments as types” (Edinburgh LF, Automath). <strong>Isabelle</strong> is a working existence proof of exactly this</p></li>
+<li><p>Univalent Foundations / <strong>HoTT</strong> — types-as-spaces, where ordinary sets fall out as a special case (types with no higher path structure, “h-sets”) and category-theoretic structure is native (∞-groupoids are the objects of higher category theory). Deepest unification, hardest to implement well — still an active research frontier (see cubical type theory for a computational account of univalence).</p></li>
+<li><p>My Choice: Currently I want to explore a logical framework architecture like <strong>Isabelle</strong>. I think what I’m looking for is model-theoretic interpretation with abductive logic programming to have Version-space/candidate-elimination narrowing, which will need formal language theory and parsing system(s) to interpret input.</p></li>
+<li><p>“Proof Calculus for the logic layer” apparently has these options:</p></li>
+<li><p>natural deduction (tied to Curry-Howard)</p></li>
+<li><p>sequent calculus</p></li>
+<li><p>resolution/unification-based approach (Prolog-like)</p></li>
+<li><p>Isabelle ## Walkthrough and Examples</p></li>
 </ul>
-</section>
-<section id="walkthrough-and-examples" class="level2">
-<h2 class="anchored" data-anchor-id="walkthrough-and-examples">Walkthrough and Examples</h2>
 
 
 </section>

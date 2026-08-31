@@ -256,6 +256,8 @@ html, body{
   font-weight: 600;
 }
 .db-panel-head .db-panel-note{ font-size: 11.5px; color: var(--muted); font-family: var(--font-mono); }
+.range-link{ cursor:pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
+.range-link:hover{ color: var(--accent); }
 
 .db-info-icon{
   position:relative;
@@ -757,10 +759,8 @@ html, body{
     </div>
     <div class="db-tabs-bar" id="schedule-tabs"></div>
     <div class="db-toolbar">
-      <button class="btn" id="btn-save" title="Save schedule as .xlsx">Save .xlsx</button>
-      <button class="btn" id="btn-load" title="Load schedule from .xlsx">Load .xlsx</button>
+      <button class="btn" id="btn-xlsx-menu" title="Save or load this schedule as a .xlsx file">Use .xlsx files ▾</button>
       <input type="file" id="file-input" accept=".xlsx" style="display:none" />
-      <button class="btn btn-primary" id="btn-solve" title="Choose how Solve should fill the schedule">▶ Solve ▾</button>
       <button class="btn btn-icon" id="btn-fullscreen" title="Scheduler fullscreen (chart, decisions, and rules)">⛶</button>
     </div>
   </header>
@@ -771,7 +771,10 @@ html, body{
     <!-- Schedule chart -->
     <section class="db-panel" id="chart-panel">
       <div class="db-panel-head">
-        <h2>Schedule</h2>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <h2>Schedule</h2>
+          <button class="btn btn-sm btn-primary" id="btn-solve" title="Choose how Solve should fill the schedule">▶ Solve ▾</button>
+        </div>
         <div class="head-actions">
           <span class="db-panel-note" id="chart-range-note"></span>
           <button class="btn btn-sm" id="btn-full-view" title="Scale the whole chart to fit without side-scrolling">Full view</button>
@@ -785,6 +788,7 @@ html, body{
         <button class="btn btn-sm" id="btn-toggle-tags">Person tags: on</button>
         <select id="hidden-people-select"><option value="">No people toggled off</option></select>
         <button class="btn btn-sm" id="btn-toggle-lock-display" title="When on, lock icons stay visible. When off, they flash briefly then only reappear on hover.">Lock display: off</button>
+        <button class="btn btn-sm" id="btn-undo" title="Undo the last change (Ctrl+Z)" style="margin-left:auto;">↶ Undo</button>
       </div>
     </section>
 
@@ -900,11 +904,11 @@ function escapeHtml(str){
 var state = {
   settings: { startMinutes: 10*60+30, endMinutes: 16*60+30 },
   people: [
-    { id:'p_alice', name:'Alice', tags:['tag_female','tag_bilingual'], hidden:false },
-    { id:'p_bob',   name:'Bob',   tags:['tag_male'], hidden:false },
-    { id:'p_carol', name:'Carol', tags:['tag_female'], hidden:false },
-    { id:'p_dave',  name:'Dave',  tags:['tag_male'], hidden:false },
-    { id:'p_eve',   name:'Eve',   tags:['tag_female','tag_bilingual'], hidden:false },
+    { id:'p_alice', name:'Alice', tags:['tag_female','tag_bilingual'] },
+    { id:'p_bob',   name:'Bob',   tags:['tag_male'] },
+    { id:'p_carol', name:'Carol', tags:['tag_female'] },
+    { id:'p_dave',  name:'Dave',  tags:['tag_male'] },
+    { id:'p_eve',   name:'Eve',   tags:['tag_female','tag_bilingual'] },
   ],
   positions: [
     { id:'pos_frontdesk',    name:'Front Desk',    durationMin:15, durationMax:15, preferredDuration:15, singlePerson:false, color:'#2563eb', textColor:'#FFFFFF', tags:[] },
@@ -935,6 +939,7 @@ var state = {
       lockedPeople: new Set(),
       lockedSlots: new Set(),
       lockedCells: new Set(),
+      hiddenPeople: new Set(),
       rules: [
         { id:'rule_0', kind:'standard', strength:'required',  effect:'require', active:true, nickname:'',
           person:{mode:'id', value:'p_bob'}, position:{mode:'id', value:'pos_breakrelief'}, slot:{mode:'id', value:30}, tags:['tag_coverage'] },
@@ -967,6 +972,7 @@ var state = {
   lockedPeople: null,
   lockedSlots: null,
   lockedCells: null,
+  hiddenPeople: null,
 };
 state.assignments = state.schedules[0].assignments;
 state.rules = state.schedules[0].rules;
@@ -974,6 +980,7 @@ state.rejectedSuggestions = state.schedules[0].rejectedSuggestions;
 state.lockedPeople = state.schedules[0].lockedPeople;
 state.lockedSlots = state.schedules[0].lockedSlots;
 state.lockedCells = state.schedules[0].lockedCells;
+state.hiddenPeople = state.schedules[0].hiddenPeople;
 
 var rulesFocusPersonId = null;
 var rulesFocusSlotIndex = null;
@@ -1008,6 +1015,7 @@ function setActiveSchedule(id){
   state.lockedPeople = sched.lockedPeople;
   state.lockedSlots = sched.lockedSlots;
   state.lockedCells = sched.lockedCells;
+  state.hiddenPeople = sched.hiddenPeople;
   renderAll();
   const overlay = document.getElementById('settings-overlay');
   if(overlay && overlay.style.display==='flex'){
@@ -1026,6 +1034,7 @@ function createSchedule(name, seed){
     lockedPeople: (seed && seed.lockedPeople) || new Set(),
     lockedSlots: (seed && seed.lockedSlots) || new Set(),
     lockedCells: (seed && seed.lockedCells) || new Set(),
+    hiddenPeople: (seed && seed.hiddenPeople) || new Set(),
   };
   state.schedules.push(sched);
   return sched;
@@ -1033,6 +1042,13 @@ function createSchedule(name, seed){
 function cellKeyFor(personId, slotIndex){ return `${personId}|${slotIndex}`; }
 function isCellLocked(sched, personId, slotIndex){
   return sched.lockedPeople.has(personId) || sched.lockedSlots.has(slotIndex) || sched.lockedCells.has(cellKeyFor(personId, slotIndex));
+}
+/* Whether a person is toggled off is schedule-specific, so the same person
+   can be hidden on one week's schedule and active on another. */
+function isPersonHidden(personId){ return state.hiddenPeople.has(personId); }
+function togglePersonHidden(personId, hidden){
+  if(hidden) state.hiddenPeople.add(personId);
+  else state.hiddenPeople.delete(personId);
 }
 function formatCloneDate(d){
   d = d || new Date();
@@ -1065,6 +1081,7 @@ function cloneActiveSchedule(mode){
     lockedPeople: new Set(src.lockedPeople),
     lockedSlots: new Set(src.lockedSlots),
     lockedCells: new Set(src.lockedCells),
+    hiddenPeople: new Set(src.hiddenPeople),
   });
   setActiveSchedule(cloned.id);
 }
@@ -1091,6 +1108,29 @@ function reorderSchedule(fromId, toId){
 /* ================================================================
    PERSISTENCE (localStorage)
    ================================================================ */
+/* Backfills any missing fields on a position with sensible defaults. Positions saved
+   by an older version of this app (before duration ranges / text color existed) can be
+   missing durationMin/durationMax/preferredDuration/textColor entirely; without this,
+   those show up as literal "undefined" in the UI (e.g. the assign dropdown's duration
+   text) after loading old localStorage data or an old settings/Excel file. */
+function normalizePosition(pos){
+  const legacyMin = pos.durationMinutes; // oldest schema, before duration ranges existed
+  const durationMin = pos.durationMin!==undefined ? pos.durationMin : (legacyMin!==undefined ? legacyMin : SLOT_MINUTES);
+  const durationMax = pos.durationMax!==undefined ? pos.durationMax : durationMin;
+  const preferredDuration = pos.preferredDuration!==undefined ? pos.preferredDuration : durationMin;
+  const safeMin = Math.max(SLOT_MINUTES, Number(durationMin)||SLOT_MINUTES);
+  const safeMax = Math.max(safeMin, Number(durationMax)||safeMin);
+  return {
+    id: pos.id, name: pos.name,
+    durationMin: safeMin, durationMax: safeMax,
+    preferredDuration: Math.min(safeMax, Math.max(safeMin, Number(preferredDuration)||safeMin)),
+    singlePerson: !!pos.singlePerson,
+    color: pos.color || '#3b6fd6',
+    textColor: pos.textColor || '#FFFFFF',
+    tags: pos.tags || [],
+  };
+}
+
 function persist(){
   try{
     const payload = {
@@ -1099,6 +1139,7 @@ function persist(){
         id:s.id, name:s.name, clonedFromName: s.clonedFromName || null, assignments:s.assignments, rules:s.rules,
         rejectedSuggestions: Array.from(s.rejectedSuggestions),
         lockedPeople: Array.from(s.lockedPeople), lockedSlots: Array.from(s.lockedSlots), lockedCells: Array.from(s.lockedCells),
+        hiddenPeople: Array.from(s.hiddenPeople),
       })),
       activeScheduleId: state.activeScheduleId,
     };
@@ -1112,14 +1153,23 @@ function loadPersisted(){
     const payload = JSON.parse(raw);
     if(!payload || !Array.isArray(payload.schedules) || payload.schedules.length===0) return false;
     state.people = payload.people || [];
-    state.positions = payload.positions || [];
+    state.positions = (payload.positions || []).map(normalizePosition);
     state.tags = payload.tags || [];
     state.settings = payload.settings || state.settings;
     state.schedules = payload.schedules.map(s=>({
       id:s.id, name:s.name, clonedFromName: s.clonedFromName || null, assignments:s.assignments||[], rules:s.rules||[],
       rejectedSuggestions: new Set(s.rejectedSuggestions||[]),
       lockedPeople: new Set(s.lockedPeople||[]), lockedSlots: new Set(s.lockedSlots||[]), lockedCells: new Set(s.lockedCells||[]),
+      hiddenPeople: new Set(s.hiddenPeople||[]),
     }));
+    // One-time migration: older versions stored "toggled off" as a global person.hidden
+    // flag. Carry those over into every schedule's hiddenPeople so behavior doesn't
+    // silently change, then drop the stale field so it can't shadow the new marker.
+    const legacyHiddenIds = state.people.filter(p=>p.hidden).map(p=>p.id);
+    if(legacyHiddenIds.length){
+      state.schedules.forEach(s=>legacyHiddenIds.forEach(id=>s.hiddenPeople.add(id)));
+      state.people.forEach(p=>{ delete p.hidden; });
+    }
     state.activeScheduleId = (payload.activeScheduleId && state.schedules.some(s=>s.id===payload.activeScheduleId))
       ? payload.activeScheduleId : state.schedules[0].id;
     const sched = activeSchedule();
@@ -1129,6 +1179,7 @@ function loadPersisted(){
     state.lockedPeople = sched.lockedPeople;
     state.lockedSlots = sched.lockedSlots;
     state.lockedCells = sched.lockedCells;
+    state.hiddenPeople = sched.hiddenPeople;
     return true;
   }catch(e){ console.warn('Could not load persisted Duty Board state', e); return false; }
 }
@@ -1152,7 +1203,7 @@ function formatTime(mins){
 }
 function formatTimeShort(mins){
   let h = Math.floor(mins/60), m = mins%60;
-  const ampm = h>=12 ? 'p' : 'a';
+  const ampm = h>=12 ? 'pm' : 'am';
   let h12 = h%12; if(h12===0) h12=12;
   return m===0 ? `${h12}${ampm}` : `${h12}:${m.toString().padStart(2,'0')}${ampm}`;
 }
@@ -1557,10 +1608,12 @@ function isValidPlacement(personId, positionId, startSlot, opts){
   }
   const occupied = range(startSlot, startSlot+durSlots-1);
 
-  for(const s of occupied){
-    const conflict = state.assignments.find(a=>a.id!==excludeId && a.personId===personId && assignmentOccupiesSlots(a).includes(s));
-    if(conflict){
-      return { ok:false, reason:`${personName(personId)} is already scheduled for ${positionName(conflict.positionId)} at ${slots[s].label}.`, conflictAssignmentId: conflict.id };
+  if(!opts.allowSelfOverride){
+    for(const s of occupied){
+      const conflict = state.assignments.find(a=>a.id!==excludeId && a.personId===personId && assignmentOccupiesSlots(a).includes(s));
+      if(conflict){
+        return { ok:false, reason:`${personName(personId)} is already scheduled for ${positionName(conflict.positionId)} at ${slots[s].label}.`, conflictAssignmentId: conflict.id };
+      }
     }
   }
 
@@ -1610,12 +1663,57 @@ function isValidResize(assignmentId, newSlotCount){
   if(newSlotCount<minSlots || newSlotCount>maxSlots){
     return { ok:false, reason:`${positionName(a.positionId)} must be between ${minSlots*SLOT_MINUTES} and ${maxSlots*SLOT_MINUTES} minutes.` };
   }
-  return isValidPlacement(a.personId, a.positionId, a.startSlot, { durSlots:newSlotCount, excludeAssignmentId:a.id });
+  const growing = newSlotCount>a.slotCount;
+  if(growing){
+    // Growing may displace this SAME person's other assignments in its path, but never
+    // a LOCKED one — locking still protects an assignment from being overridden.
+    const sched = activeSchedule();
+    const newOcc = range(a.startSlot, a.startSlot+newSlotCount-1);
+    const wouldDisplace = state.assignments.filter(other=>other.id!==a.id && other.personId===a.personId && assignmentOccupiesSlots(other).some(s=>newOcc.includes(s)));
+    for(const other of wouldDisplace){
+      if(isCellLocked(sched, a.personId, other.startSlot)){
+        return { ok:false, reason:`Can't extend over a locked assignment (${positionName(other.positionId)}).` };
+      }
+    }
+  }
+  return isValidPlacement(a.personId, a.positionId, a.startSlot, { durSlots:newSlotCount, excludeAssignmentId:a.id, allowSelfOverride:growing });
 }
 function resizeAssignment(assignmentId, newSlotCount){
   const check = isValidResize(assignmentId, newSlotCount);
   if(!check.ok) return false;
+  applyResizeWithDisplacement(assignmentId, newSlotCount);
+  return true;
+}
+/* Grows (or shrinks) an assignment to newSlotCount. When growing, any of the SAME
+   person's other assignments that fall in the newly-claimed span are displaced —
+   fully removed if entirely covered, or trimmed to their leftover tail if only
+   partially covered — rather than blocking the resize. Assumes isValidResize already
+   passed (so nothing locked is being displaced). */
+function applyResizeWithDisplacement(assignmentId, newSlotCount){
   const a = state.assignments.find(x=>x.id===assignmentId);
+  if(!a) return false;
+  if(newSlotCount>a.slotCount){
+    const oldEnd = a.startSlot+a.slotCount-1;
+    const newEnd = a.startSlot+newSlotCount-1;
+    const toRemove = [];
+    state.assignments.forEach(other=>{
+      if(other.id===a.id || other.personId!==a.personId) return;
+      const oEnd = other.startSlot+other.slotCount-1;
+      if(oEnd<=oldEnd || other.startSlot>newEnd) return; // outside the growth zone entirely
+      if(oEnd<=newEnd){
+        toRemove.push(other.id); // fully covered by growth, remove entirely
+      } else {
+        // partially covered: keep only the leftover tail beyond the new end
+        other.startSlot = newEnd+1;
+        other.slotCount = oEnd-(newEnd+1)+1;
+      }
+    });
+    if(toRemove.length){
+      const filtered = state.assignments.filter(x=>!toRemove.includes(x.id));
+      state.assignments = filtered;
+      activeSchedule().assignments = filtered;
+    }
+  }
   a.slotCount = newSlotCount;
   return true;
 }
@@ -1858,6 +1956,49 @@ function candidatesForCoverage(rule, slot){
   return out;
 }
 
+/* ================================================================
+   UNDO
+   Snapshot-based: captures the active schedule's mutable state
+   (assignments, locks, hidden people) before an action, so a single
+   Ctrl+Z (or the Undo button) reverts the last chart-affecting change.
+   ================================================================ */
+var undoStack = [];
+const MAX_UNDO = 30;
+function pushUndoSnapshot(){
+  const sched = activeSchedule();
+  undoStack.push({
+    scheduleId: sched.id,
+    assignments: JSON.parse(JSON.stringify(sched.assignments)),
+    lockedPeople: Array.from(sched.lockedPeople),
+    lockedSlots: Array.from(sched.lockedSlots),
+    lockedCells: Array.from(sched.lockedCells),
+    hiddenPeople: Array.from(sched.hiddenPeople),
+  });
+  if(undoStack.length > MAX_UNDO) undoStack.shift();
+}
+function undo(){
+  if(undoStack.length===0){ showToast('Nothing to undo.'); return; }
+  const snap = undoStack.pop();
+  const sched = state.schedules.find(s=>s.id===snap.scheduleId);
+  if(!sched){ showToast("Can't undo — that schedule no longer exists."); return; }
+  sched.assignments = snap.assignments;
+  sched.lockedPeople = new Set(snap.lockedPeople);
+  sched.lockedSlots = new Set(snap.lockedSlots);
+  sched.lockedCells = new Set(snap.lockedCells);
+  sched.hiddenPeople = new Set(snap.hiddenPeople);
+  if(state.activeScheduleId !== sched.id){
+    setActiveSchedule(sched.id);
+  } else {
+    state.assignments = sched.assignments;
+    state.lockedPeople = sched.lockedPeople;
+    state.lockedSlots = sched.lockedSlots;
+    state.lockedCells = sched.lockedCells;
+    state.hiddenPeople = sched.hiddenPeople;
+    renderAll();
+  }
+  showToast('Undid last change.');
+}
+
 function shuffleArray(arr){
   const a = arr.slice();
   for(let i=a.length-1; i>0; i--){
@@ -1872,7 +2013,7 @@ function shuffleArray(arr){
    and "fill all" leave no gaps — only required-rule placement is exempt from this. */
 function fillAllGaps(sched, respectLocks){
   const slots = getSlots();
-  const visiblePeople = shuffleArray(state.people.filter(p=>!p.hidden));
+  const visiblePeople = shuffleArray(state.people.filter(p=>!isPersonHidden(p.id)));
   let placed = 0;
   for(const person of visiblePeople){
     let s = 0;
@@ -1910,7 +2051,7 @@ function fillAllGaps(sched, respectLocks){
 function absorbTinyGaps(sched, respectLocks){
   const slots = getSlots();
   let absorbed = 0;
-  for(const person of state.people.filter(p=>!p.hidden)){
+  for(const person of state.people.filter(p=>!isPersonHidden(p.id))){
     let s = 0;
     while(s < slots.length){
       const occupied = state.assignments.some(a=>a.personId===person.id && assignmentOccupiesSlots(a).includes(s));
@@ -1941,6 +2082,7 @@ function absorbTinyGaps(sched, respectLocks){
 function solve(mode){
   mode = mode || 'required';
   const sched = activeSchedule();
+  pushUndoSnapshot();
 
   if(mode==='unlocked' || mode==='all'){
     const before = sched.assignments.length;
@@ -2025,10 +2167,14 @@ function renderAll(){
   const titleEl = document.getElementById('db-header-title');
   if(titleEl) titleEl.textContent = `${sched.name} Schedule`;
   document.getElementById('db-header-sub').textContent =
-    `${formatTime(state.settings.startMinutes)} – ${formatTime(state.settings.endMinutes)} · ${getSlots().length} × ${SLOT_MINUTES}-min slots`;
-  const visibleCount = state.people.filter(p=>!p.hidden).length;
-  document.getElementById('chart-range-note').textContent =
-    `${visibleCount} people · ${state.positions.length} positions`;
+    `${formatTime(state.settings.startMinutes)} – ${formatTime(state.settings.endMinutes)}`;
+  const visibleCount = state.people.filter(p=>!isPersonHidden(p.id)).length;
+  const rangeNote = document.getElementById('chart-range-note');
+  rangeNote.innerHTML = `<span class="range-link" id="range-people-link">${visibleCount} people</span> · <span class="range-link" id="range-positions-link">${state.positions.length} positions</span>`;
+  const peopleLink = document.getElementById('range-people-link');
+  if(peopleLink) peopleLink.addEventListener('click', ()=>openSettings('people'));
+  const positionsLink = document.getElementById('range-positions-link');
+  if(positionsLink) positionsLink.addEventListener('click', ()=>openSettings('positions'));
   renderScheduleTabs();
   renderChart();
   renderDecisions();
@@ -2058,7 +2204,7 @@ function syncRightColumnHeight(){
 function renderHiddenPeopleControl(){
   const sel = document.getElementById('hidden-people-select');
   if(!sel) return;
-  const hidden = state.people.filter(p=>p.hidden);
+  const hidden = state.people.filter(p=>isPersonHidden(p.id));
   if(hidden.length===0){
     sel.innerHTML = `<option value="">No people toggled off</option>`;
     sel.disabled = true;
@@ -2069,8 +2215,7 @@ function renderHiddenPeopleControl(){
     hidden.map(p=>`<option value="${p.id}">Restore ${escapeHtml(p.name)}</option>`).join('');
   sel.onchange = ()=>{
     if(sel.value){
-      const p = state.people.find(x=>x.id===sel.value);
-      if(p) p.hidden = false;
+      togglePersonHidden(sel.value, false);
       renderAll();
     }
   };
@@ -2125,7 +2270,7 @@ function renderChart(){
   const grid = document.getElementById('chart-grid');
   grid.innerHTML = '';
   const slots = getSlots();
-  const visiblePeople = state.people.filter(p=>!p.hidden);
+  const visiblePeople = state.people.filter(p=>!isPersonHidden(p.id));
   const sched = activeSchedule();
 
   const scrollEl = document.querySelector('#chart-panel .db-chart-scroll');
@@ -2134,7 +2279,7 @@ function renderChart(){
   let colWidth = 46;
   if(fullViewMode && scrollEl){
     const available = scrollEl.clientWidth - rowLabelWidth - 32;
-    if(available>0) colWidth = Math.max(10, Math.min(46, Math.floor(available / Math.max(1,slots.length))));
+    if(available>0) colWidth = Math.max(3, Math.min(46, Math.floor(available / Math.max(1,slots.length))));
   }
   grid.style.gridTemplateColumns = `${rowLabelWidth}px repeat(${slots.length}, ${fullViewMode ? `minmax(${colWidth}px, 1fr)` : `${colWidth}px`})`;
   grid.style.gridTemplateRows = `48px repeat(${visiblePeople.length}, 40px)`;
@@ -2187,7 +2332,8 @@ function renderChart(){
       cell.dataset.person = p.id;
       cell.dataset.slot = si;
       cell.title = `${p.name} · ${s.label} — click to assign`;
-      if(sched.lockedCells.has(cellKeyFor(p.id, si)) && !sched.lockedPeople.has(p.id) && !sched.lockedSlots.has(si)){
+      const hasAssignmentHere = state.assignments.some(a=>a.personId===p.id && a.startSlot===si);
+      if(!hasAssignmentHere && sched.lockedCells.has(cellKeyFor(p.id, si)) && !sched.lockedPeople.has(p.id) && !sched.lockedSlots.has(si)){
         const badge = document.createElement('span');
         badge.className = 'db-lock-badge';
         badge.textContent = '🔒';
@@ -2231,6 +2377,12 @@ function renderChart(){
       handle.title = `Drag to resize (${pos.durationMin}-${pos.durationMax} min)`;
       handle.addEventListener('mousedown', (e)=>startResizeDrag(e, a.id));
       block.appendChild(handle);
+    }
+    if(sched.lockedCells.has(cellKeyFor(a.personId, a.startSlot)) && !sched.lockedPeople.has(a.personId) && !sched.lockedSlots.has(a.startSlot)){
+      const badge = document.createElement('span');
+      badge.className = 'db-lock-badge';
+      badge.textContent = '🔒';
+      block.appendChild(badge);
     }
     grid.appendChild(block);
   });
@@ -2308,7 +2460,10 @@ function onResizeMouseUp(){
   document.removeEventListener('mousemove', onResizeMouseMove);
   document.removeEventListener('mouseup', onResizeMouseUp);
   resizeDrag = null;
-  if(a && finalCount!==a.slotCount) a.slotCount = finalCount;
+  if(a && finalCount!==a.slotCount){
+    pushUndoSnapshot();
+    applyResizeWithDisplacement(a.id, finalCount);
+  }
   renderAll();
 }
 
@@ -2604,13 +2759,34 @@ function renderRuleRow(rule, violations){
    FLOATING UI: dropdown, popups, tab menu
    ================================================================ */
 let currentCloser = null;
+/* Popups are normally appended to #floating-layer, but the Fullscreen API only
+   renders descendants of whichever element is currently fullscreen — content
+   outside it (like the default #floating-layer, a sibling of #chart-panel) goes
+   invisible. So while something is fullscreen, popups get a layer created inside
+   that same fullscreen element instead. */
+function getFloatingLayer(){
+  const fsEl = document.fullscreenElement;
+  if(fsEl){
+    let layer = fsEl.querySelector(':scope > #floating-layer-fs');
+    if(!layer){
+      layer = document.createElement('div');
+      layer.id = 'floating-layer-fs';
+      fsEl.appendChild(layer);
+    }
+    return layer;
+  }
+  return document.getElementById('floating-layer');
+}
 function registerCloser(fn){
   if(currentCloser) document.removeEventListener('mousedown', currentCloser);
   currentCloser = fn;
   setTimeout(()=>document.addEventListener('mousedown', currentCloser), 0);
 }
 function closeFloating(){
-  document.getElementById('floating-layer').innerHTML = '';
+  const defaultLayer = document.getElementById('floating-layer');
+  if(defaultLayer) defaultLayer.innerHTML = '';
+  const fsLayer = document.getElementById('floating-layer-fs');
+  if(fsLayer) fsLayer.innerHTML = '';
   if(currentCloser){ document.removeEventListener('mousedown', currentCloser); currentCloser = null; }
 }
 function positionFloating(el, rect){
@@ -2699,7 +2875,7 @@ function hideLockIcons(){
 }
 
 function openAssignDropdown(e, personId, slotIndex){
-  const layer = document.getElementById('floating-layer');
+  const layer = getFloatingLayer();
   const rect = e.currentTarget.getBoundingClientRect();
   const dd = document.createElement('div');
   dd.className = 'db-dropdown';
@@ -2707,12 +2883,22 @@ function openAssignDropdown(e, personId, slotIndex){
   const sched = activeSchedule();
   const cellKey = cellKeyFor(personId, slotIndex);
   const cellLocked = sched.lockedCells.has(cellKey);
+  const pasteBtnHtml = positionClipboard
+    ? `<button class="db-option-lock-toggle" id="dd-paste" title="Paste ${escapeHtml(positionName(positionClipboard.positionId))} here">📋</button>` : '';
   dd.innerHTML = `<div class="db-dropdown-head db-option-head-actions">
       <span>${escapeHtml(personName(personId))} · ${getSlots()[slotIndex].label}</span>
-      <button class="db-option-lock-toggle ${cellLocked?'on':''}" id="dd-lock-cell" title="${cellLocked?'Unlock this cell':'Lock this cell'}">🔒</button>
+      <span style="display:flex;gap:4px;">${pasteBtnHtml}<button class="db-option-lock-toggle ${cellLocked?'on':''}" id="dd-lock-cell" title="${cellLocked?'Unlock this cell':'Lock this cell'}">🔒</button></span>
     </div><div class="db-dropdown-list"></div>`;
+  const pasteBtn = dd.querySelector('#dd-paste');
+  if(pasteBtn){
+    pasteBtn.addEventListener('click', ()=>{
+      closeFloating();
+      pastePositionAt(personId, slotIndex);
+    });
+  }
   const lockCellBtn = dd.querySelector('#dd-lock-cell');
   lockCellBtn.addEventListener('click', ()=>{
+    pushUndoSnapshot();
     const wasLocked = sched.lockedCells.has(cellKey);
     if(wasLocked) sched.lockedCells.delete(cellKey);
     else sched.lockedCells.add(cellKey);
@@ -2726,15 +2912,17 @@ function openAssignDropdown(e, personId, slotIndex){
   options.forEach(opt=>{
     const row = document.createElement('div');
     row.className = 'db-option ' + (opt.ok ? 'ok' : 'blocked');
-    const durText = opt.position.durationMin===opt.position.durationMax
-      ? `${opt.position.durationMin}m` : `${opt.position.durationMin}-${opt.position.durationMax}m`;
-    const historyText = opt.history ? `<span class="history-ratio">${opt.history.matches}/${opt.history.total}</span>` : '';
+    const durMinSafe = opt.position.durationMin!==undefined ? opt.position.durationMin : SLOT_MINUTES;
+    const durMaxSafe = opt.position.durationMax!==undefined ? opt.position.durationMax : durMinSafe;
+    const durText = durMinSafe===durMaxSafe ? `${durMinSafe}m` : `${durMinSafe}-${durMaxSafe}m`;
+    const historyText = opt.history ? `<span class="history-ratio">${opt.history.matches}/${opt.history.total} previous</span>` : '';
     row.innerHTML = `<span class="dot" style="background:${opt.position.color}"></span>
       <span class="label">${escapeHtml(opt.position.name)}${opt.starred?' <span class="star-mark">★</span>':''}</span>
       ${historyText}
       <span class="dur">${durText}</span>`;
     if(opt.ok){
       row.addEventListener('click', ()=>{
+        pushUndoSnapshot();
         state.assignments.push({ id:genId('asg'), personId, positionId:opt.position.id, startSlot:slotIndex, slotCount:opt.durSlots });
         closeFloating();
         renderAll();
@@ -2762,7 +2950,7 @@ function openAssignDropdown(e, personId, slotIndex){
 
 function openSuggestionPopup(e, sug){
   closeFloating();
-  const layer = document.getElementById('floating-layer');
+  const layer = getFloatingLayer();
   const rect = e.currentTarget.getBoundingClientRect();
   const pop = document.createElement('div');
   pop.className = 'db-popup';
@@ -2774,10 +2962,12 @@ function openSuggestionPopup(e, sug){
   layer.appendChild(pop);
   positionFloating(pop, rect);
   pop.querySelector('#pop-accept').addEventListener('click', ()=>{
+    pushUndoSnapshot();
     state.assignments.push({ id:genId('asg'), personId:sug.personId, positionId:sug.positionId, startSlot:sug.startSlot, slotCount:sug.durSlots });
     closeFloating(); renderAll();
   });
   pop.querySelector('#pop-reject').addEventListener('click', ()=>{
+    pushUndoSnapshot();
     state.rejectedSuggestions.add(sug.key);
     closeFloating(); renderAll();
   });
@@ -2786,7 +2976,7 @@ function openSuggestionPopup(e, sug){
 
 function openAssignmentPopup(e, a){
   closeFloating();
-  const layer = document.getElementById('floating-layer');
+  const layer = getFloatingLayer();
   const rect = e.currentTarget.getBoundingClientRect();
   const pop = document.createElement('div');
   pop.className = 'db-popup';
@@ -2796,15 +2986,26 @@ function openAssignmentPopup(e, a){
   const locked = sched.lockedCells.has(cellKey);
   pop.innerHTML = `<div class="title">${escapeHtml(pos ? pos.name : '?')} — ${escapeHtml(personName(a.personId))}</div>
     <div class="rule-hint">${getSlots()[a.startSlot].label} · ${a.slotCount*SLOT_MINUTES} min</div>
-    <div class="row"><button class="btn btn-sm" id="pop-lock">${locked?'Unlock cell':'Lock cell'}</button><button class="btn btn-sm btn-danger-outline" id="pop-remove">Remove</button></div>`;
+    <div class="row"><button class="btn btn-sm" id="pop-cut">Cut</button><button class="btn btn-sm" id="pop-copy">Copy</button></div>
+    <div class="row" style="margin-top:6px;"><button class="btn btn-sm" id="pop-lock">${locked?'Unlock cell':'Lock cell'}</button><button class="btn btn-sm btn-danger-outline" id="pop-remove">Remove</button></div>`;
   layer.appendChild(pop);
   positionFloating(pop, rect);
+  pop.querySelector('#pop-cut').addEventListener('click', ()=>{
+    closeFloating();
+    cutAssignment(a.id);
+  });
+  pop.querySelector('#pop-copy').addEventListener('click', ()=>{
+    closeFloating();
+    copyAssignment(a.id);
+  });
   pop.querySelector('#pop-remove').addEventListener('click', ()=>{
+    pushUndoSnapshot();
     state.assignments = state.assignments.filter(x=>x.id!==a.id);
     closeFloating(); renderAll();
   });
   const lockBtn = pop.querySelector('#pop-lock');
   lockBtn.addEventListener('click', ()=>{
+    pushUndoSnapshot();
     const wasLocked = sched.lockedCells.has(cellKey);
     if(wasLocked) sched.lockedCells.delete(cellKey);
     else sched.lockedCells.add(cellKey);
@@ -2818,7 +3019,7 @@ function openAssignmentPopup(e, a){
 
 function openPersonPopup(e, personId){
   closeFloating();
-  const layer = document.getElementById('floating-layer');
+  const layer = getFloatingLayer();
   const rect = e.currentTarget.getBoundingClientRect();
   const pop = document.createElement('div');
   pop.className = 'db-popup';
@@ -2830,10 +3031,12 @@ function openPersonPopup(e, personId){
   const rowsArmed = pendingSwap && pendingSwap.mode==='rows';
   const namesLabel = namesArmed ? `Swap names: ${escapeHtml(personName(pendingSwap.personId))}` : 'Swap names';
   const rowsLabel = rowsArmed ? `Swap rows: ${escapeHtml(personName(pendingSwap.personId))}` : 'Swap rows';
+  const pasteRowBtnHtml = rowClipboard ? `<button class="btn btn-sm" id="pop-paste-row">Paste row</button>` : '';
   pop.innerHTML = `<div class="title">${escapeHtml(person.name)}</div>
     <div class="rule-hint">${tagsHtml}</div>
     <div class="row"><button class="btn btn-sm" id="pop-lock-person">${locked?'Unlock row':'Lock row'}</button><button class="btn btn-sm" id="pop-toggle-person">Toggle person</button></div>
     <div class="row" style="margin-top:6px;"><button class="btn btn-sm ${namesArmed?'armed':''}" id="pop-swap-names">${namesLabel}</button><button class="btn btn-sm ${rowsArmed?'armed':''}" id="pop-swap-rows">${rowsLabel}</button></div>
+    <div class="row" style="margin-top:6px;"><button class="btn btn-sm" id="pop-copy-row">Copy row</button>${pasteRowBtnHtml}<button class="btn btn-sm btn-danger-outline" id="pop-clear-row">Clear row</button></div>
     <div class="row" style="margin-top:6px;"><button class="btn btn-sm btn-primary" id="pop-show-rules" style="width:100%;">Show rules</button></div>`;
   layer.appendChild(pop);
   positionFloating(pop, rect);
@@ -2846,6 +3049,7 @@ function openPersonPopup(e, personId){
   });
   const lockPersonBtn = pop.querySelector('#pop-lock-person');
   lockPersonBtn.addEventListener('click', ()=>{
+    pushUndoSnapshot();
     const wasLocked = sched.lockedPeople.has(personId);
     if(wasLocked) sched.lockedPeople.delete(personId);
     else sched.lockedPeople.add(personId);
@@ -2855,12 +3059,13 @@ function openPersonPopup(e, personId){
   lockPersonBtn.addEventListener('mouseenter', ()=>showSingleLockIcon('person', personId));
   lockPersonBtn.addEventListener('mouseleave', hideLockIcons);
   pop.querySelector('#pop-toggle-person').addEventListener('click', ()=>{
-    person.hidden = true;
+    pushUndoSnapshot();
+    togglePersonHidden(personId, true);
     closeFloating(); renderAll();
   });
   pop.querySelector('#pop-swap-names').addEventListener('click', ()=>{
     if(namesArmed){
-      if(pendingSwap.personId!==personId) swapPersonNames(pendingSwap.personId, personId);
+      if(pendingSwap.personId!==personId){ pushUndoSnapshot(); swapPersonNames(pendingSwap.personId, personId); }
       pendingSwap = null;
     } else {
       pendingSwap = { mode:'names', personId };
@@ -2869,19 +3074,34 @@ function openPersonPopup(e, personId){
   });
   pop.querySelector('#pop-swap-rows').addEventListener('click', ()=>{
     if(rowsArmed){
-      if(pendingSwap.personId!==personId) swapPersonRows(pendingSwap.personId, personId);
+      if(pendingSwap.personId!==personId){ pushUndoSnapshot(); swapPersonRows(pendingSwap.personId, personId); }
       pendingSwap = null;
     } else {
       pendingSwap = { mode:'rows', personId };
     }
     closeFloating(); renderAll();
   });
+  pop.querySelector('#pop-copy-row').addEventListener('click', ()=>{
+    closeFloating();
+    copyPersonRow(personId);
+  });
+  const pasteRowBtn = pop.querySelector('#pop-paste-row');
+  if(pasteRowBtn){
+    pasteRowBtn.addEventListener('click', ()=>{
+      closeFloating();
+      pastePersonRow(personId);
+    });
+  }
+  pop.querySelector('#pop-clear-row').addEventListener('click', ()=>{
+    closeFloating();
+    clearPersonRow(personId);
+  });
   registerCloser((ev)=>{ if(!pop.contains(ev.target)) closeFloating(); });
 }
 
 function openTimeHeadPopup(e, slotIndex){
   closeFloating();
-  const layer = document.getElementById('floating-layer');
+  const layer = getFloatingLayer();
   const rect = e.currentTarget.getBoundingClientRect();
   const sched = activeSchedule();
   const locked = sched.lockedSlots.has(slotIndex);
@@ -2889,11 +3109,13 @@ function openTimeHeadPopup(e, slotIndex){
   pop.className = 'db-popup';
   pop.innerHTML = `<div class="title">${getSlots()[slotIndex].label}</div>
     <div class="row"><button class="btn btn-sm" id="pop-lock-time" style="width:100%;">${locked?'Unlock column':'Lock column'}</button></div>
+    <div class="row" style="margin-top:6px;"><button class="btn btn-sm btn-danger-outline" id="pop-clear-time" title="Trims just this slot out of any assignment crossing it, keeping the remainder(s).">Clear this time</button><button class="btn btn-sm btn-danger-outline" id="pop-clear-assignments" title="Removes every assignment that overlaps this column, in its entirety.">Clear assignments</button></div>
     <div class="row" style="margin-top:6px;"><button class="btn btn-sm btn-primary" id="pop-show-time-rules" style="width:100%;">Show rules for this time</button></div>`;
   layer.appendChild(pop);
   positionFloating(pop, rect);
   const lockTimeBtn = pop.querySelector('#pop-lock-time');
   lockTimeBtn.addEventListener('click', ()=>{
+    pushUndoSnapshot();
     const wasLocked = sched.lockedSlots.has(slotIndex);
     if(wasLocked) sched.lockedSlots.delete(slotIndex);
     else sched.lockedSlots.add(slotIndex);
@@ -2902,6 +3124,14 @@ function openTimeHeadPopup(e, slotIndex){
   });
   lockTimeBtn.addEventListener('mouseenter', ()=>showSingleLockIcon('slot', slotIndex));
   lockTimeBtn.addEventListener('mouseleave', hideLockIcons);
+  pop.querySelector('#pop-clear-time').addEventListener('click', ()=>{
+    closeFloating();
+    clearTimeColumn(slotIndex, 'split');
+  });
+  pop.querySelector('#pop-clear-assignments').addEventListener('click', ()=>{
+    closeFloating();
+    clearTimeColumn(slotIndex, 'whole');
+  });
   pop.querySelector('#pop-show-time-rules').addEventListener('click', ()=>{
     rulesFocusSlotIndex = slotIndex;
     closeFloating();
@@ -2922,6 +3152,102 @@ function swapPersonRows(idA, idB){
     if(asg.personId===idA) asg.personId = idB;
     else if(asg.personId===idB) asg.personId = idA;
   });
+}
+
+/* ---------------- Clear operations (row / time column) ---------------- */
+/* Clears every NON-locked assignment for a person, in its entirety. Locked
+   assignments (checked at their own start slot) are left untouched. */
+function clearPersonRow(personId){
+  const sched = activeSchedule();
+  pushUndoSnapshot();
+  const kept = state.assignments.filter(a=>a.personId!==personId || isCellLocked(sched, personId, a.startSlot));
+  sched.assignments = kept;
+  state.assignments = kept;
+  renderAll();
+}
+
+/* Clears a single time column. mode='split' trims just that slot out of any assignment
+   crossing it, leaving the remainder(s) intact as their own assignment(s) — clearing the
+   last slot of a 15-min block leaves a 10-min block; clearing the middle leaves two
+   pieces. mode='whole' instead removes the ENTIRE assignment wherever it overlaps this
+   column, leaving a blank column and empty slots wherever that assignment used to
+   extend. Either way, a person's assignment is skipped (left untouched) if the clicked
+   slot is locked for them. */
+function clearTimeColumn(slotIndex, mode){
+  const sched = activeSchedule();
+  pushUndoSnapshot();
+  const nextAssignments = [];
+  for(const a of state.assignments){
+    const occ = assignmentOccupiesSlots(a);
+    if(!occ.includes(slotIndex)){ nextAssignments.push(a); continue; }
+    const protectedHere = isCellLocked(sched, a.personId, slotIndex) || sched.lockedCells.has(cellKeyFor(a.personId, a.startSlot));
+    if(protectedHere){ nextAssignments.push(a); continue; }
+    if(mode==='whole') continue; // drop the whole assignment
+    // mode==='split': keep whatever falls before/after the cleared slot as separate pieces.
+    const leftLen = slotIndex - a.startSlot;
+    const rightStart = slotIndex + 1;
+    const rightLen = (a.startSlot + a.slotCount) - rightStart;
+    if(leftLen > 0) nextAssignments.push({ id:genId('asg'), personId:a.personId, positionId:a.positionId, startSlot:a.startSlot, slotCount:leftLen });
+    if(rightLen > 0) nextAssignments.push({ id:genId('asg'), personId:a.personId, positionId:a.positionId, startSlot:rightStart, slotCount:rightLen });
+  }
+  sched.assignments = nextAssignments;
+  state.assignments = nextAssignments;
+  renderAll();
+}
+
+/* ---------------- Row clipboard (copy/paste a whole person's row, program-level) ---------------- */
+var rowClipboard = null; // { sourceName, items: [{positionId, startSlot, slotCount}] } — not tied to a schedule, so it works across tabs.
+function copyPersonRow(personId){
+  const items = state.assignments.filter(a=>a.personId===personId).map(a=>({ positionId:a.positionId, startSlot:a.startSlot, slotCount:a.slotCount }));
+  rowClipboard = { sourceName: personName(personId), items };
+  showToast(`Copied ${personName(personId)}'s row (${items.length} assignment${items.length===1?'':'s'}). Paste it onto any person, in any schedule.`);
+}
+function pastePersonRow(personId){
+  if(!rowClipboard) return;
+  const sched = activeSchedule();
+  pushUndoSnapshot();
+  let next = state.assignments.filter(a=>a.personId!==personId || isCellLocked(sched, personId, a.startSlot));
+  sched.assignments = next;
+  state.assignments = next;
+  let placed = 0, skipped = 0;
+  for(const item of rowClipboard.items){
+    const occ = range(item.startSlot, item.startSlot+item.slotCount-1);
+    if(occ.some(s=>isCellLocked(sched, personId, s))){ skipped++; continue; }
+    const check = isValidPlacement(personId, item.positionId, item.startSlot, { durSlots:item.slotCount });
+    if(!check.ok){ skipped++; continue; }
+    state.assignments.push({ id:genId('asg'), personId, positionId:item.positionId, startSlot:item.startSlot, slotCount:item.slotCount });
+    placed++;
+  }
+  renderAll();
+  showToast(`Pasted ${rowClipboard.sourceName}'s row onto ${personName(personId)} — ${placed} placed${skipped ? `, ${skipped} skipped (locked or blocked by a rule)` : ''}.`);
+}
+
+/* ---------------- Position clipboard (cut/copy/paste a single filled assignment) ---------------- */
+var positionClipboard = null; // { positionId, slotCount }
+function cutAssignment(assignmentId){
+  const a = state.assignments.find(x=>x.id===assignmentId);
+  if(!a) return;
+  positionClipboard = { positionId:a.positionId, slotCount:a.slotCount };
+  pushUndoSnapshot();
+  const next = state.assignments.filter(x=>x.id!==assignmentId);
+  activeSchedule().assignments = next;
+  state.assignments = next;
+  renderAll();
+  showToast(`Cut ${positionName(a.positionId)} — click an empty slot, then Paste.`);
+}
+function copyAssignment(assignmentId){
+  const a = state.assignments.find(x=>x.id===assignmentId);
+  if(!a) return;
+  positionClipboard = { positionId:a.positionId, slotCount:a.slotCount };
+  showToast(`Copied ${positionName(a.positionId)} — click an empty slot, then Paste.`);
+}
+function pastePositionAt(personId, slotIndex){
+  if(!positionClipboard) return;
+  const check = isValidPlacement(personId, positionClipboard.positionId, slotIndex, { durSlots:positionClipboard.slotCount });
+  if(!check.ok){ alert(`Can't paste here: ${check.reason}`); return; }
+  pushUndoSnapshot();
+  state.assignments.push({ id:genId('asg'), personId, positionId:positionClipboard.positionId, startSlot:slotIndex, slotCount:positionClipboard.slotCount });
+  renderAll();
 }
 
 function previewLockedForClone(){
@@ -2949,7 +3275,7 @@ function clearLockPreview(){
 
 function openSolveMenu(e){
   closeFloating();
-  const layer = document.getElementById('floating-layer');
+  const layer = getFloatingLayer();
   const rect = e.currentTarget.getBoundingClientRect();
   const menu = document.createElement('div');
   menu.className = 'db-tab-menu';
@@ -2965,9 +3291,23 @@ function openSolveMenu(e){
   registerCloser((ev)=>{ if(!menu.contains(ev.target)) closeFloating(); });
 }
 
+function openXlsxMenu(e){
+  closeFloating();
+  const layer = getFloatingLayer();
+  const rect = e.currentTarget.getBoundingClientRect();
+  const menu = document.createElement('div');
+  menu.className = 'db-tab-menu';
+  menu.innerHTML = `<button id="xlsx-save">Save .xlsx</button><button id="xlsx-load">Load .xlsx</button>`;
+  layer.appendChild(menu);
+  positionFloating(menu, rect);
+  menu.querySelector('#xlsx-save').addEventListener('click', ()=>{ closeFloating(); exportToExcel(); });
+  menu.querySelector('#xlsx-load').addEventListener('click', ()=>{ closeFloating(); document.getElementById('file-input').click(); });
+  registerCloser((ev)=>{ if(!menu.contains(ev.target)) closeFloating(); });
+}
+
 function openTabMenu(e, scheduleId){
   closeFloating();
-  const layer = document.getElementById('floating-layer');
+  const layer = getFloatingLayer();
   const rect = e.currentTarget.getBoundingClientRect();
   const menu = document.createElement('div');
   menu.className = 'db-tab-menu';
@@ -3090,6 +3430,51 @@ function wireColorHexPair(colorId, hexId, defaultValue){
     if(/^#[0-9a-fA-F]{6}$/.test(hexEl.value)) colorEl.value = hexEl.value;
     else hexEl.value = colorEl.value;
   });
+}
+
+/* Finds the first rule (in any schedule) that references this position directly by
+   id — either as its main target or as a relative rule's "other position" — so
+   deleting the position wouldn't silently break it. Only the first match is
+   returned, even if several rules reference it. */
+function findRuleConflictForPosition(positionId){
+  for(const sched of state.schedules){
+    for(const rule of sched.rules){
+      if(rule.position && rule.position.mode==='id' && rule.position.value===positionId) return { rule, sched };
+      if(rule.kind==='relative' && rule.relative && rule.relative.otherPosition && rule.relative.otherPosition.mode==='id' && rule.relative.otherPosition.value===positionId){
+        return { rule, sched };
+      }
+    }
+  }
+  return null;
+}
+function performDeletePosition(posId){
+  state.positions = state.positions.filter(p=>p.id!==posId);
+  state.schedules.forEach(s=>{ s.assignments = s.assignments.filter(a=>a.positionId!==posId); });
+  state.assignments = activeSchedule().assignments;
+  renderPositionsTab(); renderAll();
+}
+function openPositionDeleteWarning(posId, conflict, anchorEl){
+  closeFloating();
+  const layer = getFloatingLayer();
+  const rect = anchorEl.getBoundingClientRect();
+  const pop = document.createElement('div');
+  pop.className = 'db-popup';
+  pop.style.width = '260px';
+  pop.innerHTML = `<div class="title">"${escapeHtml(positionName(posId))}" is used by a rule</div>
+    <div class="rule-hint" id="warn-rule-text"></div>
+    <div class="row"><button class="btn btn-sm" id="warn-nevermind">Nevermind</button><button class="btn btn-sm btn-danger-outline" id="warn-delete">Delete assignment</button></div>
+    <div class="row" style="margin-top:6px;"><button class="btn btn-sm btn-primary" id="warn-view-rule" style="width:100%;">View Rule</button></div>`;
+  pop.querySelector('#warn-rule-text').innerHTML = ruleNicknamePrefix(conflict.rule) + escapeHtml(ruleLabel(conflict.rule));
+  layer.appendChild(pop);
+  positionFloating(pop, rect);
+  pop.querySelector('#warn-nevermind').addEventListener('click', closeFloating);
+  pop.querySelector('#warn-delete').addEventListener('click', ()=>{ closeFloating(); performDeletePosition(posId); });
+  pop.querySelector('#warn-view-rule').addEventListener('click', ()=>{
+    closeFloating();
+    if(conflict.sched.id!==state.activeScheduleId) setActiveSchedule(conflict.sched.id);
+    openSettings('rules', conflict.rule.id);
+  });
+  registerCloser((ev)=>{ if(!pop.contains(ev.target)) closeFloating(); });
 }
 
 function renderPositionsTab(){
@@ -3223,11 +3608,13 @@ function renderPositionsTab(){
   tbody.querySelectorAll('[data-del-position]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const posId = btn.dataset.delPosition;
+      const conflict = findRuleConflictForPosition(posId);
+      if(conflict){
+        openPositionDeleteWarning(posId, conflict, btn);
+        return;
+      }
       if(!confirm('Delete this position? Its assignments will also be removed from every schedule.')) return;
-      state.positions = state.positions.filter(p=>p.id!==posId);
-      state.schedules.forEach(s=>{ s.assignments = s.assignments.filter(a=>a.positionId!==posId); });
-      state.assignments = activeSchedule().assignments;
-      renderPositionsTab(); renderAll();
+      performDeletePosition(posId);
     });
   });
   document.getElementById('add-position-btn').addEventListener('click', ()=>{
@@ -3878,8 +4265,8 @@ function exportSettingsJson(){
 async function importSettingsJson(file){
   const text = await file.text();
   const payload = JSON.parse(text);
-  if(payload.people) state.people = payload.people;
-  if(payload.positions) state.positions = payload.positions;
+  if(payload.people) state.people = payload.people.map(p=>({ id:p.id, name:p.name, tags:p.tags||[] }));
+  if(payload.positions) state.positions = payload.positions.map(normalizePosition);
   if(payload.tags) state.tags = payload.tags;
   if(payload.settings) state.settings = payload.settings;
   renderAll();
@@ -3893,7 +4280,7 @@ function exportToExcel(){
   if(typeof XLSX==='undefined'){ alert('The spreadsheet library has not finished loading yet — try again in a moment.'); return; }
   const wb = XLSX.utils.book_new();
   const slots = getSlots();
-  const visiblePeople = state.people.filter(p=>!p.hidden);
+  const visiblePeople = state.people.filter(p=>!isPersonHidden(p.id));
 
   const header = ['Person', ...slots.map(s=>s.label)];
   const rows = visiblePeople.map(p=>{
@@ -3970,7 +4357,7 @@ async function importFromExcel(file){
   }
   if(wb.Sheets['People']){
     state.people = XLSX.utils.sheet_to_json(wb.Sheets['People']).map(r=>({
-      id:String(r.id), name:String(r.name), hidden:false,
+      id:String(r.id), name:String(r.name),
       tags:String(r.tags||'').split(',').map(s=>s.trim()).filter(Boolean)
     }));
   }
@@ -4077,13 +4464,14 @@ function init(){
   document.querySelectorAll('.db-modal-tab').forEach(t=>t.addEventListener('click', ()=>{ editingRuleId = null; switchModalTab(t.dataset.tab); }));
 
   document.getElementById('btn-solve').addEventListener('click', openSolveMenu);
-  document.getElementById('btn-save').addEventListener('click', exportToExcel);
-  document.getElementById('btn-load').addEventListener('click', ()=>document.getElementById('file-input').click());
+  document.getElementById('btn-xlsx-menu').addEventListener('click', openXlsxMenu);
   document.getElementById('file-input').addEventListener('change', (e)=>{
     const file = e.target.files[0];
     if(file) importFromExcel(file).catch(err=>{ console.error(err); alert('Could not read that file: '+err.message); });
     e.target.value = '';
   });
+
+  document.getElementById('btn-undo').addEventListener('click', undo);
 
   document.getElementById('btn-settings-save').addEventListener('click', exportSettingsJson);
   document.getElementById('btn-settings-load').addEventListener('click', ()=>document.getElementById('settings-file-input').click());
@@ -4111,7 +4499,7 @@ function init(){
     renderChart();
   });
 
-  window.addEventListener('resize', syncRightColumnHeight);
+  window.addEventListener('resize', ()=>{ syncRightColumnHeight(); if(fullViewMode) renderChart(); });
 
   function toggleFullscreenOn(elId){
     const el = document.getElementById(elId);
@@ -4146,7 +4534,13 @@ function init(){
     el.addEventListener('change', renderRules);
   });
 
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeFloating(); });
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape') closeFloating();
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='z' && !e.repeat){
+      e.preventDefault();
+      undo();
+    }
+  });
 
   renderAll();
 }
