@@ -551,7 +551,7 @@
     "href": "helldivers-minimal/game.html",
     "title": "HellBrowsers",
     "section": "",
-    "text": "Minimal browser co-op inspired by Helldivers. Solo or peer-to-peer multiplayer.\n\n  \n  \n\n\n\n\n\n\nAction\nInput\n\n\n\n\nMove\nW A S D\n\n\nAim / Fire\nMouse + LMB\n\n\nSprint\nShift\n\n\nReload\nR\n\n\nStratagems\nHold Ctrl + directional WASD\n\n\nPause\nEsc\n\n\n\nStratagem codes (hold Ctrl): ↓↓↑→ Resupply · →→↑ Orbital · ↑↓→←↑ Reinforce · ↑→→ Eagle\nSurvive waves, then extract by standing in the blue circle after wave 3."
+    "text": "Minimal browser co-op inspired by Helldivers. Solo or peer-to-peer multiplayer.\nBest experience: Open HellBrowsers full page\nOr play embedded below (click Fullscreen inside the game for the best view):\n\n  \n  \n\n\n\n\n\n\nAction\nInput\n\n\n\n\nMove\nW A S D\n\n\nAim / Fire\nMouse + LMB\n\n\nSprint\nShift\n\n\nReload\nR\n\n\nStratagems\nHold Ctrl + directional WASD\n\n\nPause\nEsc\n\n\nFullscreen\nButton in top-right\n\n\n\nStratagem codes (hold Ctrl): ↓↓↑→ Resupply · →→↑ Orbital · ↑↓→←↑ Reinforce · ↑→→ Eagle"
   },
   {
     "objectID": "helldivers-minimal/game.html#quick-controls",
@@ -572,6 +572,6 @@
     "href": "helldivers-minimal/game.html#controls",
     "title": "HellBrowsers",
     "section": "",
-    "text": "Action\nInput\n\n\n\n\nMove\nW A S D\n\n\nAim / Fire\nMouse + LMB\n\n\nSprint\nShift\n\n\nReload\nR\n\n\nStratagems\nHold Ctrl + directional WASD\n\n\nPause\nEsc\n\n\n\nStratagem codes (hold Ctrl): ↓↓↑→ Resupply · →→↑ Orbital · ↑↓→←↑ Reinforce · ↑→→ Eagle\nSurvive waves, then extract by standing in the blue circle after wave 3."
+    "text": "Action\nInput\n\n\n\n\nMove\nW A S D\n\n\nAim / Fire\nMouse + LMB\n\n\nSprint\nShift\n\n\nReload\nR\n\n\nStratagems\nHold Ctrl + directional WASD\n\n\nPause\nEsc\n\n\nFullscreen\nButton in top-right\n\n\n\nStratagem codes (hold Ctrl): ↓↓↑→ Resupply · →→↑ Orbital · ↑↓→←↑ Reinforce · ↑→→ Eagle"
   }
 ]

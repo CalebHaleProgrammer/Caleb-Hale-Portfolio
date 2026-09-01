@@ -4,18 +4,279 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>HellBrowsers — Minimal co-op game, for Super Earth</title>
-  <link rel="stylesheet" href="css/style.css">
-  <!-- PeerJS optional; solo works without it -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" onerror="window.PEERJS_FAILED=true"></script>
+  <style>
+    /* Critical self-contained styles so the UI works even if external CSS fails */
+    :root {
+      --bg: #0a0c0f;
+      --panel: #141820;
+      --accent: #ffe800;
+      --accent-dim: #c4b000;
+      --text: #e8e6e0;
+      --muted: #8a8a80;
+      --danger: #ff3333;
+      --border: #2a3038;
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      user-select: none;
+    }
+    #app { width: 100%; height: 100%; position: relative; }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: none;                 /* hidden by default */
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at center, #12151c 0%, var(--bg) 70%);
+    }
+    .screen.active { display: flex; }  /* only the active screen shows */
+
+    #game.screen.active {
+      display: block;
+      background: #000;
+    }
+
+    .menu-panel {
+      background: var(--panel);
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      padding: 1.75rem 2rem;
+      max-width: 400px;
+      width: 92%;
+      text-align: center;
+      box-shadow: 0 0 40px rgba(0,0,0,0.65);
+    }
+    h1 {
+      font-size: 1.7rem;
+      letter-spacing: 0.12em;
+      margin-bottom: 0.2rem;
+    }
+    h1 .accent { color: var(--accent); }
+    h2 {
+      font-size: 1.25rem;
+      letter-spacing: 0.1em;
+      margin-bottom: 1.25rem;
+      color: var(--accent);
+    }
+    .tagline {
+      color: var(--muted);
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.1rem;
+      text-align: left;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 1rem;
+      border-radius: 3px;
+      outline: none;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+    .button-row {
+      display: flex;
+      gap: 0.6rem;
+      margin-bottom: 0.65rem;
+    }
+    .button-row.secondary {
+      margin-top: 1.25rem;
+      justify-content: center;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 0.7rem 0.9rem;
+      background: transparent;
+      border: 2px solid var(--border);
+      color: var(--text);
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: all 0.12s;
+      text-transform: uppercase;
+    }
+    .btn:hover:not(:disabled) {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #111;
+    }
+    .btn.primary:hover:not(:disabled) {
+      background: var(--accent-dim);
+      border-color: var(--accent-dim);
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn.small { flex: none; padding: 0.45rem 0.9rem; font-size: 0.72rem; }
+    .btn.full { width: 100%; margin-top: 0.5rem; }
+
+    .code {
+      font-family: ui-monospace, monospace;
+      font-size: 0.72rem;
+      color: var(--accent);
+      word-break: break-all;
+      user-select: all;
+      display: block;
+      margin: 0.4rem 0;
+    }
+    .small { font-size: 0.78rem; color: var(--muted); }
+    .status {
+      margin-top: 0.9rem;
+      font-size: 0.8rem;
+      color: var(--accent);
+      min-height: 1.2em;
+    }
+    .footer {
+      margin-top: 1.4rem;
+      font-size: 0.62rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    /* Sub-panels start hidden */
+    .subpanel { display: none; margin-top: 0.75rem; }
+    .subpanel.open { display: block; }
+
+    /* Game canvas + HUD */
+    #canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      background: #0a100e;
+    }
+    #hud {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    #hud-top {
+      position: absolute;
+      top: 10px; left: 0; right: 0;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 14px;
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+    }
+    #objective { color: var(--accent); }
+    #wave-info { color: var(--muted); }
+    #hud-bottom {
+      position: absolute;
+      bottom: 14px; left: 14px; right: 14px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    #ammo { font-size: 0.85rem; min-width: 80px; }
+    #health-bar {
+      flex: 1; max-width: 200px; height: 10px;
+      background: #222; border: 1px solid var(--border);
+      border-radius: 2px; overflow: hidden;
+    }
+    #health-fill {
+      height: 100%; width: 100%;
+      background: #33cc66;
+      transition: width 0.15s;
+    }
+    #stratagem-hint {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-left: auto;
+    }
+    #fps {
+      position: absolute;
+      top: 10px; right: 14px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      display: none;
+    }
+    #fps.show { display: block; }
+
+    #extract-timer {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.4rem;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+      text-shadow: 0 0 18px rgba(255,232,0,0.45);
+      display: none;
+    }
+    #extract-timer.show { display: block; }
+
+    #pause-menu, #mission-end {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.78);
+      pointer-events: auto;
+    }
+    #pause-menu.show, #mission-end.show { display: flex; }
+
+    /* Fullscreen button (always available on menu + in-game) */
+    #btn-fullscreen {
+      position: absolute;
+      top: 10px; right: 10px;
+      z-index: 50;
+      padding: 0.4rem 0.7rem;
+      font-size: 0.7rem;
+      background: rgba(20,24,32,0.85);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 3px;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+    }
+    #btn-fullscreen:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    #game #btn-fullscreen { top: 36px; } /* below FPS if shown */
+  </style>
 </head>
 <body>
   <div id="app">
+    <button id="btn-fullscreen" type="button">FULLSCREEN</button>
+
     <!-- Main Menu -->
-    <div id="menu" class="screen">
+    <div id="menu" class="screen active">
       <div class="menu-panel">
         <h1>HELL<span class="accent">BROWSERS</span></h1>
         <p class="tagline">Minimal co-op game, for Super Earth</p>
-        
+
         <div class="form-group">
           <label for="username">CALLSIGN</label>
           <input type="text" id="username" maxlength="16" placeholder="Enter callsign" autocomplete="off" spellcheck="false">
@@ -29,17 +290,17 @@
           <button id="btn-join" class="btn">JOIN SQUAD</button>
         </div>
 
-        <div id="join-panel" class="hidden">
+        <div id="join-panel" class="subpanel">
           <input type="text" id="room-code" maxlength="64" placeholder="PASTE FULL PEER ID" autocomplete="off" spellcheck="false">
-          <button id="btn-join-confirm" class="btn primary">CONNECT</button>
+          <button id="btn-join-confirm" class="btn primary full">CONNECT</button>
         </div>
 
-        <div id="host-panel" class="hidden">
-          <p>HOST PEER ID (copy this):</p>
-          <p><span id="host-code" class="code">------</span></p>
-          <p class="small">Share the full ID with your squad. Waiting for divers...</p>
-          <ul id="player-list"></ul>
-          <button id="btn-start" class="btn primary" disabled>START MISSION</button>
+        <div id="host-panel" class="subpanel">
+          <p style="font-size:0.75rem;color:var(--muted);">HOST PEER ID (copy this):</p>
+          <span id="host-code" class="code">------</span>
+          <p class="small">Share the full ID with your squad.</p>
+          <ul id="player-list" style="list-style:none;margin:0.6rem 0;text-align:left;font-size:0.85rem;"></ul>
+          <button id="btn-start" class="btn primary full" disabled>START MISSION</button>
         </div>
 
         <div class="button-row secondary">
@@ -47,7 +308,7 @@
           <button id="btn-stats" class="btn small">STATS</button>
         </div>
 
-        <p id="status-msg" class="status"></p>
+        <p id="status-msg" class="status">Ready — Solo Deploy works immediately</p>
 
         <p class="footer">Fan-made browser co-op. Not affiliated with Arrowhead.<br>
         Solo works offline. Multiplayer needs a modern browser + network.</p>
@@ -55,7 +316,7 @@
     </div>
 
     <!-- Options -->
-    <div id="options" class="screen hidden">
+    <div id="options" class="screen">
       <div class="menu-panel">
         <h2>OPTIONS</h2>
         <div class="form-group">
@@ -63,30 +324,34 @@
           <input type="range" id="volume" min="0" max="1" step="0.05" value="0.7">
         </div>
         <div class="form-group">
-          <label><input type="checkbox" id="show-fps"> Show FPS</label>
+          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+            <input type="checkbox" id="show-fps"> Show FPS
+          </label>
         </div>
         <div class="form-group">
-          <label><input type="checkbox" id="reduce-motion"> Reduce Motion</label>
+          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+            <input type="checkbox" id="reduce-motion"> Reduce Motion
+          </label>
         </div>
-        <button id="btn-options-back" class="btn">BACK</button>
+        <button id="btn-options-back" class="btn full">BACK</button>
       </div>
     </div>
 
     <!-- Stats -->
-    <div id="stats" class="screen hidden">
+    <div id="stats" class="screen">
       <div class="menu-panel">
         <h2>SERVICE RECORD</h2>
-        <div id="stats-content"></div>
-        <button id="btn-stats-back" class="btn">BACK</button>
+        <div id="stats-content" style="text-align:left;margin-bottom:1.2rem;line-height:1.7;"></div>
+        <button id="btn-stats-back" class="btn full">BACK</button>
       </div>
     </div>
 
     <!-- Game -->
-    <div id="game" class="screen hidden">
+    <div id="game" class="screen">
       <canvas id="canvas"></canvas>
       <div id="hud">
         <div id="hud-top">
-          <div id="objective">OBJECTIVE: Survive waves & Extract</div>
+          <div id="objective">OBJECTIVE: Survive waves &amp; Extract</div>
           <div id="wave-info">WAVE 1</div>
         </div>
         <div id="hud-bottom">
@@ -94,40 +359,1602 @@
           <div id="health-bar"><div id="health-fill"></div></div>
           <div id="stratagem-hint">Hold CTRL + WASD for Stratagems</div>
         </div>
-        <div id="fps" class="hidden">60</div>
+        <div id="fps">60 FPS</div>
       </div>
-      <div id="pause-menu" class="hidden">
+      <div id="pause-menu">
         <div class="menu-panel">
           <h2>PAUSED</h2>
-          <button id="btn-resume" class="btn primary">RESUME</button>
-          <button id="btn-leave" class="btn">LEAVE MISSION</button>
+          <button id="btn-resume" class="btn primary full">RESUME</button>
+          <button id="btn-leave" class="btn full" style="margin-top:0.5rem">LEAVE MISSION</button>
         </div>
       </div>
-      <div id="extract-timer" class="hidden">EXTRACT IN <span>25</span>s</div>
-      <div id="mission-end" class="hidden">
+      <div id="extract-timer">EXTRACT IN <span>25</span>s</div>
+      <div id="mission-end">
         <div class="menu-panel">
           <h2 id="end-title">MISSION COMPLETE</h2>
-          <p id="end-stats"></p>
-          <button id="btn-return" class="btn primary">RETURN TO SHIP</button>
+          <p id="end-stats" style="margin:1rem 0;color:var(--muted)"></p>
+          <button id="btn-return" class="btn primary full">RETURN TO SHIP</button>
         </div>
       </div>
     </div>
 
     <!-- Loading -->
-    <div id="loading" class="screen hidden">
+    <div id="loading" class="screen">
       <div class="menu-panel">
         <h2>CONNECTING...</h2>
         <p id="loading-msg">Please wait</p>
-        <button id="btn-cancel-load" class="btn" style="margin-top:1rem">CANCEL</button>
+        <button id="btn-cancel-load" class="btn full" style="margin-top:1rem">CANCEL</button>
       </div>
     </div>
   </div>
 
-  <script src="js/storage.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/network.js"></script>
-  <script src="js/entities.js"></script>
-  <script src="js/game.js"></script>
-  <script src="js/main.js"></script>
+  <!-- External game logic (kept modular) -->
+
+
+
+
+
+  <script>
+
+/* ===== js/storage.js ===== */
+// LocalStorage helpers for username, settings, stats
+const Storage = {
+  KEY: 'hellbrowsers_v1',
+
+  load() {
+    try {
+      const raw = localStorage.getItem(this.KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return {
+      username: '',
+      volume: 0.7,
+      showFps: false,
+      reduceMotion: false,
+      stats: {
+        missions: 0,
+        kills: 0,
+        deaths: 0,
+        extracts: 0,
+        playTime: 0
+      }
+    };
+  },
+
+  save(data) {
+    try {
+      localStorage.setItem(this.KEY, JSON.stringify(data));
+    } catch (e) {}
+  },
+
+  update(partial) {
+    const data = this.load();
+    Object.assign(data, partial);
+    this.save(data);
+    return data;
+  },
+
+  addStats(delta) {
+    const data = this.load();
+    for (const k in delta) {
+      data.stats[k] = (data.stats[k] || 0) + delta[k];
+    }
+    this.save(data);
+    return data.stats;
+  }
+};
+
+
+/* ===== js/audio.js ===== */
+// Minimal procedural audio using Web Audio API
+const AudioSys = {
+  ctx: null,
+  volume: 0.7,
+  enabled: true,
+
+  init() {
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {
+      this.enabled = false;
+    }
+  },
+
+  setVolume(v) {
+    this.volume = Math.max(0, Math.min(1, v));
+  },
+
+  playTone(freq, duration, type = 'square', vol = 0.15) {
+    if (!this.enabled || !this.ctx || this.volume === 0) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(vol * this.volume, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + duration);
+  },
+
+  shoot() { this.playTone(180, 0.08, 'square', 0.12); },
+  hit() { this.playTone(90, 0.12, 'sawtooth', 0.18); },
+  enemyHit() { this.playTone(220, 0.06, 'triangle', 0.1); },
+  enemyDie() { this.playTone(60, 0.25, 'sawtooth', 0.2); },
+  reload() { this.playTone(400, 0.1, 'sine', 0.1); this.playTone(300, 0.15, 'sine', 0.08); },
+  stratagem() { this.playTone(600, 0.08, 'square', 0.12); },
+  stratagemReady() { this.playTone(800, 0.15, 'square', 0.15); this.playTone(1000, 0.2, 'square', 0.12); },
+  extract() { this.playTone(440, 0.3, 'sine', 0.15); },
+  ui() { this.playTone(500, 0.05, 'sine', 0.08); },
+  death() { this.playTone(80, 0.4, 'sawtooth', 0.25); this.playTone(40, 0.5, 'sawtooth', 0.2); }
+};
+
+
+/* ===== js/network.js ===== */
+// PeerJS multiplayer networking - host authoritative
+const Network = {
+  peer: null,
+  connections: new Map(), // peerId -> DataConnection
+  isHost: false,
+  roomId: null,
+  localId: null,
+  players: new Map(), // peerId -> { name, ready }
+  onPlayerJoin: null,
+  onPlayerLeave: null,
+  onState: null,
+  onInput: null,
+  onStart: null,
+  onMessage: null,
+  maxPlayers: 8,
+
+  init() {
+    if (typeof Peer === 'undefined' || window.PEERJS_FAILED) {
+      return Promise.reject(new Error('PeerJS failed to load. Multiplayer unavailable (solo still works).'));
+    }
+    // Use public PeerJS cloud (no self-host needed)
+    this.peer = new Peer({
+      debug: 0,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:global.stun.twilio.com:3478' }
+        ]
+      }
+    });
+
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('Peer connection timed out')), 12000);
+      this.peer.on('open', (id) => {
+        clearTimeout(t);
+        this.localId = id;
+        resolve(id);
+      });
+      this.peer.on('error', (err) => {
+        clearTimeout(t);
+        console.error('Peer error', err);
+        reject(err);
+      });
+      this.peer.on('connection', (conn) => this._handleIncoming(conn));
+    });
+  },
+
+  async host(name) {
+    this.isHost = true;
+    this.roomId = this.localId.slice(0, 6).toUpperCase();
+    this.players.set(this.localId, { name, ready: true, isHost: true });
+    return this.roomId;
+  },
+
+  async join(roomCode, name) {
+    this.isHost = false;
+    this.roomId = roomCode.toUpperCase();
+    // For simplicity we treat the room code as the host's peer ID prefix.
+    // In practice users share the full short code; we attempt connection to known hosts.
+    // Real deployments often use a tiny signaling relay or deterministic ID mapping.
+    // Here we ask the user to paste the host's full peer ID or use a simple short code map.
+    // For this minimal version: host displays full ID shortened; join uses the displayed code.
+    // We'll use the code as the target peer ID (users share the 6-char code which is the start of the ID).
+    // To make it work better we will have the host use a custom ID if possible, but PeerJS free cloud
+    // generates random IDs. So for reliability we will have host share the full peer ID shortened,
+    // and join attempts connection using the provided code as full ID if length matches, else prefix search is not possible.
+    // Practical solution for GitHub Pages: host shows full peer ID, user pastes it.
+    // To keep UX nice we use 6-char and assume user pastes enough of the ID or we document it.
+    // For this build: treat the entered code as the exact peer ID to connect to.
+    const targetId = roomCode.trim();
+    const conn = this.peer.connect(targetId, { reliable: true });
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Connection timeout')), 10000);
+      conn.on('open', () => {
+        clearTimeout(timeout);
+        this.connections.set(targetId, conn);
+        this._setupConn(conn);
+        // Introduce ourselves
+        conn.send({ type: 'join', name, id: this.localId });
+        resolve();
+      });
+      conn.on('error', (e) => {
+        clearTimeout(timeout);
+        reject(e);
+      });
+    });
+  },
+
+  _handleIncoming(conn) {
+    conn.on('open', () => {
+      this.connections.set(conn.peer, conn);
+      this._setupConn(conn);
+    });
+  },
+
+  _setupConn(conn) {
+    conn.on('data', (data) => this._onData(conn.peer, data));
+    conn.on('close', () => {
+      this.connections.delete(conn.peer);
+      this.players.delete(conn.peer);
+      if (this.onPlayerLeave) this.onPlayerLeave(conn.peer);
+    });
+  },
+
+  _onData(from, data) {
+    if (!data || !data.type) return;
+    switch (data.type) {
+      case 'join':
+        if (this.isHost) {
+          if (this.players.size >= this.maxPlayers) {
+            this.sendTo(from, { type: 'reject', reason: 'full' });
+            return;
+          }
+          this.players.set(from, { name: data.name, ready: true });
+          // Send current roster + assign slot
+          this.broadcast({ type: 'roster', players: Array.from(this.players.entries()) });
+          if (this.onPlayerJoin) this.onPlayerJoin(from, data.name);
+        }
+        break;
+      case 'roster':
+        this.players = new Map(data.players);
+        if (this.onPlayerJoin) this.onPlayerJoin(null, null); // refresh UI
+        break;
+      case 'start':
+        if (this.onStart) this.onStart(data);
+        break;
+      case 'input':
+        if (this.isHost && this.onInput) this.onInput(from, data.input);
+        break;
+      case 'state':
+        if (!this.isHost && this.onState) this.onState(data.state);
+        break;
+      case 'msg':
+        if (this.onMessage) this.onMessage(data);
+        break;
+      default:
+        break;
+    }
+  },
+
+  broadcast(data, exclude = null) {
+    for (const [id, conn] of this.connections) {
+      if (id !== exclude && conn.open) {
+        try { conn.send(data); } catch (e) {}
+      }
+    }
+  },
+
+  sendTo(peerId, data) {
+    const conn = this.connections.get(peerId);
+    if (conn && conn.open) {
+      try { conn.send(data); } catch (e) {}
+    }
+  },
+
+  sendInput(input) {
+    if (this.isHost) return; // host applies locally
+    // send to host (first connection or known host)
+    for (const [id, conn] of this.connections) {
+      if (conn.open) {
+        conn.send({ type: 'input', input });
+        break;
+      }
+    }
+  },
+
+  sendState(state) {
+    if (!this.isHost) return;
+    this.broadcast({ type: 'state', state });
+  },
+
+  startGame(payload) {
+    if (!this.isHost) return;
+    this.broadcast({ type: 'start', ...payload });
+    if (this.onStart) this.onStart(payload);
+  },
+
+  destroy() {
+    for (const conn of this.connections.values()) {
+      try { conn.close(); } catch (e) {}
+    }
+    this.connections.clear();
+    this.players.clear();
+    if (this.peer) {
+      try { this.peer.destroy(); } catch (e) {}
+      this.peer = null;
+    }
+  }
+};
+
+
+/* ===== js/entities.js ===== */
+// Game entities: Player, Enemy, Projectile, Stratagem effects
+const Entities = {
+  Player: class {
+    constructor(id, name, x, y, color) {
+      this.id = id;
+      this.name = name;
+      this.x = x;
+      this.y = y;
+      this.vx = 0;
+      this.vy = 0;
+      this.angle = 0;
+      this.radius = 14;
+      this.speed = 160;
+      this.sprintMul = 1.55;
+      this.hp = 100;
+      this.maxHp = 100;
+      this.ammo = 30;
+      this.maxAmmo = 30;
+      this.reloadTime = 0;
+      this.fireCooldown = 0;
+      this.color = color || '#ffe800';
+      this.alive = true;
+      this.kills = 0;
+      this.input = { up: false, down: false, left: false, right: false, shoot: false, sprint: false, reload: false, aimX: 0, aimY: 0 };
+      this.stratagemBuffer = [];
+      this.stratagemTimer = 0;
+      this.invuln = 0;
+    }
+
+    update(dt, mapW, mapH) {
+      if (!this.alive) return;
+      if (this.invuln > 0) this.invuln -= dt;
+      if (this.reloadTime > 0) {
+        this.reloadTime -= dt;
+        if (this.reloadTime <= 0) {
+          this.ammo = this.maxAmmo;
+          AudioSys.reload();
+        }
+      }
+      if (this.fireCooldown > 0) this.fireCooldown -= dt;
+
+      const inp = this.input;
+      let mx = 0, my = 0;
+      if (inp.up) my -= 1;
+      if (inp.down) my += 1;
+      if (inp.left) mx -= 1;
+      if (inp.right) mx += 1;
+      if (mx || my) {
+        const len = Math.hypot(mx, my);
+        mx /= len; my /= len;
+        const spd = this.speed * (inp.sprint ? this.sprintMul : 1);
+        this.vx = mx * spd;
+        this.vy = my * spd;
+      } else {
+        this.vx *= 0.8;
+        this.vy *= 0.8;
+      }
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      this.x = Math.max(this.radius, Math.min(mapW - this.radius, this.x));
+      this.y = Math.max(this.radius, Math.min(mapH - this.radius, this.y));
+
+      // Aim
+      this.angle = Math.atan2(inp.aimY - this.y, inp.aimX - this.x);
+
+      if (inp.reload && this.reloadTime <= 0 && this.ammo < this.maxAmmo) {
+        this.reloadTime = 1.4;
+      }
+    }
+
+    tryShoot(projectiles) {
+      if (!this.alive || this.fireCooldown > 0 || this.reloadTime > 0 || this.ammo <= 0) return;
+      this.ammo--;
+      this.fireCooldown = 0.12;
+      const speed = 520;
+      const spread = (Math.random() - 0.5) * 0.06;
+      const a = this.angle + spread;
+      projectiles.push({
+        x: this.x + Math.cos(a) * (this.radius + 6),
+        y: this.y + Math.sin(a) * (this.radius + 6),
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed,
+        life: 1.2,
+        owner: this.id,
+        damage: 18,
+        radius: 3
+      });
+      AudioSys.shoot();
+    }
+
+    takeDamage(amount) {
+      if (!this.alive || this.invuln > 0) return;
+      this.hp -= amount;
+      this.invuln = 0.35;
+      AudioSys.hit();
+      if (this.hp <= 0) {
+        this.hp = 0;
+        this.alive = false;
+        AudioSys.death();
+      }
+    }
+
+    serialize() {
+      return {
+        id: this.id, name: this.name, x: this.x, y: this.y, angle: this.angle,
+        hp: this.hp, ammo: this.ammo, alive: this.alive, color: this.color, kills: this.kills
+      };
+    }
+  },
+
+  Enemy: class {
+    constructor(x, y, type = 'bug') {
+      this.x = x;
+      this.y = y;
+      this.type = type;
+      this.radius = type === 'charger' ? 22 : 12;
+      this.hp = type === 'charger' ? 120 : 35;
+      this.maxHp = this.hp;
+      this.speed = type === 'charger' ? 90 : 70 + Math.random() * 30;
+      this.damage = type === 'charger' ? 25 : 12;
+      this.attackCd = 0;
+      this.alive = true;
+      this.color = type === 'charger' ? '#aa4422' : '#66aa33';
+    }
+
+    update(dt, players, mapW, mapH) {
+      if (!this.alive) return;
+      // Find nearest living player
+      let nearest = null, best = Infinity;
+      for (const p of players.values()) {
+        if (!p.alive) continue;
+        const d = Math.hypot(p.x - this.x, p.y - this.y);
+        if (d < best) { best = d; nearest = p; }
+      }
+      if (nearest) {
+        const dx = nearest.x - this.x;
+        const dy = nearest.y - this.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        this.x += (dx / dist) * this.speed * dt;
+        this.y += (dy / dist) * this.speed * dt;
+        if (dist < this.radius + nearest.radius + 2 && this.attackCd <= 0) {
+          nearest.takeDamage(this.damage);
+          this.attackCd = 0.8;
+        }
+      }
+      if (this.attackCd > 0) this.attackCd -= dt;
+      this.x = Math.max(this.radius, Math.min(mapW - this.radius, this.x));
+      this.y = Math.max(this.radius, Math.min(mapH - this.radius, this.y));
+    }
+
+    takeDamage(amount) {
+      this.hp -= amount;
+      if (this.hp <= 0) {
+        this.alive = false;
+        AudioSys.enemyDie();
+        return true;
+      }
+      AudioSys.enemyHit();
+      return false;
+    }
+  },
+
+  // Simple particle / effect
+  Effect: class {
+    constructor(x, y, type, duration = 0.5) {
+      this.x = x;
+      this.y = y;
+      this.type = type; // 'explosion', 'muzzle', 'strat'
+      this.life = duration;
+      this.maxLife = duration;
+      this.radius = type === 'explosion' ? 40 : 8;
+    }
+  }
+};
+
+// Stratagem definitions (simplified directional codes using WASD while Ctrl held)
+const Stratagems = {
+  list: [
+    { name: 'Resupply', code: ['down', 'down', 'up', 'right'], cooldown: 40, icon: '📦' },
+    { name: 'Orbital Strike', code: ['right', 'right', 'up'], cooldown: 35, icon: '💥' },
+    { name: 'Reinforce', code: ['up', 'down', 'right', 'left', 'up'], cooldown: 60, icon: '🪂' },
+    { name: 'Eagle Strafing', code: ['up', 'right', 'right'], cooldown: 25, icon: '🦅' }
+  ],
+
+  match(buffer) {
+    for (const s of this.list) {
+      if (buffer.length < s.code.length) continue;
+      const slice = buffer.slice(-s.code.length);
+      if (slice.every((v, i) => v === s.code[i])) return s;
+    }
+    return null;
+  }
+};
+
+
+/* ===== js/game.js ===== */
+// Core game loop, rendering, state
+const Game = {
+  canvas: null,
+  ctx: null,
+  width: 0,
+  height: 0,
+  mapW: 2400,
+  mapH: 2400,
+  camX: 0,
+  camY: 0,
+  players: new Map(),
+  localPlayerId: null,
+  enemies: [],
+  projectiles: [],
+  effects: [],
+  wave: 1,
+  waveTimer: 0,
+  enemiesToSpawn: 8,
+  spawnCooldown: 0,
+  state: 'menu', // menu | playing | paused | extract | ended
+  extractTimer: 0,
+  extractZone: { x: 1200, y: 1200, r: 120 },
+  missionTime: 0,
+  kills: 0,
+  isHost: true,
+  lastStateSend: 0,
+  keys: {},
+  mouse: { x: 0, y: 0, down: false },
+  ctrlHeld: false,
+  stratBuffer: [],
+  stratUITimer: 0,
+  activeStratagems: {}, // name -> cooldown remaining
+  showFps: false,
+  fps: 60,
+  lastFrame: 0,
+  reduceMotion: false,
+
+  init(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    // Defer real size until the game screen is shown (hidden elements report 0)
+    this.width = 0;
+    this.height = 0;
+    window.addEventListener('resize', () => {
+      if (this.state === 'playing' || this.state === 'extract' || this.state === 'paused') this.resize();
+    });
+    this._bindInput();
+  },
+
+  resize() {
+    // Prefer parent (#game) size; fall back to window
+    const parent = this.canvas.parentElement;
+    let w = parent ? parent.clientWidth : 0;
+    let h = parent ? parent.clientHeight : 0;
+    if (w < 100 || h < 100) {
+      w = window.innerWidth || 800;
+      h = window.innerHeight || 600;
+    }
+    this.width = w;
+    this.height = h;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.canvas.width = Math.floor(w * dpr);
+    this.canvas.height = Math.floor(h * dpr);
+    this.canvas.style.width = w + 'px';
+    this.canvas.style.height = h + 'px';
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  },
+
+  startSolo(name) {
+    this.reset();
+    this.isHost = true;
+    this.localPlayerId = 'local';
+    const p = new Entities.Player('local', name, this.mapW / 2, this.mapH / 2, '#ffe800');
+    this.players.set('local', p);
+    this.state = 'playing';
+    // Critical: size the canvas now that #game is visible
+    this.resize();
+    this.camX = p.x - this.width / 2;
+    this.camY = p.y - this.height / 2;
+    this._spawnWave();
+  },
+
+  startMulti(localId, isHost, roster, name) {
+    this.reset();
+    this.isHost = isHost;
+    this.localPlayerId = localId;
+    const colors = ['#ffe800', '#33aaff', '#ff66aa', '#66ff99', '#ff9944', '#cc66ff', '#66ffff', '#ff6666'];
+    let i = 0;
+    const entries = roster instanceof Map ? [...roster.entries()] : Object.entries(roster || {});
+    for (const [id, info] of entries) {
+      const angle = (i / Math.max(1, entries.length)) * Math.PI * 2;
+      const px = this.mapW / 2 + Math.cos(angle) * 60;
+      const py = this.mapH / 2 + Math.sin(angle) * 60;
+      const p = new Entities.Player(id, (info && info.name) || 'Diver', px, py, colors[i % colors.length]);
+      this.players.set(id, p);
+      i++;
+    }
+    if (!this.players.has(localId)) {
+      const p = new Entities.Player(localId, name, this.mapW / 2, this.mapH / 2, '#ffe800');
+      this.players.set(localId, p);
+    }
+    this.state = 'playing';
+    this.resize();
+    const lp = this.players.get(localId);
+    if (lp) {
+      this.camX = lp.x - this.width / 2;
+      this.camY = lp.y - this.height / 2;
+    }
+    if (this.isHost) this._spawnWave();
+  },
+
+  reset() {
+    this.players.clear();
+    this.enemies = [];
+    this.projectiles = [];
+    this.effects = [];
+    this.wave = 1;
+    this.waveTimer = 0;
+    this.enemiesToSpawn = 8;
+    this.spawnCooldown = 0;
+    this.extractTimer = 0;
+    this.missionTime = 0;
+    this.kills = 0;
+    this.stratBuffer = [];
+    this.activeStratagems = {};
+    this.state = 'menu';
+  },
+
+  _bindInput() {
+    window.addEventListener('keydown', (e) => {
+      this.keys[e.code] = true;
+      if (e.code === 'ControlLeft' || e.code === 'ControlRight') this.ctrlHeld = true;
+      if (this.state === 'playing' && this.ctrlHeld) {
+        const dir = { KeyW: 'up', KeyS: 'down', KeyA: 'left', KeyD: 'right' }[e.code];
+        if (dir) {
+          this.stratBuffer.push(dir);
+          if (this.stratBuffer.length > 8) this.stratBuffer.shift();
+          AudioSys.stratagem();
+          this.stratUITimer = 2;
+          const match = Stratagems.match(this.stratBuffer);
+          if (match && (!this.activeStratagems[match.name] || this.activeStratagems[match.name] <= 0)) {
+            this._activateStratagem(match);
+            this.stratBuffer = [];
+          }
+        }
+      }
+      if (e.code === 'Escape' && this.state === 'playing') {
+        this.state = 'paused';
+      } else if (e.code === 'Escape' && this.state === 'paused') {
+        this.state = 'playing';
+      }
+      if (e.code === 'KeyR') {
+        const lp = this.players.get(this.localPlayerId);
+        if (lp) lp.input.reload = true;
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      this.keys[e.code] = false;
+      if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
+        this.ctrlHeld = false;
+        this.stratBuffer = [];
+      }
+      if (e.code === 'KeyR') {
+        const lp = this.players.get(this.localPlayerId);
+        if (lp) lp.input.reload = false;
+      }
+    });
+    this.canvas.addEventListener('mousemove', (e) => {
+      const rect = this.canvas.getBoundingClientRect();
+      this.mouse.x = e.clientX - rect.left;
+      this.mouse.y = e.clientY - rect.top;
+    });
+    this.canvas.addEventListener('mousedown', (e) => {
+      if (e.button === 0) this.mouse.down = true;
+    });
+    this.canvas.addEventListener('mouseup', (e) => {
+      if (e.button === 0) this.mouse.down = false;
+    });
+    this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  },
+
+  _getLocalInput() {
+    const worldMx = this.mouse.x + this.camX;
+    const worldMy = this.mouse.y + this.camY;
+    return {
+      up: !!this.keys['KeyW'],
+      down: !!this.keys['KeyS'],
+      left: !!this.keys['KeyA'],
+      right: !!this.keys['KeyD'],
+      shoot: this.mouse.down,
+      sprint: !!this.keys['ShiftLeft'] || !!this.keys['ShiftRight'],
+      reload: !!this.keys['KeyR'],
+      aimX: worldMx,
+      aimY: worldMy
+    };
+  },
+
+  _activateStratagem(s) {
+    this.activeStratagems[s.name] = s.cooldown;
+    AudioSys.stratagemReady();
+    const lp = this.players.get(this.localPlayerId);
+    if (!lp) return;
+    if (s.name === 'Resupply') {
+      lp.ammo = lp.maxAmmo;
+      lp.hp = Math.min(lp.maxHp, lp.hp + 40);
+      this.effects.push(new Entities.Effect(lp.x, lp.y, 'strat', 0.8));
+    } else if (s.name === 'Orbital Strike' || s.name === 'Eagle Strafing') {
+      // Call at aim point
+      const ax = lp.input.aimX;
+      const ay = lp.input.aimY;
+      this.effects.push(new Entities.Effect(ax, ay, 'explosion', 0.6));
+      // Damage enemies in radius
+      for (const e of this.enemies) {
+        if (!e.alive) continue;
+        if (Math.hypot(e.x - ax, e.y - ay) < 90) {
+          if (e.takeDamage(80)) {
+            this.kills++;
+            lp.kills++;
+          }
+        }
+      }
+    } else if (s.name === 'Reinforce') {
+      // Revive local if dead, or heal
+      if (!lp.alive) {
+        lp.alive = true;
+        lp.hp = lp.maxHp * 0.6;
+        lp.invuln = 2;
+      } else {
+        lp.hp = lp.maxHp;
+      }
+      this.effects.push(new Entities.Effect(lp.x, lp.y, 'strat', 1));
+    }
+  },
+
+  _spawnWave() {
+    this.enemiesToSpawn = 6 + this.wave * 3;
+    this.spawnCooldown = 0.5;
+  },
+
+  _spawnEnemy() {
+    const side = Math.floor(Math.random() * 4);
+    let x, y;
+    if (side === 0) { x = Math.random() * this.mapW; y = -20; }
+    else if (side === 1) { x = this.mapW + 20; y = Math.random() * this.mapH; }
+    else if (side === 2) { x = Math.random() * this.mapW; y = this.mapH + 20; }
+    else { x = -20; y = Math.random() * this.mapH; }
+    const type = Math.random() < 0.12 ? 'charger' : 'bug';
+    this.enemies.push(new Entities.Enemy(x, y, type));
+  },
+
+  update(dt) {
+    if (this.state !== 'playing' && this.state !== 'extract') return;
+
+    this.missionTime += dt;
+
+    // Local input
+    const lp = this.players.get(this.localPlayerId);
+    if (lp) {
+      lp.input = this._getLocalInput();
+      if (!this.isHost) {
+        Network.sendInput(lp.input);
+      }
+    }
+
+    // Stratagem cooldowns
+    for (const k in this.activeStratagems) {
+      if (this.activeStratagems[k] > 0) this.activeStratagems[k] -= dt;
+    }
+    if (this.stratUITimer > 0) this.stratUITimer -= dt;
+
+    if (this.isHost) {
+      // Update all players
+      for (const p of this.players.values()) {
+        p.update(dt, this.mapW, this.mapH);
+        if (p.input.shoot) p.tryShoot(this.projectiles);
+      }
+
+      // Enemies
+      for (const e of this.enemies) {
+        e.update(dt, this.players, this.mapW, this.mapH);
+      }
+      this.enemies = this.enemies.filter(e => e.alive || (e._fade = (e._fade || 0.4) - dt) > 0);
+
+      // Spawn
+      if (this.enemiesToSpawn > 0) {
+        this.spawnCooldown -= dt;
+        if (this.spawnCooldown <= 0) {
+          this._spawnEnemy();
+          this.enemiesToSpawn--;
+          this.spawnCooldown = 0.6 + Math.random() * 0.4;
+        }
+      } else if (this.enemies.filter(e => e.alive).length === 0) {
+        this.wave++;
+        this._spawnWave();
+      }
+
+      // Projectiles
+      for (const pr of this.projectiles) {
+        pr.x += pr.vx * dt;
+        pr.y += pr.vy * dt;
+        pr.life -= dt;
+        // Hit enemies
+        for (const e of this.enemies) {
+          if (!e.alive) continue;
+          if (Math.hypot(e.x - pr.x, e.y - pr.y) < e.radius + pr.radius) {
+            const owner = this.players.get(pr.owner);
+            if (e.takeDamage(pr.damage)) {
+              this.kills++;
+              if (owner) owner.kills++;
+            }
+            pr.life = 0;
+            break;
+          }
+        }
+      }
+      this.projectiles = this.projectiles.filter(p => p.life > 0);
+
+      // Effects
+      for (const ef of this.effects) ef.life -= dt;
+      this.effects = this.effects.filter(e => e.life > 0);
+
+      // Extract check
+      const living = [...this.players.values()].filter(p => p.alive);
+      if (living.length > 0) {
+        const inZone = living.every(p => Math.hypot(p.x - this.extractZone.x, p.y - this.extractZone.y) < this.extractZone.r);
+        if (inZone && this.wave >= 3) {
+          if (this.state !== 'extract') {
+            this.state = 'extract';
+            this.extractTimer = 25;
+            AudioSys.extract();
+          } else {
+            this.extractTimer -= dt;
+            if (this.extractTimer <= 0) {
+              this._endMission(true);
+            }
+          }
+        } else if (this.state === 'extract') {
+          this.state = 'playing';
+          this.extractTimer = 0;
+        }
+      }
+
+      // All dead?
+      if (living.length === 0) {
+        this._endMission(false);
+      }
+
+      // Broadcast state ~20 Hz
+      this.lastStateSend += dt;
+      if (this.lastStateSend > 0.05) {
+        this.lastStateSend = 0;
+        Network.sendState(this._serializeState());
+      }
+    } else {
+      // Client: only update local prediction lightly + apply received state
+      if (lp) {
+        lp.update(dt, this.mapW, this.mapH);
+        // Local shoot is cosmetic; real projectiles come from host state
+      }
+    }
+
+    // Camera follow local
+    if (lp) {
+      const targetX = lp.x - this.width / 2;
+      const targetY = lp.y - this.height / 2;
+      const lerp = this.reduceMotion ? 1 : 0.12;
+      this.camX += (targetX - this.camX) * lerp;
+      this.camY += (targetY - this.camY) * lerp;
+      this.camX = Math.max(0, Math.min(this.mapW - this.width, this.camX));
+      this.camY = Math.max(0, Math.min(this.mapH - this.height, this.camY));
+    }
+  },
+
+  applyState(state) {
+    // Host state applied on clients
+    this.wave = state.wave;
+    this.kills = state.kills;
+    this.extractTimer = state.extractTimer;
+    this.state = state.state;
+    // Players
+    for (const ps of state.players) {
+      let p = this.players.get(ps.id);
+      if (!p) {
+        p = new Entities.Player(ps.id, ps.name, ps.x, ps.y, ps.color);
+        this.players.set(ps.id, p);
+      }
+      if (ps.id !== this.localPlayerId) {
+        p.x = ps.x; p.y = ps.y; p.angle = ps.angle;
+      }
+      p.hp = ps.hp; p.ammo = ps.ammo; p.alive = ps.alive; p.kills = ps.kills;
+    }
+    // Enemies (simple replace for minimal)
+    this.enemies = state.enemies.map(e => {
+      const en = new Entities.Enemy(e.x, e.y, e.type);
+      en.hp = e.hp; en.alive = e.alive;
+      return en;
+    });
+    this.projectiles = state.projectiles || [];
+  },
+
+  applyInput(fromId, input) {
+    const p = this.players.get(fromId);
+    if (p) p.input = input;
+  },
+
+  _serializeState() {
+    return {
+      wave: this.wave,
+      kills: this.kills,
+      extractTimer: this.extractTimer,
+      state: this.state,
+      players: [...this.players.values()].map(p => p.serialize()),
+      enemies: this.enemies.filter(e => e.alive).map(e => ({
+        x: e.x, y: e.y, type: e.type, hp: e.hp, alive: e.alive
+      })),
+      projectiles: this.projectiles.map(p => ({
+        x: p.x, y: p.y, vx: p.vx, vy: p.vy, life: p.life, radius: p.radius
+      }))
+    };
+  },
+
+  _endMission(success) {
+    this.state = 'ended';
+    const stats = {
+      kills: this.kills,
+      wave: this.wave,
+      time: Math.floor(this.missionTime),
+      success
+    };
+    Storage.addStats({
+      missions: 1,
+      kills: this.kills,
+      deaths: success ? 0 : 1,
+      extracts: success ? 1 : 0,
+      playTime: Math.floor(this.missionTime)
+    });
+    // UI handled externally
+    if (this.onMissionEnd) this.onMissionEnd(stats);
+  },
+
+  draw() {
+    const ctx = this.ctx;
+    ctx.fillStyle = '#0d1210';
+    ctx.fillRect(0, 0, this.width, this.height);
+
+    // Grid
+    ctx.save();
+    ctx.translate(-this.camX, -this.camY);
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    ctx.lineWidth = 1;
+    const grid = 80;
+    const startX = Math.floor(this.camX / grid) * grid;
+    const startY = Math.floor(this.camY / grid) * grid;
+    for (let x = startX; x < this.camX + this.width + grid; x += grid) {
+      ctx.beginPath(); ctx.moveTo(x, this.camY); ctx.lineTo(x, this.camY + this.height); ctx.stroke();
+    }
+    for (let y = startY; y < this.camY + this.height + grid; y += grid) {
+      ctx.beginPath(); ctx.moveTo(this.camX, y); ctx.lineTo(this.camX + this.width, y); ctx.stroke();
+    }
+
+    // Extract zone
+    ctx.beginPath();
+    ctx.arc(this.extractZone.x, this.extractZone.y, this.extractZone.r, 0, Math.PI * 2);
+    ctx.strokeStyle = this.state === 'extract' ? 'rgba(255,232,0,0.6)' : 'rgba(0,200,255,0.3)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = this.state === 'extract' ? 'rgba(255,232,0,0.08)' : 'rgba(0,200,255,0.05)';
+    ctx.fill();
+    ctx.fillStyle = '#8af';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('EXTRACT', this.extractZone.x, this.extractZone.y - this.extractZone.r - 8);
+
+    // Effects
+    for (const ef of this.effects) {
+      const a = ef.life / ef.maxLife;
+      if (ef.type === 'explosion') {
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, ef.radius * (1.2 - a), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,120,20,${a * 0.7})`;
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, 20 * a, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255,232,0,${a})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    // Enemies
+    for (const e of this.enemies) {
+      if (!e.alive && !e._fade) continue;
+      const alpha = e.alive ? 1 : (e._fade || 0);
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+      ctx.fillStyle = e.color;
+      ctx.fill();
+      // HP bar for chargers
+      if (e.type === 'charger' && e.alive) {
+        ctx.fillStyle = '#333';
+        ctx.fillRect(e.x - 16, e.y - e.radius - 10, 32, 4);
+        ctx.fillStyle = '#f44';
+        ctx.fillRect(e.x - 16, e.y - e.radius - 10, 32 * (e.hp / e.maxHp), 4);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // Projectiles
+    ctx.fillStyle = '#ffe8a0';
+    for (const pr of this.projectiles) {
+      ctx.beginPath();
+      ctx.arc(pr.x, pr.y, pr.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Players
+    for (const p of this.players.values()) {
+      if (!p.alive) {
+        // Ghost
+        ctx.globalAlpha = 0.35;
+      }
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      // Body
+      ctx.beginPath();
+      ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.fill();
+      // Direction indicator
+      ctx.fillStyle = '#111';
+      ctx.fillRect(4, -3, 12, 6);
+      ctx.restore();
+      // Name
+      ctx.fillStyle = '#ccc';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.name, p.x, p.y - p.radius - 8);
+      // Local HP already in HUD
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+
+    // Stratagem buffer UI
+    if (this.stratUITimer > 0 && this.stratBuffer.length) {
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(this.width / 2 - 80, this.height - 100, 160, 28);
+      ctx.fillStyle = '#ffe800';
+      ctx.font = '14px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(this.stratBuffer.map(d => ({up:'↑',down:'↓',left:'←',right:'→'})[d]).join(' '), this.width / 2, this.height - 82);
+    }
+  },
+
+  loop(ts) {
+    if (!this._looping) return;
+    if (!this.lastFrame) this.lastFrame = ts;
+    let dt = (ts - this.lastFrame) / 1000;
+    if (dt > 0.1) dt = 0.05; // catch-up / tab-switch guard
+    this.lastFrame = ts;
+    this.fps = dt > 0 ? Math.round(1 / dt) : 60;
+
+    if (this.width < 50) this.resize(); // safety
+
+    if (this.state === 'playing' || this.state === 'extract') {
+      this.update(dt);
+    }
+    this.draw();
+    requestAnimationFrame((t) => this.loop(t));
+  }
+};
+
+
+/* ===== js/main.js ===== */
+// UI wiring — HellBrowsers
+// Buttons are attached as early as possible so a later error doesn't kill the menu.
+(function () {
+  'use strict';
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => document.querySelectorAll(sel);
+
+  function setStatus(msg) {
+    const el = $('#status-msg');
+    if (el) el.textContent = msg || '';
+  }
+
+  function showScreen(id) {
+    $$('.screen').forEach(s => s.classList.remove('active'));
+    const el = $(id);
+    if (el) el.classList.add('active');
+  }
+
+  function openSub(id) {
+    $$('.subpanel').forEach(p => p.classList.remove('open'));
+    const el = $(id);
+    if (el) el.classList.add('open');
+  }
+
+  function closeSubs() {
+    $$('.subpanel').forEach(p => p.classList.remove('open'));
+  }
+
+  function getName() {
+    return (($('#username') && $('#username').value.trim()) || 'Diver').slice(0, 16);
+  }
+
+  // ========== ALWAYS-AVAILABLE MENU BUTTONS (no Game dependency) ==========
+  // These must work even if game.js / network.js fail to load.
+
+  const btnOptions = $('#btn-options');
+  if (btnOptions) {
+    btnOptions.addEventListener('click', function () {
+      showScreen('#options');
+    });
+  }
+
+  const btnOptionsBack = $('#btn-options-back');
+  if (btnOptionsBack) {
+    btnOptionsBack.addEventListener('click', function () {
+      showScreen('#menu');
+    });
+  }
+
+  const btnStats = $('#btn-stats');
+  if (btnStats) {
+    btnStats.addEventListener('click', function () {
+      let s = { missions: 0, kills: 0, extracts: 0, deaths: 0, playTime: 0 };
+      try {
+        if (typeof Storage !== 'undefined') {
+          s = Object.assign(s, Storage.load().stats || {});
+        }
+      } catch (e) {}
+      const box = $('#stats-content');
+      if (box) {
+        box.innerHTML =
+          '<p>Missions: ' + (s.missions || 0) + '</p>' +
+          '<p>Kills: ' + (s.kills || 0) + '</p>' +
+          '<p>Extracts: ' + (s.extracts || 0) + '</p>' +
+          '<p>Deaths: ' + (s.deaths || 0) + '</p>' +
+          '<p>Play time: ' + Math.floor((s.playTime || 0) / 60) + 'm ' + ((s.playTime || 0) % 60) + 's</p>';
+      }
+      showScreen('#stats');
+    });
+  }
+
+  const btnStatsBack = $('#btn-stats-back');
+  if (btnStatsBack) {
+    btnStatsBack.addEventListener('click', function () {
+      showScreen('#menu');
+    });
+  }
+
+  const btnJoin = $('#btn-join');
+  if (btnJoin) {
+    btnJoin.addEventListener('click', function () {
+      openSub('#join-panel');
+      setStatus('Paste the host\'s full Peer ID');
+    });
+  }
+
+  const btnCancelLoad = $('#btn-cancel-load');
+  if (btnCancelLoad) {
+    btnCancelLoad.addEventListener('click', function () {
+      try { if (typeof Network !== 'undefined') Network.destroy(); } catch (e) {}
+      showScreen('#menu');
+      setStatus('');
+    });
+  }
+
+  // Volume / checkboxes (safe)
+  const vol = $('#volume');
+  if (vol) {
+    vol.addEventListener('input', function (e) {
+      const v = parseFloat(e.target.value);
+      const label = $('#vol-val');
+      if (label) label.textContent = v.toFixed(2);
+      try { if (typeof AudioSys !== 'undefined') AudioSys.setVolume(v); } catch (e) {}
+      try { if (typeof Storage !== 'undefined') Storage.update({ volume: v }); } catch (e) {}
+    });
+  }
+
+  // ========== GAME-DEPENDENT BUTTONS ==========
+  // Wrapped so a missing Game / Network does not prevent the menu from working.
+
+  function safeAudioUi() {
+    try { if (typeof AudioSys !== 'undefined') AudioSys.ui(); } catch (e) {}
+  }
+
+  // Solo Deploy
+  const btnSolo = $('#btn-solo');
+  if (btnSolo) {
+    btnSolo.addEventListener('click', function () {
+      const name = getName();
+      try { if (typeof Storage !== 'undefined') Storage.update({ username: name }); } catch (e) {}
+      safeAudioUi();
+      setStatus('');
+      closeSubs();
+
+      if (typeof Game === 'undefined') {
+        setStatus('Game module failed to load — check console');
+        console.error('HellBrowsers: Game is undefined. Did js/game.js load?');
+        return;
+      }
+
+      showScreen('#game');
+      requestAnimationFrame(function () {
+        try {
+          Game.startSolo(name);
+          if (!Game._looping) {
+            Game._looping = true;
+            requestAnimationFrame(function (t) { Game.loop(t); });
+          }
+          startHUD();
+        } catch (err) {
+          console.error('Solo start error', err);
+          setStatus('Error starting game: ' + err.message);
+          showScreen('#menu');
+        }
+      });
+    });
+  }
+
+  // Host
+  const btnHost = $('#btn-host');
+  if (btnHost) {
+    btnHost.addEventListener('click', async function () {
+      const name = getName();
+      try { if (typeof Storage !== 'undefined') Storage.update({ username: name }); } catch (e) {}
+      safeAudioUi();
+
+      if (typeof Network === 'undefined' || typeof Peer === 'undefined') {
+        alert('Multiplayer library not available.\nSolo Deploy still works.');
+        setStatus('Multiplayer unavailable — try Solo');
+        return;
+      }
+
+      showScreen('#loading');
+      if ($('#loading-msg')) $('#loading-msg').textContent = 'Starting peer connection...';
+      try {
+        await Network.init();
+        await Network.host(name);
+        if ($('#host-code')) $('#host-code').textContent = Network.localId || '???';
+        openSub('#host-panel');
+        showScreen('#menu');
+        setStatus('Hosting — share the Peer ID');
+        refreshPlayerList();
+        Network.onPlayerJoin = refreshPlayerList;
+        Network.onPlayerLeave = refreshPlayerList;
+        Network.onStart = function () {
+          showScreen('#game');
+          requestAnimationFrame(function () {
+            Game.startMulti(Network.localId, true, Network.players, name);
+            if (!Game._looping) {
+              Game._looping = true;
+              requestAnimationFrame(function (t) { Game.loop(t); });
+            }
+            startHUD();
+          });
+        };
+        if ($('#btn-start')) $('#btn-start').disabled = false;
+      } catch (e) {
+        console.error(e);
+        alert('Could not host: ' + (e.message || e) + '\n\nSolo Deploy still works.');
+        showScreen('#menu');
+        setStatus('Multiplayer unavailable — try Solo');
+      }
+    });
+  }
+
+  // Join confirm
+  const btnJoinConfirm = $('#btn-join-confirm');
+  if (btnJoinConfirm) {
+    btnJoinConfirm.addEventListener('click', async function () {
+      const name = getName();
+      const code = (($('#room-code') && $('#room-code').value) || '').trim();
+      if (!code) {
+        setStatus('Enter a Peer ID first');
+        return;
+      }
+      try { if (typeof Storage !== 'undefined') Storage.update({ username: name }); } catch (e) {}
+      safeAudioUi();
+
+      if (typeof Network === 'undefined' || typeof Peer === 'undefined') {
+        alert('Multiplayer library not available.');
+        return;
+      }
+
+      showScreen('#loading');
+      if ($('#loading-msg')) $('#loading-msg').textContent = 'Connecting to host...';
+      try {
+        await Network.init();
+        await Network.join(code, name);
+        Network.onStart = function () {
+          showScreen('#game');
+          requestAnimationFrame(function () {
+            const roster = new Map([[Network.localId, { name: name }]]);
+            Game.startMulti(Network.localId, false, roster, name);
+            if (!Game._looping) {
+              Game._looping = true;
+              requestAnimationFrame(function (t) { Game.loop(t); });
+            }
+            startHUD();
+          });
+        };
+        Network.onState = function (state) { Game.applyState(state); };
+        if ($('#loading-msg')) $('#loading-msg').textContent = 'Connected! Waiting for host to start...';
+        setStatus('Joined — waiting for host');
+      } catch (e) {
+        console.error(e);
+        alert('Join failed: ' + (e.message || e));
+        showScreen('#menu');
+        setStatus('Join failed');
+      }
+    });
+  }
+
+  const btnStart = $('#btn-start');
+  if (btnStart) {
+    btnStart.addEventListener('click', function () {
+      safeAudioUi();
+      if (typeof Network !== 'undefined') Network.startGame({});
+    });
+  }
+
+  // Pause / leave
+  const btnResume = $('#btn-resume');
+  if (btnResume) {
+    btnResume.addEventListener('click', function () {
+      if (typeof Game !== 'undefined') Game.state = 'playing';
+      const pm = $('#pause-menu');
+      if (pm) pm.classList.remove('show');
+    });
+  }
+
+  function leaveMission() {
+    try { if (typeof Network !== 'undefined') Network.destroy(); } catch (e) {}
+    if (typeof Game !== 'undefined') {
+      Game.reset();
+      Game._looping = false;
+    }
+    showScreen('#menu');
+    const pm = $('#pause-menu');
+    if (pm) pm.classList.remove('show');
+    const me = $('#mission-end');
+    if (me) me.classList.remove('show');
+    setStatus('');
+  }
+
+  if ($('#btn-leave')) $('#btn-leave').addEventListener('click', leaveMission);
+  if ($('#btn-return')) $('#btn-return').addEventListener('click', leaveMission);
+
+  function refreshPlayerList() {
+    const ul = $('#player-list');
+    if (!ul || typeof Network === 'undefined') return;
+    ul.innerHTML = '';
+    for (const [id, info] of Network.players) {
+      const li = document.createElement('li');
+      li.textContent = (info.isHost ? '★ ' : '') + (info.name || id.slice(0, 8));
+      ul.appendChild(li);
+    }
+  }
+
+  // ========== INIT GAME MODULES (after buttons are live) ==========
+  try {
+    let data = { username: '', volume: 0.7, showFps: false, reduceMotion: false };
+    try { if (typeof Storage !== 'undefined') data = Storage.load(); } catch (e) {}
+
+    if ($('#username') && data.username) $('#username').value = data.username;
+    if ($('#volume')) {
+      $('#volume').value = data.volume ?? 0.7;
+      if ($('#vol-val')) $('#vol-val').textContent = (data.volume ?? 0.7).toFixed(2);
+    }
+    if ($('#show-fps')) $('#show-fps').checked = !!data.showFps;
+    if ($('#reduce-motion')) $('#reduce-motion').checked = !!data.reduceMotion;
+
+    try {
+      if (typeof AudioSys !== 'undefined') {
+        AudioSys.init();
+        AudioSys.setVolume(data.volume ?? 0.7);
+      }
+    } catch (e) { console.warn('Audio init', e); }
+
+    const canvas = $('#canvas');
+    if (canvas && typeof Game !== 'undefined') {
+      Game.init(canvas);
+      Game.showFps = !!data.showFps;
+      Game.reduceMotion = !!data.reduceMotion;
+      Game.onMissionEnd = function (stats) {
+        const end = $('#mission-end');
+        if (end) {
+          end.classList.add('show');
+          if ($('#end-title')) $('#end-title').textContent = stats.success ? 'MISSION COMPLETE' : 'MISSION FAILED';
+          if ($('#end-stats')) $('#end-stats').textContent = 'Kills: ' + stats.kills + '  ·  Wave: ' + stats.wave + '  ·  Time: ' + stats.time + 's';
+        }
+      };
+    } else {
+      console.error('HellBrowsers: Game module or canvas missing');
+      setStatus('Game engine failed to load (see console)');
+    }
+
+    if ($('#show-fps')) {
+      $('#show-fps').addEventListener('change', function (e) {
+        if (typeof Game !== 'undefined') Game.showFps = e.target.checked;
+        try { if (typeof Storage !== 'undefined') Storage.update({ showFps: e.target.checked }); } catch (e) {}
+      });
+    }
+    if ($('#reduce-motion')) {
+      $('#reduce-motion').addEventListener('change', function (e) {
+        if (typeof Game !== 'undefined') Game.reduceMotion = e.target.checked;
+        try { if (typeof Storage !== 'undefined') Storage.update({ reduceMotion: e.target.checked }); } catch (e) {}
+      });
+    }
+
+    if (typeof Network !== 'undefined') {
+      Network.onInput = function (from, input) {
+        if (typeof Game !== 'undefined') Game.applyInput(from, input);
+      };
+    }
+  } catch (err) {
+    console.error('HellBrowsers init error', err);
+    setStatus('Init error — menu still works');
+  }
+
+  // HUD loop
+  let hudRunning = false;
+  function startHUD() {
+    if (hudRunning) return;
+    hudRunning = true;
+    function tick() {
+      if (typeof Game === 'undefined' || Game.state === 'menu') {
+        hudRunning = false;
+        return;
+      }
+      const lp = Game.players.get(Game.localPlayerId);
+      if (lp) {
+        if ($('#ammo')) $('#ammo').textContent = 'AMMO ' + lp.ammo + '/' + lp.maxAmmo;
+        const fill = $('#health-fill');
+        if (fill) {
+          fill.style.width = Math.max(0, (lp.hp / lp.maxHp) * 100) + '%';
+          fill.style.background = lp.hp < 30 ? '#f33' : '#33cc66';
+        }
+      }
+      if ($('#wave-info')) $('#wave-info').textContent = 'WAVE ' + Game.wave + '  ·  KILLS ' + Game.kills;
+
+      const et = $('#extract-timer');
+      if (et) {
+        if (Game.state === 'extract') {
+          et.classList.add('show');
+          const span = et.querySelector('span');
+          if (span) span.textContent = Math.ceil(Game.extractTimer);
+        } else {
+          et.classList.remove('show');
+        }
+      }
+
+      const pause = $('#pause-menu');
+      if (pause) {
+        if (Game.state === 'paused') pause.classList.add('show');
+        else pause.classList.remove('show');
+      }
+
+      const fpsEl = $('#fps');
+      if (fpsEl) {
+        if (Game.showFps) {
+          fpsEl.classList.add('show');
+          fpsEl.textContent = Game.fps + ' FPS';
+        } else {
+          fpsEl.classList.remove('show');
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // Initial
+  showScreen('#menu');
+  setStatus('Ready — Solo Deploy works immediately');
+  console.log('HellBrowsers menu ready. Game=', typeof Game, 'Network=', typeof Network, 'Peer=', typeof Peer);
+})();
+
+
+  </script>
+
+<script>
+    // Bootstrap that always runs — provides fullscreen + emergency button wiring
+    // if main.js fails to load or throws.
+    (function () {
+      const $ = (s) => document.querySelector(s);
+      function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+        const el = $(id);
+        if (el) el.classList.add('active');
+      }
+      function setStatus(msg) {
+        const el = $('#status-msg');
+        if (el) el.textContent = msg || '';
+      }
+
+      // Fullscreen
+      const fsBtn = $('#btn-fullscreen');
+      if (fsBtn) {
+        fsBtn.addEventListener('click', function () {
+          const root = document.documentElement;
+          if (!document.fullscreenElement) {
+            (root.requestFullscreen || root.webkitRequestFullscreen || root.msRequestFullscreen).call(root);
+            fsBtn.textContent = 'EXIT FULLSCREEN';
+          } else {
+            (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen).call(document);
+            fsBtn.textContent = 'FULLSCREEN';
+          }
+        });
+        document.addEventListener('fullscreenchange', function () {
+          fsBtn.textContent = document.fullscreenElement ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
+        });
+      }
+
+      // Emergency wiring (only attaches if main.js has not already done so)
+      function wireIfNeeded(id, handler) {
+        const el = $(id);
+        if (!el) return;
+        // If main.js already attached a listener, this still adds a second one — 
+        // but for broken-load cases it is the only one. Acceptable tradeoff.
+        el.addEventListener('click', handler);
+      }
+
+      // Delay slightly so main.js (if present) can attach first
+      setTimeout(function () {
+        // Detect whether main.js ran by checking a side effect
+        const status = $('#status-msg');
+        const mainRan = status && status.textContent && status.textContent.indexOf('Ready') !== -1;
+
+        if (!mainRan) {
+          console.warn('HellBrowsers: main init may have failed — using emergency button handlers');
+          setStatus('Limited mode — some features may be unavailable');
+
+          wireIfNeeded('#btn-options', function () { showScreen('#options'); });
+          wireIfNeeded('#btn-options-back', function () { showScreen('#menu'); });
+          wireIfNeeded('#btn-stats', function () { showScreen('#stats'); });
+          wireIfNeeded('#btn-stats-back', function () { showScreen('#menu'); });
+          wireIfNeeded('#btn-join', function () {
+            const p = $('#join-panel');
+            if (p) p.classList.add('open');
+          });
+          wireIfNeeded('#btn-solo', function () {
+            if (typeof Game === 'undefined') {
+              setStatus('Game engine missing — hard refresh the page.');
+              console.error('Game is undefined');
+              return;
+            }
+            showScreen('#game');
+            requestAnimationFrame(function () {
+              try {
+                Game.startSolo((($('#username') && $('#username').value.trim()) || 'Diver').slice(0, 16));
+                if (!Game._looping) {
+                  Game._looping = true;
+                  requestAnimationFrame(function (t) { Game.loop(t); });
+                }
+              } catch (e) {
+                console.error(e);
+                setStatus('Error: ' + e.message);
+                showScreen('#menu');
+              }
+            });
+          });
+        }
+      }, 100);
+
+      showScreen('#menu');
+    })();
+  </script>
 </body>
 </html>
