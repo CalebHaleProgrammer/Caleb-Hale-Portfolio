@@ -1,0 +1,356 @@
+:root {
+  --bg: #0a0c0f;
+  --panel: #141820;
+  --accent: #ffe800;
+  --accent-dim: #c4b000;
+  --text: #e8e6e0;
+  --muted: #8a8a80;
+  --danger: #ff3333;
+  --success: #33cc66;
+  --health: #33cc66;
+  --border: #2a3038;
+  --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  user-select: none;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, #12151c 0%, var(--bg) 70%);
+}
+
+.hidden { display: none !important; }
+
+.menu-panel {
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  padding: 2rem 2.5rem;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(0,0,0,0.6);
+}
+
+h1 {
+  font-size: 1.8rem;
+  letter-spacing: 0.15em;
+  margin-bottom: 0.25rem;
+  color: var(--text);
+}
+
+h1 .accent { color: var(--accent); }
+
+h2 {
+  font-size: 1.4rem;
+  letter-spacing: 0.1em;
+  margin-bottom: 1.5rem;
+  color: var(--accent);
+}
+
+.tagline {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  margin-bottom: 1.75rem;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 1rem;
+  border-radius: 2px;
+  outline: none;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+input[type="text"]:focus {
+  border-color: var(--accent);
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.button-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.button-row.secondary {
+  margin-top: 1.5rem;
+  justify-content: center;
+}
+
+.btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: 2px solid var(--border);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.15s;
+  text-transform: uppercase;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #111;
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: var(--accent-dim);
+  border-color: var(--accent-dim);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn.small {
+  flex: none;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+}
+
+.code {
+  font-family: monospace;
+  font-size: 1.4rem;
+  letter-spacing: 0.3em;
+  color: var(--accent);
+}
+
+#player-list {
+  list-style: none;
+  margin: 1rem 0;
+  text-align: left;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+#player-list li {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.small { font-size: 0.8rem; color: var(--muted); }
+.footer {
+  margin-top: 1.75rem;
+  font-size: 0.65rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.status {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: var(--accent);
+  min-height: 1.2em;
+}
+
+.code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+  color: var(--accent);
+  word-break: break-all;
+  display: inline-block;
+  max-width: 100%;
+  user-select: all;
+}
+
+/* Game */
+#game {
+  background: #000;
+  display: block; /* override flex when visible */
+}
+
+#game:not(.hidden) {
+  display: block;
+}
+
+#canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  background: #0a100e;
+}
+
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#hud-top {
+  position: absolute;
+  top: 12px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 16px;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+}
+
+#objective { color: var(--accent); }
+#wave-info { color: var(--muted); }
+
+#hud-bottom {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+#ammo {
+  font-size: 0.9rem;
+  min-width: 80px;
+}
+
+#health-bar {
+  flex: 1;
+  max-width: 200px;
+  height: 10px;
+  background: #222;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+#health-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--health);
+  transition: width 0.15s;
+}
+
+#stratagem-hint {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-left: auto;
+}
+
+#fps {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+#killfeed {
+  position: absolute;
+  top: 40px;
+  right: 16px;
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+#killfeed div {
+  margin-bottom: 4px;
+  animation: fadeout 4s forwards;
+}
+
+@keyframes fadeout {
+  0% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+#extract-timer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 20px rgba(255,232,0,0.5);
+}
+
+#pause-menu, #mission-end {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.75);
+  pointer-events: auto;
+}
+
+/* Stratagem UI overlay */
+#stratagem-ui {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  border: 1px solid var(--accent);
+  padding: 8px 16px;
+  font-family: monospace;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  display: none;
+}

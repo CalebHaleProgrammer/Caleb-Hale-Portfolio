@@ -545,5 +545,33 @@
       "Machine Learning",
       "Prometheus UI"
     ]
+  },
+  {
+    "objectID": "helldivers-minimal/game.html",
+    "href": "helldivers-minimal/game.html",
+    "title": "HellBrowsers",
+    "section": "",
+    "text": "Minimal browser co-op inspired by Helldivers. Solo or peer-to-peer multiplayer.\n\n  \n  \n\n\n\n\n\n\nAction\nInput\n\n\n\n\nMove\nW A S D\n\n\nAim / Fire\nMouse + LMB\n\n\nSprint\nShift\n\n\nReload\nR\n\n\nStratagems\nHold Ctrl + directional WASD\n\n\nPause\nEsc\n\n\n\nStratagem codes (hold Ctrl): ↓↓↑→ Resupply · →→↑ Orbital · ↑↓→←↑ Reinforce · ↑→→ Eagle\nSurvive waves, then extract by standing in the blue circle after wave 3."
+  },
+  {
+    "objectID": "helldivers-minimal/game.html#quick-controls",
+    "href": "helldivers-minimal/game.html#quick-controls",
+    "title": "HellBrowsers",
+    "section": "",
+    "text": "Action\nInput\n\n\n\n\nMove\nW A S D\n\n\nAim / Fire\nMouse + LMB\n\n\nSprint\nShift\n\n\nReload\nR\n\n\nStratagems\nHold Ctrl + directional WASD\n\n\nPause\nEsc\n\n\n\nStratagem codes (hold Ctrl):\n\nResupply: ↓ ↓ ↑ →\nOrbital Strike: → → ↑\nReinforce: ↑ ↓ → ← ↑\nEagle Strafing: ↑ → →"
+  },
+  {
+    "objectID": "helldivers-minimal/game.html#multiplayer",
+    "href": "helldivers-minimal/game.html#multiplayer",
+    "title": "HellBrowsers",
+    "section": "",
+    "text": "One player hosts and shares the Peer ID shown on screen.\nOthers paste the full ID and join.\nHost starts the mission when the squad is ready.\n\nYour callsign, volume, and basic stats are remembered in the browser (localStorage).\n\nFan project. Not affiliated with Arrowhead. For those who want a taste of the gameplay or bigger squads."
+  },
+  {
+    "objectID": "helldivers-minimal/game.html#controls",
+    "href": "helldivers-minimal/game.html#controls",
+    "title": "HellBrowsers",
+    "section": "",
+    "text": "Action\nInput\n\n\n\n\nMove\nW A S D\n\n\nAim / Fire\nMouse + LMB\n\n\nSprint\nShift\n\n\nReload\nR\n\n\nStratagems\nHold Ctrl + directional WASD\n\n\nPause\nEsc\n\n\n\nStratagem codes (hold Ctrl): ↓↓↑→ Resupply · →→↑ Orbital · ↑↓→←↑ Reinforce · ↑→→ Eagle\nSurvive waves, then extract by standing in the blue circle after wave 3."
   }
 ]

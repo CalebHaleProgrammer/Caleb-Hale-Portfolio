@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>HellBrowsers — Minimal co-op game, for Super Earth</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- PeerJS optional; solo works without it -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" onerror="window.PEERJS_FAILED=true"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Main Menu -->
+    <div id="menu" class="screen">
+      <div class="menu-panel">
+        <h1>HELL<span class="accent">BROWSERS</span></h1>
+        <p class="tagline">Minimal co-op game, for Super Earth</p>
+        
+        <div class="form-group">
+          <label for="username">CALLSIGN</label>
+          <input type="text" id="username" maxlength="16" placeholder="Enter callsign" autocomplete="off" spellcheck="false">
+        </div>
+
+        <div class="button-row">
+          <button id="btn-solo" class="btn primary">SOLO DEPLOY</button>
+        </div>
+        <div class="button-row">
+          <button id="btn-host" class="btn">HOST SQUAD</button>
+          <button id="btn-join" class="btn">JOIN SQUAD</button>
+        </div>
+
+        <div id="join-panel" class="hidden">
+          <input type="text" id="room-code" maxlength="64" placeholder="PASTE FULL PEER ID" autocomplete="off" spellcheck="false">
+          <button id="btn-join-confirm" class="btn primary">CONNECT</button>
+        </div>
+
+        <div id="host-panel" class="hidden">
+          <p>HOST PEER ID (copy this):</p>
+          <p><span id="host-code" class="code">------</span></p>
+          <p class="small">Share the full ID with your squad. Waiting for divers...</p>
+          <ul id="player-list"></ul>
+          <button id="btn-start" class="btn primary" disabled>START MISSION</button>
+        </div>
+
+        <div class="button-row secondary">
+          <button id="btn-options" class="btn small">OPTIONS</button>
+          <button id="btn-stats" class="btn small">STATS</button>
+        </div>
+
+        <p id="status-msg" class="status"></p>
+
+        <p class="footer">Fan-made browser co-op. Not affiliated with Arrowhead.<br>
+        Solo works offline. Multiplayer needs a modern browser + network.</p>
+      </div>
+    </div>
+
+    <!-- Options -->
+    <div id="options" class="screen hidden">
+      <div class="menu-panel">
+        <h2>OPTIONS</h2>
+        <div class="form-group">
+          <label>Master Volume <span id="vol-val">0.7</span></label>
+          <input type="range" id="volume" min="0" max="1" step="0.05" value="0.7">
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox" id="show-fps"> Show FPS</label>
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox" id="reduce-motion"> Reduce Motion</label>
+        </div>
+        <button id="btn-options-back" class="btn">BACK</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div id="stats" class="screen hidden">
+      <div class="menu-panel">
+        <h2>SERVICE RECORD</h2>
+        <div id="stats-content"></div>
+        <button id="btn-stats-back" class="btn">BACK</button>
+      </div>
+    </div>
+
+    <!-- Game -->
+    <div id="game" class="screen hidden">
+      <canvas id="canvas"></canvas>
+      <div id="hud">
+        <div id="hud-top">
+          <div id="objective">OBJECTIVE: Survive waves & Extract</div>
+          <div id="wave-info">WAVE 1</div>
+        </div>
+        <div id="hud-bottom">
+          <div id="ammo">AMMO 30/30</div>
+          <div id="health-bar"><div id="health-fill"></div></div>
+          <div id="stratagem-hint">Hold CTRL + WASD for Stratagems</div>
+        </div>
+        <div id="fps" class="hidden">60</div>
+      </div>
+      <div id="pause-menu" class="hidden">
+        <div class="menu-panel">
+          <h2>PAUSED</h2>
+          <button id="btn-resume" class="btn primary">RESUME</button>
+          <button id="btn-leave" class="btn">LEAVE MISSION</button>
+        </div>
+      </div>
+      <div id="extract-timer" class="hidden">EXTRACT IN <span>25</span>s</div>
+      <div id="mission-end" class="hidden">
+        <div class="menu-panel">
+          <h2 id="end-title">MISSION COMPLETE</h2>
+          <p id="end-stats"></p>
+          <button id="btn-return" class="btn primary">RETURN TO SHIP</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="screen hidden">
+      <div class="menu-panel">
+        <h2>CONNECTING...</h2>
+        <p id="loading-msg">Please wait</p>
+        <button id="btn-cancel-load" class="btn" style="margin-top:1rem">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/network.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
