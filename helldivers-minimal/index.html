@@ -148,6 +148,23 @@
       max-width: 360px; display: none; z-index: 60; text-align: center;
     }
     #fs-warn.show { display: block; }
+    #strat-loadout-menu {
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+      background: rgba(0,0,0,0.95); border: 1px solid var(--accent); padding: 16px 18px;
+      min-width: 320px; max-width: 420px; display: none; z-index: 55; text-align: center;
+      max-height: 80vh; overflow-y: auto; pointer-events: auto;
+    }
+    #strat-loadout-menu.show { display: block; }
+    #strat-loadout-menu h3 { color: var(--accent); margin: 0 0 8px; }
+    .strat-pick {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 8px; margin: 3px 0; border: 1px solid var(--border); cursor: pointer;
+      font-size: 0.75rem; color: var(--text); background: rgba(20,24,30,0.9);
+    }
+    .strat-pick:hover { border-color: var(--accent); }
+    .strat-pick.selected { border-color: var(--accent); background: rgba(255,232,0,0.12); }
+    .strat-pick.provided { border-color: #3a6; }
+    .strat-pick .code { color: var(--muted); letter-spacing: 0.12em; }
     #fs-warn p { color: var(--muted); font-size: 0.82rem; margin: 0 0 12px; line-height: 1.45; }
     #fs-warn h3 { color: var(--danger); margin: 0 0 10px; font-size: 0.95rem; }
     #ship-menu h3 { color: var(--accent); margin: 0 0 10px; font-size: 0.95rem; }
@@ -158,9 +175,11 @@
     .opt-pane { display: none; }
     .opt-pane.active { display: block; }
     #extract-timer {
-      position: absolute; top: 18%; left: 50%; transform: translate(-50%, -50%);
-      font-size: 1.35rem; color: var(--accent); letter-spacing: 0.08em;
-      text-shadow: 0 0 18px rgba(255,232,0,0.45); display: none;
+      position: absolute; top: 16%; left: 50%; transform: translate(-50%, -50%);
+      font-size: 1.4rem; color: var(--accent); letter-spacing: 0.08em;
+      text-shadow: 0 0 18px rgba(255,232,0,0.55); display: none;
+      z-index: 40; background: rgba(0,0,0,0.55); padding: 8px 16px; border-radius: 4px;
+      border: 1px solid var(--border); pointer-events: none;
     }
     #extract-timer.show { display: block; }
     #minimap {
@@ -187,7 +206,7 @@
     }
     #pause-menu, #mission-end {
       position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
-      background: rgba(0,0,0,0.78); pointer-events: auto;
+      background: rgba(0,0,0,0.82); pointer-events: auto; z-index: 100;
     }
     #pause-menu.show, #mission-end.show { display: flex; }
     #btn-fullscreen {
@@ -274,6 +293,7 @@
               <option value="top-right">Top right</option>
             </select>
           </div>
+          <div class="form-group"><label style="display:flex;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="scroll-cam-zoom"> Scroll wheel zooms camera (else minimap)</label></div>
         </div>
         <div class="opt-pane" id="opt-controls">
           <p class="footer" style="margin:0">WASD move · Mouse look · Shift sprint · Space climb<br>
@@ -311,33 +331,38 @@
           <div id="objective">OBJECTIVE: Clear holes · Call extract at terminal</div>
           <div id="wave-info">HOLES 0 · KILLS 0</div>
         </div>
+        <div id="stamina-wrap">
+          <div class="hud-label">STAMINA</div>
+          <div id="stamina-bar"><div id="stamina-fill"></div></div>
+        </div>
         <div id="hud-bottom">
-          <div class="hud-block">
-            <div class="hud-label">PRIMARY</div>
-            <div id="ammo-text">30 / 30</div>
-            <div class="clip-bar" id="clip-bar"></div>
-          </div>
-          <div id="secondary-icon" title="Secondary (2)">🔫<span class="key">2</span></div>
-          <div class="hud-block">
-            <div class="hud-label">GRENADES</div>
-            <div id="grenades">3</div>
-          </div>
-          <div class="hud-block">
-            <div class="hud-label">STIMS [V]</div>
-            <div id="stims">2</div>
-          </div>
-          <div class="hud-block">
-            <div class="hud-label">STAMINA</div>
-            <div id="stamina-bar" style="width:100px;height:8px;background:#222;border:1px solid #2a3038;border-radius:2px;overflow:hidden">
-              <div id="stamina-fill" style="height:100%;width:100%;background:#3af"></div>
+          <div id="hud-bottom-left">
+            <div id="weapon-hud">
+              <div id="weapon-icon">🔫<span class="slot">1</span></div>
+              <div class="hud-block">
+                <div class="hud-label" id="weapon-slot-label">PRIMARY</div>
+                <div id="weapon-name">Liberator</div>
+                <div id="ammo-text">30 / 30</div>
+              </div>
+              <div class="clip-bar" id="clip-bar"></div>
+            </div>
+            <div class="hud-block">
+              <div class="hud-label">GRENADES</div>
+              <div id="grenades">3</div>
+            </div>
+            <div class="hud-block">
+              <div class="hud-label">STIMS [V]</div>
+              <div id="stims">2</div>
             </div>
           </div>
-          <div class="hud-block">
-            <div class="hud-label">HEALTH</div>
-            <div id="health-bar"><div id="health-fill"></div></div>
+          <div id="hud-bottom-right">
+            <div class="hud-block">
+              <div class="hud-label">HEALTH</div>
+              <div id="health-bar"><div id="health-fill"></div></div>
+            </div>
+            <div id="backpack-icon" class="active" title="Supply Pack">🎒</div>
+            <div id="stratagem-hint">Ctrl stratagems · V stim · 5 backpack · E interact</div>
           </div>
-          <div id="backpack-icon" class="active" title="Supply Pack">🎒</div>
-          <div id="stratagem-hint">Ctrl stratagems · V stim · 5 backpack · E interact</div>
         </div>
         <div id="mission-obj"></div>
         <canvas id="minimap" width="140" height="140"></canvas>
@@ -352,6 +377,20 @@
           <h3 id="ship-menu-title">STATION</h3>
           <div id="ship-menu-body"></div>
           <button type="button" class="btn full" id="ship-menu-close" style="margin-top:8px">CLOSE (E)</button>
+        </div>
+        <div id="fs-warn">
+          <h3>FULLSCREEN RECOMMENDED</h3>
+          <p>You are not in fullscreen mode. Calling in stratagems with <b>Ctrl+W</b> may close your tab.</p>
+          <button type="button" class="btn primary full" id="fs-warn-go">GO FULLSCREEN</button>
+          <button type="button" class="btn full" id="fs-warn-anyway" style="margin-top:0.45rem">DROP ANYWAY</button>
+        </div>
+        <div id="strat-loadout-menu">
+          <h3>STRATAGEM LOADOUT</h3>
+          <p style="color:var(--muted);font-size:0.75rem;margin:0 0 8px">Select stratagems (5 on diff 1–3, else 4). ★ = provided. Click map to set drop.</p>
+          <div id="strat-loadout-slots" style="margin-bottom:8px;color:var(--accent);font-size:0.78rem"></div>
+          <div id="strat-loadout-list" style="max-height:40vh;overflow-y:auto;text-align:left"></div>
+          <button type="button" class="btn primary full" id="strat-loadout-confirm" style="margin-top:10px">CONFIRM &amp; DROP</button>
+          <button type="button" class="btn full" id="strat-loadout-back" style="margin-top:6px">BACK</button>
         </div>
         <div id="strat-cds"></div>
         <div id="strat-ui">
@@ -473,10 +512,16 @@ const PLANETS = [
   { id: 'angel', name: "Angel's Venture", biome: 'ash', fog: 0x1a0a08, fogNear: 45, fogFar: 120, ground: 0x2a1810, ash: 0.7 }
 ];
 const DIFFICULTIES = [
-  { id: 1, name: 'Trivial', enemyMult: 0.7, patrols: 2, breaches: 0.3 },
-  { id: 3, name: 'Medium', enemyMult: 1.0, patrols: 3, breaches: 0.6 },
-  { id: 5, name: 'Hard', enemyMult: 1.35, patrols: 4, breaches: 0.9 },
-  { id: 7, name: 'Suicide', enemyMult: 1.7, patrols: 5, breaches: 1.2 }
+  { id: 1, name: 'Trivial', enemyMult: 0.55, patrols: 1, breaches: 0.2 },
+  { id: 2, name: 'Easy', enemyMult: 0.7, patrols: 2, breaches: 0.3 },
+  { id: 3, name: 'Medium', enemyMult: 0.85, patrols: 2, breaches: 0.45 },
+  { id: 4, name: 'Challenging', enemyMult: 1.0, patrols: 3, breaches: 0.6 },
+  { id: 5, name: 'Hard', enemyMult: 1.15, patrols: 3, breaches: 0.75 },
+  { id: 6, name: 'Extreme', enemyMult: 1.3, patrols: 4, breaches: 0.9 },
+  { id: 7, name: 'Suicide Mission', enemyMult: 1.5, patrols: 4, breaches: 1.05 },
+  { id: 8, name: 'Impossible', enemyMult: 1.7, patrols: 5, breaches: 1.2 },
+  { id: 9, name: 'Helldive', enemyMult: 1.9, patrols: 5, breaches: 1.35 },
+  { id: 10, name: 'Super Helldive', enemyMult: 2.15, patrols: 6, breaches: 1.5 }
 ];
 const MISSION_TYPES = [
   { id: 'holes', name: 'Eradicate Bug Holes', obj: 'Destroy all bug holes' },
@@ -663,7 +708,7 @@ const Game = {
     { id: 'ammo_extra', name: 'Extra Mag', cost: 8 },
     { id: 'armor_light', name: 'Light Armor', cost: 12 }
   ],
-  stratagemLoadout: ['Resupply', 'Orbital Strike', 'Orbital Barrage', 'Orbital Laser'],
+  stratagemLoadout: ['Resupply', 'Orbital Strike', 'Reinforce', 'Eagle Strafing', 'Orbital Barrage', 'Orbital Laser'],
   roomCode: null,
   voiceEvents: [], // multiplayer voice event log
   killStreak: 0,
@@ -1047,19 +1092,10 @@ const Game = {
       }
 
       // ESC: pause only — never fullscreen
-      if (e.code === 'Escape') {
+      if (e.code === 'Escape' || e.code === 'Tab') {
         e.preventDefault();
         e.stopPropagation();
-        if (this.state === 'playing' || this.state === 'extract') {
-          this.state = 'paused';
-          this._exitLock(); // unlock mouse for menu clicks
-          this.ctrlHeld = false;
-          this.stratBuffer = [];
-          this.grenadePrimed = false;
-        } else if (this.state === 'paused') {
-          this.state = this.extractCalled && this.extractTimer > 0 ? 'extract' : 'playing';
-          this._requestLock(); // relock after menu
-        }
+        this._handleMenuToggle();
       }
     });
 
@@ -1136,8 +1172,13 @@ const Game = {
     document.addEventListener('wheel', (e) => {
       if (this.state !== 'playing' && this.state !== 'extract' && this.state !== 'ship') return;
       e.preventDefault();
-      const base = this.mouse.rmb ? 5.5 : 14;
-      this.camDistTarget = Math.max(4, Math.min(22, (this.camDistTarget || base) + (e.deltaY > 0 ? 1.2 : -1.2)));
+      if (this.scrollCamZoom) {
+        const base = this.mouse.rmb ? 5.5 : 14;
+        this.camDistTarget = Math.max(4, Math.min(22, (this.camDistTarget || base) + (e.deltaY > 0 ? 1.2 : -1.2)));
+      } else {
+        // Zoom minimap scale
+        this.minimapZoom = Math.max(0.6, Math.min(2.5, (this.minimapZoom || 1) + (e.deltaY > 0 ? -0.12 : 0.12)));
+      }
     }, { passive: false });
 
     // Click canvas to lock
@@ -1218,6 +1259,10 @@ const Game = {
     if (this.bilePods) {
       for (const b of this.bilePods) { if (b.mesh) this.scene.remove(b.mesh); }
       this.bilePods = [];
+    }
+    if (this.turrets) {
+      for (const tu of this.turrets) { if (tu.mesh) this.scene.remove(tu.mesh); }
+      this.turrets = [];
     }
     if (this.samplesFound) {
       for (const s of this.samplesFound) { if (s.mesh) this.scene.remove(s.mesh); }
@@ -1372,9 +1417,29 @@ const Game = {
         this.selectedMission = i; this._shipStatus(); this._openShipMenu(station);
       }));
     } else if (station.id === 'difficulty') {
-      DIFFICULTIES.forEach((d, i) => addBtn((i === this.selectedDiff ? '✓ ' : '') + d.name, () => {
-        this.selectedDiff = i; this._shipStatus(); this._openShipMenu(station);
-      }));
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'margin:8px 0;text-align:left';
+      const label = document.createElement('div');
+      label.id = 'diff-slider-label';
+      label.style.cssText = 'color:var(--accent);margin-bottom:6px;font-size:0.85rem';
+      const d0 = DIFFICULTIES[this.selectedDiff] || DIFFICULTIES[0];
+      label.textContent = d0.id + ' — ' + d0.name;
+      const sl = document.createElement('input');
+      sl.type = 'range'; sl.min = '1'; sl.max = '10'; sl.step = '1';
+      sl.value = String((DIFFICULTIES[this.selectedDiff] || DIFFICULTIES[0]).id);
+      sl.style.width = '100%';
+      sl.oninput = () => {
+        const id = parseInt(sl.value, 10);
+        const idx = DIFFICULTIES.findIndex(d => d.id === id);
+        this.selectedDiff = idx >= 0 ? idx : 0;
+        const d = DIFFICULTIES[this.selectedDiff];
+        label.textContent = d.id + ' — ' + d.name;
+        this._shipStatus();
+      };
+      wrap.appendChild(label);
+      wrap.appendChild(sl);
+      body.appendChild(wrap);
+      addBtn('DONE', () => this._closeShipMenu());
     } else if (station.id === 'armory') {
       addBtn('— PRIMARY —', () => {});
       PRIMARY_IDS.forEach(id => addBtn((this.loadoutPrimary === id ? '✓ ' : '') + Weapons[id].name, () => {
@@ -1400,11 +1465,11 @@ const Game = {
         this.loadoutSupport = sw.id; this._shipStatus(); this._openShipMenu(station);
       }));
     } else if (station.id === 'deploy') {
-      addBtn('CONFIRM DROP', () => {
+      addBtn('OPEN LOADOUT & DROP', () => {
         this._closeShipMenu();
         const p = this.players.get(this.localId);
-        const name = p ? p.name : 'Diver';
-        this._confirmHellpodDrop(name);
+        this._pendingDropName = p ? p.name : 'Diver';
+        this._openStratLoadoutMenu();
       });
     }
     menu.classList.add('show');
@@ -1417,22 +1482,244 @@ const Game = {
     if (this.state === 'ship') this._requestLock();
   },
 
+  _handleMenuToggle() {
+    // Shared by ESC and Tab — close nested UI first, then pause/unpause
+    const fsWarn = document.getElementById('fs-warn');
+    const stratMenu = document.getElementById('strat-loadout-menu');
+    const shipMenu = document.getElementById('ship-menu');
+    const options = document.getElementById('options');
+    if (fsWarn && fsWarn.classList.contains('show')) {
+      fsWarn.classList.remove('show');
+      this.shipMenuOpen = false;
+      return;
+    }
+    if (stratMenu && stratMenu.classList.contains('show')) {
+      this._closeStratLoadoutMenu();
+      return;
+    }
+    if (shipMenu && shipMenu.classList.contains('show')) {
+      this._closeShipMenu();
+      return;
+    }
+    if (options && options.classList.contains('active')) {
+      // leave options via existing back if possible
+      const back = document.getElementById('btn-options-back');
+      if (back) back.click();
+      return;
+    }
+    if (this.state === 'playing' || this.state === 'extract') {
+      this.state = 'paused';
+      this._exitLock();
+      this.ctrlHeld = false;
+      this.stratBuffer = [];
+      this.grenadePrimed = false;
+      const pm = document.getElementById('pause-menu');
+      if (pm) pm.classList.add('show');
+    } else if (this.state === 'paused') {
+      const pm = document.getElementById('pause-menu');
+      if (pm) pm.classList.remove('show');
+      if (this.extractCalled) this.state = 'extract';
+      else this.state = 'playing';
+      this._requestLock();
+    } else if (this.state === 'ship') {
+      // Open nearest station menu or unlock cursor for menu use
+      this._exitLock();
+      this.shipMenuOpen = false;
+      // Prefer opening hellpod loadout if near deploy, else nearest station
+      const p = this.players.get(this.localId);
+      if (p) {
+        let nearest = null, best = 6;
+        for (const s of (this.shipStations || [])) {
+          const d = Math.hypot(p.x - s.x, p.z - s.z);
+          if (d < best) { best = d; nearest = s; }
+        }
+        if (nearest) this._openShipMenu(nearest);
+        else this.shipMenuOpen = true; // free cursor
+      }
+    }
+  },
+
   _isFullscreen() {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
   },
 
+  _getProvidedStratagems() {
+    // Always provided
+    const list = ['Resupply', 'Reinforce'];
+    const pl = PLANETS[this.selectedPlanet] || PLANETS[0];
+    const mis = MISSION_TYPES[this.selectedMission] || MISSION_TYPES[0];
+    // Planet-specific
+    if (pl.id === 'malevelon' || pl.biome === 'forest') list.push('Eagle Strafing');
+    if (pl.id === 'angel' || pl.biome === 'ash') list.push('Orbital Barrage');
+    if (pl.id === 'tien' || pl.biome === 'ice') list.push('Orbital Laser');
+    if (pl.id === 'fori' || pl.biome === 'desert') list.push('Orbital Strike');
+    // Mission-specific
+    if (mis.id === 'holes' || mis.id === 'fabs') list.push('Orbital Strike');
+    if (mis.id === 'icbm' || mis.id === 'upload') list.push('Eagle Strafing');
+    return [...new Set(list)];
+  },
+
+  _maxStratSlots() {
+    const d = DIFFICULTIES[this.selectedDiff] || DIFFICULTIES[0];
+    return (d.id < 4) ? 5 : 4;
+  },
+
+  _openStratLoadoutMenu() {
+    this._exitLock();
+    this.shipMenuOpen = true;
+    const provided = this._getProvidedStratagems();
+    const maxSlots = this._maxStratSlots();
+    if (!this.stratagemLoadout || !this.stratagemLoadout.length) {
+      this.stratagemLoadout = provided.slice(0, maxSlots);
+    }
+    // Trim if difficulty raised
+    while (this.stratagemLoadout.length > maxSlots) this.stratagemLoadout.pop();
+    for (const p of provided) {
+      if (!this.stratagemLoadout.includes(p) && this.stratagemLoadout.length < maxSlots) {
+        this.stratagemLoadout.push(p);
+      }
+    }
+    // Default drop location
+    if (this.dropPickX == null) {
+      this.dropPickX = 0;
+      this.dropPickZ = 0;
+    }
+    const menu = document.getElementById('strat-loadout-menu');
+    const list = document.getElementById('strat-loadout-list');
+    const slots = document.getElementById('strat-loadout-slots');
+    if (!menu || !list) {
+      this._confirmHellpodDrop(this._pendingDropName || 'Diver');
+      return;
+    }
+    // Map preview canvas
+    let prev = document.getElementById('drop-map-preview');
+    if (!prev) {
+      const holder = document.createElement('div');
+      holder.style.cssText = 'margin:8px 0;';
+      holder.innerHTML = '<div style="color:var(--muted);font-size:0.7rem;margin-bottom:4px">Click map to set drop point</div>';
+      prev = document.createElement('canvas');
+      prev.id = 'drop-map-preview';
+      prev.width = 220; prev.height = 220;
+      prev.style.cssText = 'width:220px;height:220px;border:1px solid var(--border);cursor:crosshair;image-rendering:pixelated';
+      holder.appendChild(prev);
+      menu.insertBefore(holder, list);
+    }
+    const drawPreview = () => {
+      const ctx = prev.getContext('2d');
+      const W = prev.width, H = prev.height;
+      const pl = PLANETS[this.selectedPlanet] || PLANETS[0];
+      ctx.fillStyle = '#' + (pl.ground || 0x1a2a1c).toString(16).padStart(6, '0');
+      ctx.fillRect(0, 0, W, H);
+      // Simple terrain-ish noise
+      for (let i = 0; i < 80; i++) {
+        ctx.fillStyle = 'rgba(0,0,0,' + (0.08 + Math.random() * 0.12) + ')';
+        ctx.beginPath();
+        ctx.arc(Math.random() * W, Math.random() * H, 4 + Math.random() * 14, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Extract zone marker
+      const scale = W / 160;
+      const ex = W / 2, ez = H / 2;
+      ctx.strokeStyle = '#ffe800'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(ex, ez, 10, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#ffe800'; ctx.font = '9px monospace'; ctx.fillText('LZ', ex + 12, ez);
+      // Drop pick
+      const dx = W / 2 + (this.dropPickX || 0) * scale;
+      const dz = H / 2 + (this.dropPickZ || 0) * scale;
+      ctx.fillStyle = '#3af';
+      ctx.beginPath(); ctx.arc(dx, dz, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.stroke();
+      ctx.fillStyle = '#3af'; ctx.fillText('DROP', dx + 8, dz);
+    };
+    prev.onclick = (ev) => {
+      const rect = prev.getBoundingClientRect();
+      const mx = (ev.clientX - rect.left) / rect.width * prev.width;
+      const mz = (ev.clientY - rect.top) / rect.height * prev.height;
+      const scale = prev.width / 160;
+      this.dropPickX = (mx - prev.width / 2) / scale;
+      this.dropPickZ = (mz - prev.height / 2) / scale;
+      // Clamp to map
+      const half = 70;
+      this.dropPickX = Math.max(-half, Math.min(half, this.dropPickX));
+      this.dropPickZ = Math.max(-half, Math.min(half, this.dropPickZ));
+      drawPreview();
+    };
+    drawPreview();
+
+    const arrow = { up: '↑', down: '↓', left: '←', right: '→' };
+    const render = () => {
+      const maxS = this._maxStratSlots();
+      slots.textContent = 'Selected: ' + (this.stratagemLoadout.join(', ') || 'none') + ' (' + this.stratagemLoadout.length + '/' + maxS + ')'
+        + (maxS >= 5 ? ' · +1 slot (diff < 4)' : '');
+      list.innerHTML = '';
+      for (const s of Stratagems.list) {
+        const isProv = provided.includes(s.name);
+        const isSel = this.stratagemLoadout.includes(s.name);
+        const row = document.createElement('div');
+        row.className = 'strat-pick' + (isSel ? ' selected' : '') + (isProv ? ' provided' : '');
+        const code = (s.code || []).map(d => arrow[d] || d).join('');
+        row.innerHTML = '<span>' + (isProv ? '★ ' : '') + s.name + '</span><span class="code">' + code + '</span>';
+        row.onclick = () => {
+          if (isSel) {
+            if (isProv) return;
+            this.stratagemLoadout = this.stratagemLoadout.filter(n => n !== s.name);
+          } else {
+            if (this.stratagemLoadout.length >= maxS) {
+              const idx = [...this.stratagemLoadout].reverse().findIndex(n => !provided.includes(n));
+              if (idx >= 0) {
+                const real = this.stratagemLoadout.length - 1 - idx;
+                this.stratagemLoadout[real] = s.name;
+              } else return;
+            } else this.stratagemLoadout.push(s.name);
+          }
+          render();
+        };
+        list.appendChild(row);
+      }
+    };
+    render();
+    menu.classList.add('show');
+  },
+
+  _closeStratLoadoutMenu() {
+    const menu = document.getElementById('strat-loadout-menu');
+    if (menu) menu.classList.remove('show');
+    this.shipMenuOpen = false;
+  },
+
   _confirmHellpodDrop(name) {
-    this._pendingDropName = name;
+    this._pendingDropName = name || this._pendingDropName || 'Diver';
+    this._closeStratLoadoutMenu();
     if (this._isFullscreen()) {
-      this._startHellpodDrop(name);
+      this._startHellpodDrop(this._pendingDropName);
       return;
     }
     this._exitLock();
+    this.shipMenuOpen = true;
     const w = document.getElementById('fs-warn');
-    if (w) w.classList.add('show');
+    if (w) {
+      w.classList.add('show');
+    } else {
+      // No warning UI — drop anyway so Confirm never soft-locks
+      this._startHellpodDrop(this._pendingDropName);
+    }
   },
 
   _startHellpodDrop(name) {
+    // Finalize loadout: always include provided stratagems
+    const provided = this._getProvidedStratagems ? this._getProvidedStratagems() : ['Resupply', 'Reinforce'];
+    if (!this.stratagemLoadout) this.stratagemLoadout = [];
+    const maxSlots = this._maxStratSlots ? this._maxStratSlots() : 4;
+    while (this.stratagemLoadout.length > maxSlots) this.stratagemLoadout.pop();
+    for (const p of provided) {
+      if (!this.stratagemLoadout.includes(p)) {
+        if (this.stratagemLoadout.length < maxSlots) this.stratagemLoadout.push(p);
+        else this.stratagemLoadout[this.stratagemLoadout.length - 1] = p;
+      }
+    }
+    const fw = document.getElementById('fs-warn'); if (fw) fw.classList.remove('show');
+    const sm = document.getElementById('strat-loadout-menu'); if (sm) sm.classList.remove('show');
+    this.shipMenuOpen = false;
     if (this.shipRoot) { this.scene.remove(this.shipRoot); this.shipRoot = null; }
     const el = document.getElementById('objective');
     if (el) el.textContent = 'HELLPOD LAUNCH — Entering atmosphere...';
@@ -1479,7 +1766,10 @@ const Game = {
     this.hellpodT = 0;
     this.state = 'hellpod'; // AFTER reset so state sticks
     this.reinforceBudget = this.reinforceBudgetEnabled ? (5 + this.selectedDiff) : 99;
-    this.hellpodPos = { x: 0, z: 2 };
+    this.hellpodPos = {
+      x: this.dropPickX != null ? this.dropPickX : 0,
+      z: this.dropPickZ != null ? this.dropPickZ : 2
+    };
     AudioSys.extract();
     this._emitVoice('pod_drop', { name: name });
 
@@ -1622,6 +1912,53 @@ const Game = {
       this.samplesFound.push({ x, z, mesh, taken: false, rarity: 'rare', style: 'crystal' });
     }
     this.breachTimer = 40 / (diff.breaches || 1);
+    this._placeTurrets();
+  },
+
+  _placeTurrets() {
+    this.turrets = [];
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 + 0.4;
+      const d = 10 + Math.random() * 8;
+      const x = Math.cos(a) * d, z = Math.sin(a) * d;
+      const y = this.getHeight(x, z);
+      const mesh = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.5 }));
+      base.position.y = 0.25; mesh.add(base);
+      const gun = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.7), new THREE.MeshStandardMaterial({ color: 0x555560 }));
+      gun.position.set(0, 0.7, 0.2); gun.name = 'gun'; mesh.add(gun);
+      mesh.position.set(x, y, z);
+      this.scene.add(mesh);
+      this.turrets.push({ x, z, mesh, hp: 80, alive: true, fireCd: 0, heat: 0 });
+    }
+  },
+
+  _updateTurrets(dt) {
+    if (!this.turrets) return;
+    for (const turr of this.turrets) {
+      if (!turr.alive) continue;
+      turr.fireCd -= dt;
+      turr.heat = Math.max(0, (turr.heat || 0) - 15 * dt);
+      let target = null, best = 16;
+      for (const e of this.enemies) {
+        if (!e.alive) continue;
+        const d = Math.hypot(e.x - turr.x, e.z - turr.z);
+        if (d < best) { best = d; target = e; }
+      }
+      if (target && turr.fireCd <= 0 && (turr.heat || 0) < 90) {
+        turr.fireCd = 0.28;
+        turr.heat = (turr.heat || 0) + 12;
+        const gy = this.getHeight(turr.x, turr.z) + 0.8;
+        const pr = {
+          x: turr.x, y: gy, z: turr.z,
+          vx: (target.x - turr.x) * 4, vz: (target.z - turr.z) * 4, vy: 0.2,
+          life: 0.8, damage: 14, owner: 'turret'
+        };
+        this._addProjectile(pr, 0x88ffaa, 0.09);
+        const gun = turr.mesh.getObjectByName('gun');
+        if (gun) turr.mesh.lookAt(target.x, gy, target.z);
+      }
+    }
   },
 
   _makeSampleMesh(rarity, style) {
@@ -1935,25 +2272,55 @@ const Game = {
     const light = new THREE.PointLight(0x4488ff, 1.5, 20); light.position.set(0, 2, 0); g.add(light);
     const bay = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 2), new THREE.MeshBasicMaterial({ color: 0xffe800 }));
     bay.position.set(0, 0.15, -1.5); g.add(bay);
-    g.position.set(this.extractZone.x, this.getHeight(this.extractZone.x, this.extractZone.z) + 35, this.extractZone.z);
+    const groundY = this.getHeight(this.extractZone.x, this.extractZone.z) || 0;
+    g.position.set(this.extractZone.x, groundY + 40, this.extractZone.z);
     this.scene.add(g);
-    this.extractShip = { mesh: g, y: g.position.y, targetY: this.getHeight(this.extractZone.x, this.extractZone.z) + 0.2, phase: 'descending', flyT: 0 };
+    this.extractShip = { mesh: g, y: groundY + 40, targetY: groundY + 1.5, phase: 'descending', flyT: 0 };
     this.extractShipPhase = 'descending';
+    this.state = 'extract';
     AudioSys.extract();
+    const obj = document.getElementById('objective');
+    if (obj) obj.textContent = 'PELICAN INBOUND — Stay in the extract zone';
+  },
+
+  _pelicanTurret(dt) {
+    this._pelicanFireCd = (this._pelicanFireCd || 0) - dt;
+    if (this._pelicanFireCd > 0) return;
+    const ox = this.extractZone.x, oz = this.extractZone.z;
+    let target = null, best = 22;
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      const d = Math.hypot(e.x - ox, e.z - oz);
+      if (d < best) { best = d; target = e; }
+    }
+    if (!target) return;
+    this._pelicanFireCd = 0.22;
+    const gy = (this.extractShip && this.extractShip.y) || this.getHeight(ox, oz) + 2;
+    const pr = {
+      x: ox, y: gy + 1.5, z: oz,
+      vx: (target.x - ox) * 3.5, vz: (target.z - oz) * 3.5, vy: 0.5,
+      life: 0.9, damage: 22, owner: 'pelican', heavy: true
+    };
+    this._addProjectile(pr, 0xff6622, 0.12);
+    // Instant splash chance
+    if (best < 3) { target.hp -= 10; if (target.hp <= 0) { target.alive = false; this.kills++; } }
   },
 
   _boardExtractShip() {
     const p = this.players.get(this.localId);
-    if (!p || !this.extractShip || this.extractShipPhase !== 'landed') return;
+    if (!p || !p.alive) return;
+    if (!this.extractShip || (this.extractShipPhase !== 'landed' && this.extractShip.phase !== 'landed')) return;
     const s = this.extractShip;
-    // Generous boarding volume around LZ / pelican
-    if (Math.hypot(p.x - this.extractZone.x, p.z - this.extractZone.z) > this.extractZone.r + 4) return;
+    const dist = Math.hypot(p.x - this.extractZone.x, p.z - this.extractZone.z);
+    if (dist > this.extractZone.r + 8) return; // large boarding volume
     this.extractShipPhase = 'departing';
     s.phase = 'departing';
     s.flyT = 0;
     p.alive = true;
     AudioSys.extract();
     this._emitVoice('board_pelican');
+    const obj = document.getElementById('objective');
+    if (obj) obj.textContent = 'EXTRACTING — Hold on!';
   },
 
   _updateExtractShip(dt) {
@@ -1961,18 +2328,23 @@ const Game = {
     const s = this.extractShip;
     const mesh = s.mesh;
     if (s.phase === 'descending') {
-      s.y -= 12 * dt;
+      s.y -= 18 * dt;
       if (s.y <= s.targetY) {
         s.y = s.targetY;
         s.phase = 'landed';
         this.extractShipPhase = 'landed';
+        const obj = document.getElementById('objective');
+        if (obj) obj.textContent = 'PELICAN LANDED — Enter the ship (walk into LZ or press E)';
       }
       mesh.position.y = s.y;
       mesh.position.x = this.extractZone.x;
       mesh.position.z = this.extractZone.z;
+      this._pelicanTurret(dt);
     } else if (s.phase === 'landed') {
       mesh.position.y = s.targetY + Math.sin(this.missionTime * 3) * 0.05;
+      this._pelicanTurret(dt);
     } else if (s.phase === 'departing') {
+      this._pelicanTurret(dt);
       s.flyT += dt;
       mesh.position.y = s.targetY + s.flyT * s.flyT * 18;
       mesh.position.z = this.extractZone.z - s.flyT * 8;
@@ -2081,14 +2453,27 @@ const Game = {
         if (sw && sw.ammo) this.supportAmmo = sw.ammo;
       }
     } else if (kind === 'Orbital Strike') this._explosion(x, z, 6.5, 110);
-    else if (kind === 'Eagle Strafing') this._explosion(x, z, 4.5, 60);
-    else if (kind === 'Orbital Barrage') {
+    else if (kind === 'Eagle Strafing') {
+      // Strafing run along a line through impact point
+      const self = this;
+      const ang = Math.random() * Math.PI * 2;
+      for (let i = 0; i < 7; i++) {
+        const d = (i - 3) * 3.2;
+        const ax = x + Math.cos(ang) * d;
+        const az = z + Math.sin(ang) * d;
+        setTimeout(() => {
+          if (self.state === 'playing' || self.state === 'extract' || self.state === 'paused')
+            self._explosion(ax, az, 3.8, 55);
+        }, 80 + i * 140);
+      }
+    } else if (kind === 'Orbital Barrage') {
       const self = this;
       for (let i = 0; i < 6; i++) {
         const ax = x + (Math.random() - 0.5) * 12;
         const az = z + (Math.random() - 0.5) * 12;
         setTimeout(() => {
-          if (self.state === 'playing' || self.state === 'extract') self._explosion(ax, az, 4.2, 60);
+          if (self.state === 'playing' || self.state === 'extract' || self.state === 'paused')
+            self._explosion(ax, az, 4.2, 60);
         }, 200 + i * 320);
       }
     } else if (kind === 'Orbital Laser') {
@@ -2228,24 +2613,39 @@ const Game = {
   },
 
   _startOrbitalLaser(x, z) {
-    const laser = {
-      x, z, life: 4.5,
-      mesh: null
-    };
+    if (!this.activeLasers) this.activeLasers = [];
+    const gy = this.getHeight(x, z) || 0;
+    const laser = { x, z, life: 5.5, dmgCd: 0 };
     const beam = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.25, 0.6, 20, 8),
-      new THREE.MeshBasicMaterial({ color: 0xff2222, transparent: true, opacity: 0.55 })
+      new THREE.CylinderGeometry(0.35, 0.9, 24, 10),
+      new THREE.MeshBasicMaterial({ color: 0xff3311, transparent: true, opacity: 0.7 })
     );
-    beam.position.set(x, this.getHeight(x, z) + 10, z);
+    beam.position.set(x, gy + 12, z);
     this.scene.add(beam);
     laser.mesh = beam;
-    const light = new THREE.PointLight(0xff2200, 2, 18);
-    light.position.set(x, this.getHeight(x, z) + 4, z);
+    const core = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.2, 24, 6),
+      new THREE.MeshBasicMaterial({ color: 0xffe8a0 })
+    );
+    core.position.set(x, gy + 12, z);
+    this.scene.add(core);
+    laser.core = core;
+    const light = new THREE.PointLight(0xff3300, 3.5, 28);
+    light.position.set(x, gy + 5, z);
     this.scene.add(light);
     laser.light = light;
-    if (!this.activeLasers) this.activeLasers = [];
+    // Impact ring
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.5, 2.2, 24),
+      new THREE.MeshBasicMaterial({ color: 0xff4400, side: THREE.DoubleSide, transparent: true, opacity: 0.6 })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(x, gy + 0.15, z);
+    this.scene.add(ring);
+    laser.ring = ring;
     this.activeLasers.push(laser);
     this._emitVoice('stratagem_laser', { x, z });
+    AudioSys.boom();
   },
 
   _updateLasers(dt) {
@@ -2253,28 +2653,33 @@ const Game = {
     for (let i = this.activeLasers.length - 1; i >= 0; i--) {
       const L = this.activeLasers[i];
       L.life -= dt;
-      // Damage ticks
-      if (Math.floor(L.life * 5) !== Math.floor((L.life + dt) * 5)) {
+      L.dmgCd = (L.dmgCd || 0) - dt;
+      if (L.dmgCd <= 0) {
+        L.dmgCd = 0.18;
         for (const e of this.enemies) {
           if (!e.alive) continue;
-          if (Math.hypot(e.x - L.x, e.z - L.z) < 3.5) {
-            e.hp -= 25; e.aggro = true;
-            if (e.hp <= 0) { e.alive = false; this.kills++; this.killStreak++; }
+          if (Math.hypot(e.x - L.x, e.z - L.z) < 4.2) {
+            e.hp -= 28; e.aggro = true; e.stagger = 0.3;
+            if (e.hp <= 0) { e.alive = false; this.kills++; this.killStreak = (this.killStreak||0)+1; AudioSys.enemyDie(); }
           }
         }
         if (this.fabricators) {
           for (const f of this.fabricators) {
-            if (f.alive && Math.hypot(f.x - L.x, f.z - L.z) < 3.5) {
-              f.hp -= 30;
-              if (f.hp <= 0) { f.alive = false; if (f.mesh) this.scene.remove(f.mesh); }
+            if (f.alive && Math.hypot(f.x - L.x, f.z - L.z) < 4.2) {
+              f.hp -= 35;
+              if (f.hp <= 0) { f.alive = false; if (f.mesh) this.scene.remove(f.mesh); if (f.light) this.scene.remove(f.light); }
             }
           }
         }
       }
-      if (L.mesh) L.mesh.material.opacity = 0.3 + Math.sin(L.life * 10) * 0.2;
+      if (L.mesh) L.mesh.material.opacity = 0.45 + Math.sin(L.life * 12) * 0.25;
+      if (L.core) L.core.material.opacity = 0.8;
+      if (L.ring) { L.ring.scale.setScalar(1 + Math.sin(L.life * 8) * 0.15); L.ring.material.opacity = 0.35 + (L.life / 6) * 0.3; }
       if (L.life <= 0) {
         if (L.mesh) this.scene.remove(L.mesh);
+        if (L.core) this.scene.remove(L.core);
         if (L.light) this.scene.remove(L.light);
+        if (L.ring) this.scene.remove(L.ring);
         this.activeLasers.splice(i, 1);
       }
     }
@@ -2389,31 +2794,95 @@ const Game = {
       // Spend reinforce budget if enabled
       if (this.reinforceBudgetEnabled) {
         if ((this.reinforceBudget || 0) <= 0) {
-          const anyAlive = [...this.players.values()].some(pl => pl.alive || (pl.respawnT || 0) > 0);
+          const anyAlive = [...this.players.values()].some(pl => pl.alive || (pl.respawnT || 0) > 0 || pl.reinforcing);
           if (!anyAlive) this._end(false);
           return;
         }
         this.reinforceBudget = Math.max(0, (this.reinforceBudget || 0) - 1);
+      } else if (this.reinforceBudget == null) {
+        this.reinforceBudget = 5;
       }
-      p.respawnT = isSolo ? 2.0 : 3.5;
-      // Visible feedback
+      // Immediate hellpod sequence (short delay then pod)
+      p.respawnT = isSolo ? 0.35 : 1.2;
       const obj = document.getElementById('objective');
-      if (obj) obj.textContent = 'REINFORCING IN ' + Math.ceil(p.respawnT) + 's...';
+      if (obj) obj.textContent = 'HELLPOD INBOUND...';
     }
   },
 
   _respawnPlayer(p) {
-    p.alive = true;
-    p.downed = false;
-    p.hp = p.maxHp * 0.7;
-    p.invuln = 2.5;
-    p.stamina = p.maxStamina;
-    p.x = this.extractZone.x + (Math.random() - 0.5) * 3;
-    p.z = this.extractZone.z + (Math.random() - 0.5) * 3;
-    p.y = this.getHeight(p.x, p.z);
+    // Start hellpod reinforce sequence near death (SP) or extract/reinforce point
     p.respawnT = 0;
+    p.downed = false;
+    const deathX = p.x, deathZ = p.z;
+    const isSolo = this.players.size <= 1;
+    let rx, rz;
+    if (isSolo) {
+      // Near death location
+      const a = Math.random() * Math.PI * 2;
+      rx = deathX + Math.cos(a) * 4;
+      rz = deathZ + Math.sin(a) * 4;
+    } else {
+      // Multiplayer reinforce near extract / squad
+      rx = this.extractZone.x + (Math.random() - 0.5) * 5;
+      rz = this.extractZone.z + (Math.random() - 0.5) * 5;
+    }
+    const half = this.mapSize / 2 - 5;
+    rx = Math.max(-half, Math.min(half, rx));
+    rz = Math.max(-half, Math.min(half, rz));
+    this._startReinforcePod(p, rx, rz);
+  },
+
+  _startReinforcePod(p, x, z) {
+    p.alive = false;
+    p.reinforcing = true;
+    p.reinforceT = 0;
+    p.reinforceX = x;
+    p.reinforceZ = z;
+    // Visual pod
+    if (p.reinforceMesh) this.scene.remove(p.reinforceMesh);
+    const pod = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.7, 1.8, 8), new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.5 }));
+    pod.add(body);
+    const flame = new THREE.PointLight(0xff6622, 1.5, 10); flame.position.y = -1.2; pod.add(flame);
+    const gy = this.getHeight(x, z);
+    pod.position.set(x, gy + 28, z);
+    this.scene.add(pod);
+    p.reinforceMesh = pod;
+    p.reinforceStartY = gy + 28;
+    p.reinforceGroundY = gy + 0.1;
     this._emitVoice('reinforce', { name: p.name });
     AudioSys.extract();
+    const obj = document.getElementById('objective');
+    if (obj) obj.textContent = 'HELLPOD INBOUND — Reinforcing ' + (p.name || 'diver');
+  },
+
+  _updateReinforcePods(dt) {
+    for (const p of this.players.values()) {
+      if (!p.reinforcing || !p.reinforceMesh) continue;
+      p.reinforceT = (p.reinforceT || 0) + dt;
+      const u = Math.min(1, p.reinforceT / 2.2);
+      const y = p.reinforceStartY + (p.reinforceGroundY - p.reinforceStartY) * (u * u);
+      p.reinforceMesh.position.set(p.reinforceX, y, p.reinforceZ);
+      p.reinforceMesh.rotation.y += dt * 2;
+      if (u >= 1) {
+        // Land & revive
+        this.scene.remove(p.reinforceMesh);
+        p.reinforceMesh = null;
+        p.reinforcing = false;
+        p.alive = true;
+        p.hp = p.maxHp * 0.75;
+        p.invuln = 2.5;
+        p.stamina = p.maxStamina;
+        p.x = p.reinforceX;
+        p.z = p.reinforceZ;
+        p.y = this.getHeight(p.x, p.z);
+        this._explosion(p.x, p.z, 2.5, 0);
+        AudioSys.boom();
+        const obj = document.getElementById('objective');
+        if (obj && this.extractCalled) obj.textContent = 'EXTRACT CALLED — Hold the zone!';
+        else if (obj) obj.textContent = 'Reinforced — Fight on!';
+      }
+    }
   },
 
 
@@ -2493,11 +2962,14 @@ const Game = {
         if (target.hp <= 0) {
           target.alive = false; this.kills++; owner.kills = (owner.kills || 0) + 1; AudioSys.enemyDie();
         } else AudioSys.enemyHit();
-        const tr = new THREE.Mesh(new THREE.SphereGeometry(0.05, 4, 4), new THREE.MeshBasicMaterial({ color: 0xff6666 }));
-        tr.position.set(dog.x, this.getHeight(dog.x, dog.z) + 1.4, dog.z);
-        this.scene.add(tr);
-        this.effects.push({ mesh: tr, life: 0.1, maxLife: 0.1, radius: 0.2 });
-        this.meshes.effects.push(tr);
+        // Visible tracer toward target
+        const gy = this.getHeight(dog.x, dog.z) + 1.4;
+        const pr = {
+          x: dog.x, y: gy, z: dog.z,
+          vx: (target.x - dog.x) * 8, vz: (target.z - dog.z) * 8, vy: 0,
+          life: 0.35, damage: 0, owner: 'guarddog'
+        };
+        this._addProjectile(pr, 0xff4444, 0.1);
       }
     }
     const gy = this.getHeight(dog.x, dog.z) + 1.35 + Math.sin(this.missionTime * 4) * 0.08;
@@ -2596,6 +3068,8 @@ const Game = {
     this._updateGuardDog(dt);
     this._updateLasers(dt);
     this._updatePlayerAnims(dt);
+    this._updateReinforcePods(dt);
+    this._updateTurrets(dt);
     if (this.dayNightEnabled) this.dayNightT = (this.dayNightT || 0) + dt;
 
     // Mouse look — disabled while ship menu needs free cursor
@@ -2620,12 +3094,15 @@ const Game = {
 
     for (const p of this.players.values()) {
       // Respawn timer runs even while dead
-      if (!p.alive) {
-        if (p.respawnT > 0) {
+      if (!p.alive || p.reinforcing) {
+        if (!p.alive && !p.reinforcing && p.respawnT > 0) {
           p.respawnT -= dt;
           if (p.respawnT <= 0) this._respawnPlayer(p);
         }
-        continue;
+        // Hide player mesh while dead/reinforcing
+        const mesh = this.meshes.players.get(p.id);
+        if (mesh) mesh.visible = !!(p.alive && !p.reinforcing);
+        if (!p.alive || p.reinforcing) continue;
       }
       if (p.invuln > 0) p.invuln -= dt;
       if (p.reloadTimer > 0) {
@@ -2642,6 +3119,13 @@ const Game = {
       if (p.fireCd > 0) p.fireCd -= dt;
       if (p.stimCd > 0) p.stimCd -= dt;
       if (p.packCd > 0) p.packCd -= dt;
+      // Heat weapons cool over time
+      const pwd = Weapons[p.weapon];
+      if (pwd && pwd.heatWeapon && (p.heat || 0) > 0 && !this.keys['Mouse0']) {
+        p.heat = Math.max(0, p.heat - (pwd.heatCool || 20) * dt);
+      } else if (pwd && pwd.heatWeapon && (p.heat || 0) > 0) {
+        p.heat = Math.max(0, p.heat - (pwd.heatCool || 20) * 0.25 * dt);
+      }
       // Global stamina regen over time (safety net even when idle off local branch)
       if (p.id !== this.localId && p.stamina < p.maxStamina) {
         p.stamina = Math.min(p.maxStamina, p.stamina + 16 * dt);
@@ -2727,9 +3211,27 @@ const Game = {
         // Shoot along look with weapon recoil pattern (planet only)
         if (this.state !== 'ship' && this.keys['Mouse0'] && p.usingSupport && this.loadoutSupport && this.loadoutSupport !== 'none' && !this.ctrlHeld) {
           this._fireSupport();
-        } else if (this.state !== 'ship' && this.keys['Mouse0'] && !p.usingSupport && p.fireCd <= 0 && p.reloadTimer <= 0 && p.ammo > 0 && !this.ctrlHeld) {
+        } else if (this.state !== 'ship' && this.keys['Mouse0'] && !p.usingSupport && p.fireCd <= 0 && p.reloadTimer <= 0 && !this.ctrlHeld) {
           const wdef = Weapons[p.weapon] || Weapons[0];
-          p.ammo--;
+          if (wdef.heatWeapon) {
+            p.heat = Math.min((wdef.heatMax || 100) + 5, (p.heat || 0) + (wdef.heatPerShot || 10));
+            if (p.heat >= (wdef.heatMax || 100)) {
+              if (wdef.explodeOnMax) {
+                this._explosion(p.x, p.z, 2.2, 25);
+                this._damagePlayer(p, 30, false);
+                p.heat = 30;
+                p.fireCd = 1.2;
+              } else {
+                // Cannot fire until cools under 80
+                p.heat = wdef.heatMax || 100;
+                p.fireCd = 0.25;
+                continue;
+              }
+            }
+          } else {
+            if (p.ammo <= 0) continue;
+            p.ammo--;
+          }
           p.fireCd = wdef.fireRate;
           // Pattern step
           const idx = Math.min(Math.floor(p.recoilIndex), wdef.pattern.length - 1);
@@ -2754,11 +3256,8 @@ const Game = {
             vy: Math.sin(-pitch * 0.85) * spd,
             y: (p.y || 0) + 0.95, life: 1.2, damage: wdef.damage, owner: p.id
           };
-          this.projectiles.push(pr);
-          const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 4), new THREE.MeshBasicMaterial({ color: p.weapon === 1 ? 0xaaffff : 0xffe8a0 }));
-          mesh.position.set(pr.x, pr.y, pr.z);
-          this.scene.add(mesh);
-          this.meshes.projectiles.push(mesh);
+          const col = p.weapon === 1 ? 0xaaffff : 0xffe8a0;
+          this._addProjectile(pr, col, 0.08);
           AudioSys.shoot();
           this._applyPlayerAnim(p, 'fire');
           this._emitVoice('shoot');
@@ -2893,21 +3392,28 @@ const Game = {
       const pitch = this.camPitch;
       const yaw = this.camYaw;
       // Camera sits behind opposite to forward
-      // HD-style over-shoulder: offset to the right so body doesn't cover aim
-      const shoulder = 1.15;
+      // Over-shoulder camera: aim ray matches gun (camYaw/camPitch); body stays off crosshair
+      const shoulder = 1.25;
       const rightX = -Math.cos(yaw), rightZ = Math.sin(yaw);
-      const back = dist * Math.cos(pitch * 0.55);
-      const cx = lp.x - forwardX * back + rightX * shoulder;
-      const cy = py + 1.35 + Math.sin(Math.max(0.05, pitch + 0.15)) * dist * 0.65;
-      const cz = lp.z - forwardZ * back + rightZ * shoulder;
-      const lerp = this.reduceMotion ? 1 : 0.15;
+      const aimPitch = pitch;
+      const aimFx = Math.sin(yaw) * Math.cos(aimPitch * 0.85);
+      const aimFz = Math.cos(yaw) * Math.cos(aimPitch * 0.85);
+      const aimFy = -Math.sin(aimPitch * 0.85);
+      // Camera sits behind + right of player
+      const back = dist * 0.85;
+      const cx = lp.x - Math.sin(yaw) * back + rightX * shoulder;
+      const cy = py + 1.55 + dist * 0.12;
+      const cz = lp.z - Math.cos(yaw) * back + rightZ * shoulder;
+      const lerp = this.reduceMotion ? 1 : 0.18;
       this.camera.position.x += (cx - this.camera.position.x) * lerp;
       this.camera.position.y += (cy - this.camera.position.y) * lerp;
       this.camera.position.z += (cz - this.camera.position.z) * lerp;
-      const lookDist = 6;
-      const lookX = lp.x + forwardX * lookDist * Math.cos(pitch * 0.9);
-      const lookZ = lp.z + forwardZ * lookDist * Math.cos(pitch * 0.9);
-      const lookY = py + 1.2 - Math.sin(pitch) * lookDist;
+      // Look point = gun muzzle path through screen center (~same as bullet direction)
+      const muzzleY = py + 1.05;
+      const lookDist = 18;
+      const lookX = lp.x + Math.sin(yaw) * 0.45 + aimFx * lookDist;
+      const lookY = muzzleY + aimFy * lookDist;
+      const lookZ = lp.z + Math.cos(yaw) * 0.45 + aimFz * lookDist;
       this.camera.lookAt(lookX, lookY, lookZ);
     }
 
@@ -3049,10 +3555,27 @@ const Game = {
       else pr.y = this.getHeight(pr.x, pr.z) + 0.85;
       pr.life -= dt;
       const mesh = this.meshes.projectiles[i];
-      if (mesh) mesh.position.set(pr.x, pr.y, pr.z);
+      if (mesh) {
+        mesh.position.set(pr.x, pr.y, pr.z);
+        if (pr.vx !== undefined) mesh.lookAt(pr.x + pr.vx, pr.y + (pr.vy || 0), pr.z + pr.vz);
+      }
       // Ground collide
       const gy = this.getHeight(pr.x, pr.z);
       if (pr.y < gy + 0.1) { pr.life = 0; }
+      // Rock collision
+      if (pr.life > 0 && this.rocks) {
+        for (const r of this.rocks) {
+          const d = Math.hypot(pr.x - r.x, pr.z - r.z);
+          if (d < r.r + 0.1) { pr.life = 0; break; }
+        }
+      }
+      // Tree trunks
+      if (pr.life > 0 && this.trees) {
+        for (const tr of this.trees) {
+          if (!tr.alive) continue;
+          if (Math.hypot(pr.x - tr.x, pr.z - tr.z) < 0.35) { pr.life = 0; break; }
+        }
+      }
       let hit = false;
       // Friendly fire
       for (const pl of this.players.values()) {
@@ -3195,7 +3718,7 @@ const Game = {
 
     if (this.extractCalled) {
       const living = [...this.players.values()].filter(p => p.alive);
-      const pending = [...this.players.values()].some(p => !p.alive && p.respawnT > 0);
+      const pending = [...this.players.values()].some(p => (!p.alive && p.respawnT > 0) || p.reinforcing);
       if (living.length === 0 && !pending) { this._end(false); return; }
       const inZone = living.every(p => Math.hypot(p.x - this.extractZone.x, p.z - this.extractZone.z) < this.extractZone.r);
       if (inZone) {
@@ -3207,15 +3730,17 @@ const Game = {
       }
       this._updateExtractShip(dt);
       // Auto-board prompt proximity
-      if (this.extractShipPhase === 'landed') {
+      if (this.extractShipPhase === 'landed' || (this.extractShip && this.extractShip.phase === 'landed')) {
+        this.extractShipPhase = 'landed';
         const lp = this.players.get(this.localId);
-        if (lp && lp.alive && Math.hypot(lp.x - this.extractZone.x, lp.z - this.extractZone.z) < this.extractZone.r + 3.5) {
-          // Keep interact hint active — E boards
+        if (lp && lp.alive && Math.hypot(lp.x - this.extractZone.x, lp.z - this.extractZone.z) < this.extractZone.r + 5) {
+          // Auto-board when standing in the LZ under the pelican
+          this._boardExtractShip();
         }
       }
     } else {
       const living = [...this.players.values()].filter(p => p.alive);
-      const pending = [...this.players.values()].some(p => !p.alive && (p.respawnT || 0) > 0);
+      const pending = [...this.players.values()].some(p => (!p.alive && (p.respawnT || 0) > 0) || p.reinforcing);
       if (living.length === 0 && !pending) this._end(false);
     }
   },
@@ -3236,10 +3761,23 @@ const Game = {
       d.shipMeta = this.shipMeta;
       Storage.save(d);
     } catch (e) {}
+    // Credits: base + kills + samples + success bonus
+    let earned = Math.floor(this.kills * 2 + (this.sampleCommon || 0) * 5 + (this.sampleRare || 0) * 15);
+    if (success) earned += 50 + (this.selectedDiff || 0) * 15;
+    else earned = Math.floor(earned * 0.35);
+    this.credits = (this.credits || 0) + earned;
+    this.scoreBreakdown.credits = earned;
+    this.scoreBreakdown.creditsTotal = this.credits;
+    try {
+      const d = Storage.load();
+      d.credits = this.credits;
+      Storage.save(d);
+    } catch (e) {}
     this._emitVoice(success ? 'extract_success' : 'mission_fail', this.scoreBreakdown);
     if (this.onMissionEnd) this.onMissionEnd({
       success, kills: this.kills, wave: this.scoreBreakdown.holes,
-      time: this.scoreBreakdown.time, samples: this.samples, streak: this.killStreak
+      time: this.scoreBreakdown.time, samples: this.samples, streak: this.killStreak,
+      credits: earned, creditsTotal: this.credits
     });
   },
 
@@ -3275,11 +3813,19 @@ const Game = {
 
   const fsBtn = $('#btn-fullscreen');
   if (fsBtn) {
-    fsBtn.onclick = (e) => {
+    fsBtn.onclick = async (e) => {
+      e.preventDefault();
       e.stopPropagation();
-      const r = document.documentElement;
-      if (!document.fullscreenElement) (r.requestFullscreen || r.webkitRequestFullscreen).call(r);
-      else (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      try {
+        const r = document.documentElement;
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+          if (r.requestFullscreen) await r.requestFullscreen();
+          else if (r.webkitRequestFullscreen) await r.webkitRequestFullscreen();
+        } else {
+          if (document.exitFullscreen) await document.exitFullscreen();
+          else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+        }
+      } catch (err) { console.warn('Fullscreen failed', err); }
     };
     document.addEventListener('fullscreenchange', () => {
       fsBtn.textContent = document.fullscreenElement ? 'EXIT FULLSCREEN' : 'FULLSCREEN';
@@ -3301,7 +3847,7 @@ const Game = {
     if (end) {
       end.classList.add('show');
       $('#end-title').textContent = stats.success ? 'MISSION COMPLETE' : 'MISSION FAILED';
-      $('#end-stats').textContent = `Kills: ${stats.kills} · Streak: ${stats.streak||0} · Samples: ${stats.samples||0} · Holes: ${stats.wave} · Time: ${stats.time}s`;
+      $('#end-stats').textContent = `Kills: ${stats.kills} · Samples: ${stats.samples||0} · Credits: +${stats.credits||0} (Total ${stats.creditsTotal||0}) · Time: ${stats.time}s`;
     }
   };
 
@@ -3355,21 +3901,35 @@ const Game = {
     $('#minimap-pos').onchange = e => { Game.minimapPos = e.target.value; Storage.update({ minimapPos: e.target.value }); applyMinimap(); };
   }
   applyMinimap();
+  if ($('#scroll-cam-zoom')) {
+    $('#scroll-cam-zoom').checked = !!Storage.load().scrollCamZoom;
+    Game.scrollCamZoom = !!Storage.load().scrollCamZoom;
+    $('#scroll-cam-zoom').onchange = e => { Game.scrollCamZoom = e.target.checked; Storage.update({ scrollCamZoom: e.target.checked }); };
+  }
   if ($('#ship-menu-close')) $('#ship-menu-close').onclick = () => Game._closeShipMenu();
   if ($('#fs-warn-go')) $('#fs-warn-go').onclick = async () => {
     try {
       const el = document.documentElement;
       if (el.requestFullscreen) await el.requestFullscreen();
       else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
-    } catch (err) {}
+    } catch (err) { console.warn(err); }
     const w = $('#fs-warn'); if (w) w.classList.remove('show');
+    Game.shipMenuOpen = false;
     const name = Game._pendingDropName || getName();
     Game._startHellpodDrop(name);
   };
   if ($('#fs-warn-anyway')) $('#fs-warn-anyway').onclick = () => {
     const w = $('#fs-warn'); if (w) w.classList.remove('show');
+    Game.shipMenuOpen = false;
     const name = Game._pendingDropName || getName();
     Game._startHellpodDrop(name);
+  };
+  if ($('#strat-loadout-confirm')) $('#strat-loadout-confirm').onclick = () => {
+    Game._confirmHellpodDrop(Game._pendingDropName || getName());
+  };
+  if ($('#strat-loadout-back')) $('#strat-loadout-back').onclick = () => {
+    Game._closeStratLoadoutMenu();
+    if (Game.state === 'ship') Game._requestLock();
   };
   $('#reduce-motion').onchange = e => { Game.reduceMotion = e.target.checked; Storage.update({ reduceMotion: e.target.checked }); };
   if ($('#auto-climb')) $('#auto-climb').onchange = e => { Game.autoClimb = e.target.checked; Storage.update({ autoClimb: e.target.checked }); };
@@ -3519,17 +4079,64 @@ const Game = {
       if (Game.state === 'menu') return;
       const lp = Game.players.get(Game.localId);
       if (lp) {
-        if ($('#ammo-text')) $('#ammo-text').textContent = `${lp.ammo} / ${lp.maxAmmo}`;
-        // Clip segments
+        // Active weapon display
+        const wdef = (typeof Weapons !== 'undefined') ? (Weapons[lp.usingSupport ? -1 : lp.weapon] || Weapons[lp.weapon] || Weapons[0]) : null;
+        let wName = '—', wIcon = '🔫', wSlot = '1', wLabel = 'PRIMARY';
+        if (lp.usingSupport && Game.loadoutSupport && Game.loadoutSupport !== 'none') {
+          const sw = SUPPORT_WEAPONS.find(s => s.id === Game.loadoutSupport);
+          wName = sw ? sw.name : 'Support';
+          wIcon = Game.loadoutSupport === 'recoilless' ? '🚀' : '🔫';
+          wSlot = '3'; wLabel = 'SUPPORT';
+          if ($('#ammo-text')) $('#ammo-text').textContent = `${Game.supportAmmo || 0}`;
+        } else {
+          const wd = Weapons[lp.weapon] || Weapons[0];
+          wName = wd.name || 'Gun';
+          wIcon = wd.slot === 'secondary' ? '🔫' : '🪖';
+          if (wd.name && wd.name.includes('Redeemer')) wIcon = '💥';
+          if (wd.name && wd.name.includes('Peacemaker')) wIcon = '🔫';
+          if (wd.name && wd.name.includes('Diligence')) wIcon = '🎯';
+          if (wd.name && wd.name.includes('Liberator')) wIcon = '🪖';
+          wSlot = wd.slot === 'secondary' ? '2' : '1';
+          wLabel = (wd.slot || 'primary').toUpperCase();
+          if ($('#ammo-text')) $('#ammo-text').textContent = `${lp.ammo} / ${lp.maxAmmo}`;
+        }
+        if ($('#weapon-name')) $('#weapon-name').textContent = wName;
+        if ($('#weapon-slot-label')) $('#weapon-slot-label').textContent = wLabel;
+        const wi = $('#weapon-icon');
+        if (wi) wi.innerHTML = wIcon + '<span class="slot">' + wSlot + '</span>';
+        // Vertical clip / heat segments
         const bar = $('#clip-bar');
         if (bar) {
-          const segs = 10;
-          const filled = Math.round((lp.ammo / lp.maxAmmo) * segs);
+          const segs = 12;
+          const wd = Weapons[lp.weapon] || Weapons[0];
+          let filled = 0, heatMode = false, heatRatio = 0;
+          if (lp.usingSupport) {
+            const maxA = SUPPORT_WEAPONS.find(s => s.id === Game.loadoutSupport)?.ammo || 20;
+            filled = Math.round(((Game.supportAmmo || 0) / maxA) * segs);
+          } else if (wd.heatWeapon) {
+            heatMode = true;
+            heatRatio = Math.min(1, (lp.heat || 0) / (wd.heatMax || 100));
+            filled = Math.round(heatRatio * segs);
+          } else {
+            filled = Math.round((lp.ammo / Math.max(1, lp.maxAmmo)) * segs);
+          }
           let html = '';
           for (let i = 0; i < segs; i++) {
-            html += `<div class="clip-seg${i < filled ? (filled === segs ? ' full' : ' full') : ''}"></div>`;
+            let cls = 'clip-seg';
+            if (i < filled) {
+              cls += ' full';
+              if (heatMode) {
+                if (heatRatio > 0.85) cls += ' heat-red';
+                else if (heatRatio > 0.55) cls += ' heat-orange';
+                else cls += ' heat-white';
+              } else if (filled / segs < 0.25) cls += ' low';
+            }
+            html += `<div class="${cls}"></div>`;
           }
           bar.innerHTML = html;
+          if ($('#ammo-text') && heatMode && !lp.usingSupport) {
+            $('#ammo-text').textContent = Math.round(heatRatio * 100) + '% HEAT';
+          }
         }
         if ($('#grenades')) $('#grenades').textContent = String(lp.grenades);
         if ($('#stims')) $('#stims').textContent = String(lp.stims != null ? lp.stims : 0);
@@ -3560,7 +4167,8 @@ const Game = {
           const ctx = mm.getContext('2d');
           const W = mm.width, H = mm.height;
           ctx.fillStyle = '#0a100e'; ctx.fillRect(0,0,W,H);
-          const scale = W / Game.mapSize;
+          const zoom = Game.minimapZoom || 1;
+          const scale = (W / Game.mapSize) * zoom;
           const ox = W/2 - lp.x * scale, oz = H/2 - lp.z * scale;
           const wx = (x) => x * scale + ox, wz = (z) => z * scale + oz;
           ctx.fillStyle = '#1a2a1c'; ctx.fillRect(ox - Game.mapSize/2*scale, oz - Game.mapSize/2*scale, Game.mapSize*scale, Game.mapSize*scale);
@@ -3623,16 +4231,23 @@ const Game = {
 
       const et = $('#extract-timer');
       if (et) {
-        if (Game.extractCalled && Game.extractTimer > 0) {
-          et.classList.add('show');
-          et.querySelector('span').textContent = Math.ceil(Game.extractTimer);
+        if (Game.state === 'paused') {
+          et.classList.remove('show');
         } else if (Game.extractShipPhase === 'descending') {
           et.classList.add('show');
           et.innerHTML = 'PELICAN DESCENDING';
         } else if (Game.extractShipPhase === 'landed') {
           et.classList.add('show');
-          et.innerHTML = 'BOARD NOW';
-        } else et.classList.remove('show');
+          et.innerHTML = 'BOARD PELICAN — PRESS E';
+        } else if (Game.extractShipPhase === 'departing') {
+          et.classList.add('show');
+          et.innerHTML = 'EXTRACTING...';
+        } else if (Game.extractCalled && Game.extractTimer > 0) {
+          et.classList.add('show');
+          et.innerHTML = 'EXTRACT IN <span>' + Math.ceil(Game.extractTimer) + '</span>s';
+        } else {
+          et.classList.remove('show');
+        }
       }
       const pause = $('#pause-menu');
       if (pause) { if (Game.state === 'paused') pause.classList.add('show'); else pause.classList.remove('show'); }
@@ -3660,7 +4275,7 @@ const Game = {
         } else if (Game.nearPickup) {
           ih.classList.add('show');
           ih.textContent = Game.nearPickup.type === 'supply' ? '[E] SUPPLY PACK' : (Game.nearPickup.type === 'sample' ? '[E] SAMPLE' : '[E] AMMO');
-        } else if (Game.nearTerminal && !Game.extractCalled && (Game.state === 'playing' || Game.state === 'extract')) {
+        } else if (Game.nearTerminal && !Game.extractCalled && !Game.extractShip && Game.state === 'playing') {
           ih.classList.add('show');
           ih.textContent = '[E] CALL EXTRACT';
         } else {
@@ -3671,10 +4286,14 @@ const Game = {
       const cds = $('#strat-cds');
       if (cds) {
         const arrow = { up: '↑', down: '↓', left: '←', right: '→' };
+        const loadout = Game.stratagemLoadout || [];
         const list = (typeof Stratagems !== 'undefined' && Stratagems.list) ? Stratagems.list : [];
         let html = '';
         for (const s of list) {
           const left = (Game.activeStratagems && Game.activeStratagems[s.name]) || 0;
+          const equipped = loadout.includes(s.name);
+          // Show if equipped, or still on cooldown (even if unequipped mid-mission)
+          if (!equipped && left <= 0) continue;
           const ready = left <= 0;
           const primed = Game.primedStratagem && Game.primedStratagem.name === s.name;
           const code = (s.code || []).map(d => arrow[d] || d).join('');

@@ -4692,6 +4692,8 @@ font-family: var(--font-mono); font-size:9.5px; letter-spacing:.06em; text-trans
 color: var(--danger); font-weight:700; margin-bottom:3px; display:block;
 }
 .db-violation-card .txt{ font-size:12px; }
+.db-violation-card.preferred{ border-color: var(--preferred); background: var(--preferred-soft); }
+.db-violation-card.preferred .tag{ color: var(--preferred); }
 .db-decision-card{
 border: 1px solid var(--border);
 border-radius: var(--radius-sm);
@@ -5910,6 +5912,32 @@ function preferredMatchesFor(personId, positionId, startSlot){
     return occ.some(s=>slotMatchesTarget(rule.slot, s));
   });
 }
+/* Which active PREFERRED-forbid rules a candidate placement would violate. isValidPlacement
+   only ever enforces REQUIRED-forbid rules as a hard block, so without this the solver has
+   no way to know a placement breaks a preferred rule at all — it can (and did) freely create
+   preferred-rule violations whenever nothing required stopped it. This mirrors the forbid-
+   checking loop in isValidPlacement, but scoped to preferred strength, and returns the list
+   instead of blocking, so callers can prefer alternatives without treating it as a hard fail. */
+function preferredForbidHits(personId, positionId, startSlot, durSlotsOverride){
+  const durSlots = durSlotsOverride!==undefined ? durSlotsOverride : positionDurationSlots(positionId);
+  const occupied = range(startSlot, startSlot+durSlots-1);
+  return state.rules.filter(rule=>{
+    if(!rule.active || rule.strength!=='preferred' || rule.effect!=='forbid') return false;
+    if(rule.kind==='relative'){
+      const relType = rule.relative && rule.relative.type;
+      if(relType==='sequence') return violatesSequenceRule(rule, personId, positionId, occupied);
+      if(relType==='together') return violatesTogetherRule(rule, personId, positionId, occupied);
+      if(relType==='consecutive') return violatesConsecutiveRule(rule, personId, positionId, startSlot, durSlots);
+      if(relType==='totalLimit') return violatesTotalLimitRule(rule, personId, positionId, occupied);
+      if(relType==='crossSchedule') return violatesCrossScheduleRule(rule, personId, positionId, startSlot, durSlots);
+      if(relType==='swap') return violatesSwapRule(rule, personId, positionId, occupied);
+      return false;
+    }
+    if(!personMatchesTarget(rule.person, personId)) return false;
+    if(!positionMatchesTarget(rule.position, positionId)) return false;
+    return occupied.some(s=>slotMatchesTarget(rule.slot, s));
+  });
+}
 
 /* ---------------- Violations / coverage ---------------- */
 function computeViolations(){
@@ -5930,7 +5958,7 @@ function computeViolations(){
         else if(relType==='totalLimit') violated = violatesTotalLimitRule(rule, a.personId, a.positionId, occ, a.id);
         else if(relType==='crossSchedule') violated = violatesCrossScheduleRule(rule, a.personId, a.positionId, a.startSlot, a.slotCount);
         else if(relType==='swap') violated = violatesSwapRule(rule, a.personId, a.positionId, occ, a.id);
-        if(violated && rule.strength==='required') out.push({ rule, assignment:a, kind:'forbidden-but-scheduled' });
+        if(violated) out.push({ rule, assignment:a, kind:'forbidden-but-scheduled' });
       }
       continue;
     }
@@ -6178,7 +6206,10 @@ function fillAllGaps(sched, respectLocks){
           if(s+durSlots>slots.length) continue;
           if(respectLocks && range(s, s+durSlots-1).some(sl=>isCellLocked(sched, person.id, sl))) continue;
           const check = isValidPlacement(person.id, pos.id, s, { durSlots });
-          if(check.ok) options.push({ positionId: pos.id, durSlots, prefScore: preferredMatchesFor(person.id, pos.id, s).length });
+          if(check.ok){
+            const prefScore = preferredMatchesFor(person.id, pos.id, s).length - preferredForbidHits(person.id, pos.id, s, durSlots).length;
+            options.push({ positionId: pos.id, durSlots, prefScore });
+          }
         }
       }
       if(options.length===0){ s++; continue; }
@@ -6260,7 +6291,7 @@ function solve(mode){
       if(!best || cands.length<best.candidates.length) best = { pair, candidates: cands };
     }
     if(!best) break; // everything left is currently unsatisfiable
-    let bestCand=null, bestScore=-1;
+    let bestCand=null, bestScore=-Infinity;
     const candList = randomize ? shuffleArray(best.candidates) : best.candidates;
     for(const cand of candList){
       const occ = range(cand.startSlot, cand.startSlot+cand.durSlots-1);
@@ -6269,7 +6300,8 @@ function solve(mode){
         if(occ.includes(p.slot) && personMatchesTarget(p.rule.person, cand.personId) && positionMatchesTarget(p.rule.position, cand.positionId)) coverCount++;
       }
       const prefBonus = preferredMatchesFor(cand.personId, cand.positionId, cand.startSlot).length;
-      const score = coverCount*10 + prefBonus;
+      const prefPenalty = preferredForbidHits(cand.personId, cand.positionId, cand.startSlot, cand.durSlots).length;
+      const score = coverCount*10 + prefBonus - prefPenalty*5;
       if(score>bestScore){ bestScore=score; bestCand=cand; }
     }
     state.assignments.push({ id:genId('asg'), personId:bestCand.personId, positionId:bestCand.positionId, startSlot:bestCand.startSlot, slotCount:bestCand.durSlots });
@@ -6284,7 +6316,13 @@ function solve(mode){
       let suggestions = computeSuggestions();
       if(respectLocks) suggestions = suggestions.filter(s=>!range(s.startSlot, s.startSlot+s.durSlots-1).some(sl=>isCellLocked(sched, s.personId, sl)));
       if(suggestions.length===0) break;
-      const sug = randomize ? shuffleArray(suggestions)[0] : suggestions[0];
+      // Accepting a preferred-require suggestion could still trip a DIFFERENT preferred-forbid
+      // rule (e.g. a bilingual-but-female suggestion for a physically-demanding slot). Prefer
+      // whichever candidate causes the fewest such conflicts rather than picking blindly.
+      const scored = suggestions.map(s=>({ s, penalty: preferredForbidHits(s.personId, s.positionId, s.startSlot, s.durSlots).length }));
+      const minPenalty = Math.min(...scored.map(x=>x.penalty));
+      const cleanest = scored.filter(x=>x.penalty===minPenalty).map(x=>x.s);
+      const sug = randomize ? shuffleArray(cleanest)[0] : cleanest[0];
       state.assignments.push({ id:genId('asg'), personId:sug.personId, positionId:sug.positionId, startSlot:sug.startSlot, slotCount:sug.durSlots });
       prefFilled++; progress=true;
     }
@@ -6653,11 +6691,12 @@ function renderDecisions(){
   const violations = computeViolations();
 
   violations.forEach(v=>{
+    const isPreferredViolation = v.kind==='forbidden-but-scheduled' && v.rule.strength==='preferred';
     const card = document.createElement('div');
-    card.className = 'db-violation-card';
+    card.className = 'db-violation-card' + (isPreferredViolation ? ' preferred' : '');
     const tag = document.createElement('span');
     tag.className = 'tag';
-    tag.textContent = v.kind==='forbidden-but-scheduled' ? 'Rule violated'
+    tag.textContent = v.kind==='forbidden-but-scheduled' ? (isPreferredViolation ? 'Preferred Rule Violated' : 'Required Rule Violated')
       : v.kind==='overcapacity' ? 'Required — over capacity' : 'Required — unfilled';
     const txt = document.createElement('div');
     txt.className = 'txt';
@@ -6870,8 +6909,10 @@ function renderRuleRow(rule, violations){
   if(isViolated){
     const w = document.createElement('span');
     w.className = 'db-tag-chip';
-    w.style.color = 'var(--danger)'; w.style.background = 'var(--danger-soft)';
-    w.textContent = 'violated';
+    const isPreferredViol = rule.strength==='preferred';
+    w.style.color = isPreferredViol ? 'var(--preferred)' : 'var(--danger)';
+    w.style.background = isPreferredViol ? 'var(--preferred-soft)' : 'var(--danger-soft)';
+    w.textContent = isPreferredViol ? 'preferred rule violated' : 'required rule violated';
     meta.appendChild(w);
   }
   main.appendChild(meta);
