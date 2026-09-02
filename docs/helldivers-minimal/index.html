@@ -180,11 +180,27 @@
     #fs-warn h3 { color: var(--danger); margin: 0 0 10px; font-size: 0.95rem; }
     #ship-menu h3 { color: var(--accent); margin: 0 0 10px; font-size: 0.95rem; }
     #ship-menu .opt { display: block; width: 100%; margin: 4px 0; }
-    .options-tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
-    .options-tabs button { flex: 1; min-width: 70px; font-size: 0.68rem; padding: 0.4rem; }
+    .options-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: nowrap; width: 100%; }
+    .options-tabs button { flex: 1 1 0; min-width: 0; font-size: 0.72rem; padding: 0.45rem 0.25rem; }
     .options-tabs button.active { border-color: var(--accent); color: var(--accent); }
     .opt-pane { display: none; }
-    .opt-pane.active { display: block; }
+    .opt-pane.active { display: block; text-align: left; max-height: 52vh; overflow-y: auto; padding-right: 4px; }
+    #options .menu-panel.options-panel {
+      max-width: 560px; width: min(560px, 94vw); min-height: 420px; height: min(70vh, 560px);
+      display: flex; flex-direction: column; text-align: center;
+    }
+    #options .options-body { flex: 1; min-height: 0; overflow: hidden; }
+    #pickup-toast {
+      position: absolute; right: 18px; top: 50%; transform: translateY(-50%);
+      z-index: 35; pointer-events: none; display: flex; flex-direction: column; gap: 6px;
+      align-items: flex-end; max-width: 220px;
+    }
+    #pickup-toast .toast {
+      background: rgba(0,0,0,0.82); border: 1px solid var(--accent); color: var(--text);
+      padding: 6px 12px; font-size: 0.78rem; letter-spacing: 0.04em; border-radius: 3px;
+      opacity: 0; transition: opacity 0.2s; white-space: nowrap;
+    }
+    #pickup-toast .toast.show { opacity: 1; }
     #extract-timer {
       position: absolute; top: 16%; left: 50%; transform: translate(-50%, -50%);
       font-size: 1.4rem; color: var(--accent); letter-spacing: 0.08em;
@@ -290,7 +306,7 @@
     </div>
 
     <div id="options" class="screen">
-      <div class="menu-panel" style="max-width:440px">
+      <div class="menu-panel options-panel">
         <h2>OPTIONS</h2>
         <div class="options-tabs">
           <button type="button" class="btn small active" data-opt="gameplay">Gameplay</button>
@@ -304,6 +320,7 @@
           <div class="form-group"><label style="display:flex;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="reinforce-budget" checked> Reinforcement budget</label></div>
           <div class="form-group"><label style="display:flex;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="downed-revive"> Downed + revive (multiplayer)</label></div>
           <div class="form-group"><label style="display:flex;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="auto-ammo"> Auto-pickup ammo packs</label></div>
+          <div class="form-group"><label style="display:flex;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="auto-support"> Auto-pickup support weapons (slot 3, only if empty)</label></div>
           <div class="form-group"><label style="display:flex;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="auto-supply"> Auto-pickup supply packs</label></div>
           <div class="form-group"><label style="display:flex;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="auto-samples" checked> Auto-pickup samples</label></div>
           <div class="form-group"><label style="display:flex;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="mod-fog"> Modifier: Heavy Fog</label></div>
@@ -461,6 +478,7 @@
         </div>
       </div>
       <div id="edge-warn">WARNING: You are leaving the mission area</div>
+      <div id="pickup-toast"></div>
       <div id="extract-timer">EXTRACT IN <span>25</span>s</div>
       <div id="mission-end">
         <div class="menu-panel">
@@ -600,7 +618,8 @@ const MISSION_TYPES = [
   { id: 'holes', name: 'Eradicate Bug Holes', obj: 'Destroy all bug holes' },
   { id: 'icbm', name: 'Launch ICBM', obj: 'Activate the ICBM silo' },
   { id: 'upload', name: 'Upload Escape Data', obj: 'Hold the upload terminal' },
-  { id: 'fabs', name: 'Destroy Fabricators', obj: 'Destroy Automaton fabricators' }
+  { id: 'fabs', name: 'Destroy Fabricators', obj: 'Destroy Automaton fabricators' },
+  { id: 'scout', name: 'Scout (Endless)', obj: 'Scout the area — Field Extract when ready' }
 ];
 const BACKPACKS = [
   { id: 'supply', name: 'Supply Pack', icon: '🎒' },
@@ -624,7 +643,8 @@ const Stratagems = {
     { name: 'Orbital Barrage', code: ['right', 'down', 'down', 'right'], cooldown: 40 },
     { name: 'Orbital Laser', code: ['down', 'up', 'right', 'right'], cooldown: 50 },
     { name: 'Gatling Turret', code: ['down', 'up', 'right', 'down'], cooldown: 45 },
-    { name: 'Laser Turret', code: ['down', 'up', 'left', 'down'], cooldown: 50 }
+    { name: 'Laser Turret', code: ['down', 'up', 'left', 'down'], cooldown: 50 },
+    { name: 'Field Extraction', code: ['up', 'up', 'down', 'right'], cooldown: 100 }
   ],
   match(buf) {
     // Prefer the longest matching code so Orbital Laser (↓↑→→) is not
@@ -864,36 +884,37 @@ const Game = {
   /** World XZ → height (Y) */
 
   _cameraCollision(px, py, pz, dx, dy, dz) {
-    // March from pivot toward desired camera; stop just before obstacles
-    const steps = 14;
-    let x = px, y = py + 0.5, z = pz;
+    // March from desired cam inward to pivot; keep last free sample
+    const steps = 16;
+    let last = { x: px + (dx - px) * 0.12, y: py + 0.4, z: pz + (dz - pz) * 0.12 };
     for (let i = steps; i >= 1; i--) {
       const u = i / steps;
       const tx = px + (dx - px) * u;
       const ty = py + (dy - py) * u;
       const tz = pz + (dz - pz) * u;
       let blocked = false;
-      if (this.rocks) {
-        for (const r of this.rocks) {
-          if (Math.hypot(tx - r.x, tz - r.z) < (r.r || 0.5) + 0.5) { blocked = true; break; }
-        }
-      }
-      if (!blocked && this.state === 'ship' && this.shipColliders) {
-        for (const c of this.shipColliders) {
-          if (tx > c.minX - 0.4 && tx < c.maxX + 0.4 && tz > c.minZ - 0.4 && tz < c.maxZ + 0.4) {
-            blocked = true; break;
+      if (this.state === 'ship') {
+        // Outer hull only — do NOT treat terminals/pods as camera blockers
+        if (tx < -9.7 || tx > 9.7 || tz < -17.7 || tz > 17.7) blocked = true;
+        const floorY = this._shipFloorY ? this._shipFloorY(tx, tz) : 0;
+        if (ty < floorY + 0.35 || ty > 5.8) blocked = true;
+      } else {
+        if (this.rocks) {
+          for (const r of this.rocks) {
+            if (Math.hypot(tx - r.x, tz - r.z) < (r.r || 0.5) + 0.55) { blocked = true; break; }
           }
         }
-      }
-      if (!blocked && this.state !== 'ship' && typeof this.getHeight === 'function') {
-        if (ty < this.getHeight(tx, tz) + 0.6) blocked = true;
+        if (!blocked && typeof this.getHeight === 'function') {
+          if (ty < this.getHeight(tx, tz) + 0.55) blocked = true;
+        }
       }
       if (!blocked) {
-        return { x: tx, y: ty, z: tz };
+        last = { x: tx, y: ty, z: tz };
+        // farthest free point wins (first hit in this loop)
+        return last;
       }
     }
-    // Fully blocked — hug the pivot
-    return { x: px + (dx - px) * 0.08, y: py + 0.5, z: pz + (dz - pz) * 0.08 };
+    return last;
   },
 
   getHeight(x, z) {
@@ -1412,6 +1433,12 @@ const Game = {
     this.objectives = [];
     this.enemies = [];
     this.holes = [];
+    this.scoutMode = false;
+    this.scoutDiffMult = 1;
+    if (this.weaponDrops) {
+      for (const w of this.weaponDrops) { if (w.mesh) this.scene.remove(w.mesh); }
+      this.weaponDrops = [];
+    }
     this.ctrlHeld = false;
     this.stratBuffer = [];
     this.keys = {};
@@ -1422,15 +1449,18 @@ const Game = {
       console.warn('HellBrowsers: shipStations missing, rebuilding');
       this._buildShip();
     }
-    this._addPlayer('local', name, 12, 7, 0xffe800);
+    this._addPlayer('local', name, 7.7, 14.2, 0xffe800);
     const p = this.players.get('local');
     if (p) {
-      p.x = 12; p.z = 7; p.y = -1.5;
+      // SE lower bay spawn — on lowered platform
+      p.x = 7.7; p.z = 14.2;
+      p.y = this._shipFloorY ? this._shipFloorY(p.x, p.z) : (this._shipBayY || 0);
       p.alive = true;
       p._hiddenInPod = false;
       p.backpack = this.loadoutBackpack || 'supply';
-      this.camYaw = -Math.PI * 0.75;
-      this.camPitch = 0.35;
+      // Look toward ramp / main deck (west-north)
+      this.camYaw = -Math.PI * 0.65;
+      this.camPitch = 0.25;
     }
     this.state = 'ship';
     // Strip any leftover extract / objective HUD
@@ -1529,78 +1559,125 @@ const Game = {
     const floorMat = new THREE.MeshStandardMaterial({ color: 0x2a2e35, metalness: 0.4, roughness: 0.6 });
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x1a1e24, metalness: 0.3, roughness: 0.7 });
     const accentMat = new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.5, roughness: 0.5 });
-    // Main deck
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(32, 0.4, 20), floorMat);
-    floor.position.y = -0.2; floor.receiveShadow = true; this.shipRoot.add(floor);
-    // SE lowered bay (spawn area)
-    const bay = new THREE.Mesh(new THREE.BoxGeometry(10, 0.4, 8), floorMat);
-    bay.position.set(11, -1.7, 6); bay.receiveShadow = true; this.shipRoot.add(bay);
-    // Ramp: east low → west high (up toward main deck, looking west then north)
-    const ramp = new THREE.Mesh(new THREE.BoxGeometry(7, 0.35, 3.2), accentMat);
-    ramp.position.set(7.2, -0.85, 6);
-    ramp.rotation.z = -0.28; // rises toward -X (west)
+    const yellowMat = new THREE.MeshStandardMaterial({ color: 0xffe800, metalness: 0.4, roughness: 0.35, emissive: 0x665500, emissiveIntensity: 0.25 });
+
+    // Destroyer faces north (−Z). Long axis is N–S (Z).
+    // Main deck raised; SE bay is a real lower platform; ramp aligns flush to both decks.
+    const MAIN_Y = 2.0;
+    const BAY_Y = 0.0;
+    this._shipMainY = MAIN_Y;
+    this._shipBayY = BAY_Y;
+    // Shared seams (must match _shipFloorY)
+    const SEAM_X = 5.5;       // ramp east / bay west
+    const RAMP_X0 = 2.0;      // ramp west (top) on main deck
+    const RAMP_Z0 = 12.0;
+    const RAMP_Z1 = 15.5;
+    const BAY_X1 = 10.0;
+    const BAY_Z0 = 11.0;
+    const BAY_Z1 = 17.8;
+    this._shipSeam = { SEAM_X, RAMP_X0, RAMP_Z0, RAMP_Z1, BAY_X1, BAY_Z0, BAY_Z1 };
+
+    // --- Floors: NO main-deck mesh over ramp corridor ---
+    // 1) Main deck north/center (stops at z = BAY_Z0)
+    const mainDepth = BAY_Z0 - (-18);
+    const deckN = new THREE.Mesh(new THREE.BoxGeometry(20, 0.4, mainDepth), floorMat);
+    deckN.position.set(0, MAIN_Y - 0.2, (-18 + BAY_Z0) / 2);
+    deckN.receiveShadow = true; this.shipRoot.add(deckN);
+
+    // 2) Main deck south-west only (west of ramp top). East edge = RAMP_X0
+    const westW = RAMP_X0 - (-10);
+    const westCX = (-10 + RAMP_X0) / 2;
+    const westD = 18 - BAY_Z0;
+    const deckSW = new THREE.Mesh(new THREE.BoxGeometry(westW, 0.4, westD), floorMat);
+    deckSW.position.set(westCX, MAIN_Y - 0.2, (BAY_Z0 + 18) / 2);
+    deckSW.receiveShadow = true; this.shipRoot.add(deckSW);
+
+    // 3) SE bay — west edge flush with SEAM_X (no overlap onto ramp)
+    const bayW = BAY_X1 - SEAM_X;
+    const bayD = BAY_Z1 - BAY_Z0;
+    const bay = new THREE.Mesh(new THREE.BoxGeometry(bayW, 0.4, bayD), floorMat);
+    bay.position.set((SEAM_X + BAY_X1) / 2, BAY_Y - 0.2, (BAY_Z0 + BAY_Z1) / 2);
+    bay.receiveShadow = true; this.shipRoot.add(bay);
+
+    // 4) Ramp mesh only in corridor (not covered by other floors)
+    const rampLen = SEAM_X - RAMP_X0;
+    const rampDepth = RAMP_Z1 - RAMP_Z0;
+    const rise = MAIN_Y - BAY_Y;
+    const ramp = new THREE.Mesh(new THREE.BoxGeometry(rampLen, 0.28, rampDepth), accentMat);
+    ramp.position.set((RAMP_X0 + SEAM_X) / 2, (MAIN_Y + BAY_Y) / 2, (RAMP_Z0 + RAMP_Z1) / 2);
+    ramp.rotation.z = -Math.atan2(rise, rampLen);
     this.shipRoot.add(ramp);
-    // Outer walls
+
+    // Bay rails (not blocking ramp)
+    const bayRailE = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.9, bayD), accentMat);
+    bayRailE.position.set(BAY_X1 - 0.05, BAY_Y + 0.35, (BAY_Z0 + BAY_Z1) / 2); this.shipRoot.add(bayRailE);
+    const bayRailS = new THREE.Mesh(new THREE.BoxGeometry(bayW, 0.9, 0.25), accentMat);
+    bayRailS.position.set((SEAM_X + BAY_X1) / 2, BAY_Y + 0.35, BAY_Z1 - 0.05); this.shipRoot.add(bayRailS);
+
+    // Outer hull walls
+    const WALL_N = -18.0, WALL_S = 18.0, WALL_W = -10.0, WALL_E = 10.0;
+    const wallH = 4.5;
+    const wallBase = MAIN_Y + wallH / 2 - 0.5;
     const mkWall = (w, h, d, x, y, z) => {
       const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
       m.position.set(x, y, z); this.shipRoot.add(m); return m;
     };
-    mkWall(32, 4, 0.4, 0, 2, -10); mkWall(32, 4, 0.4, 0, 2, 10);
-    mkWall(0.4, 4, 20, -16, 2, 0); mkWall(0.4, 4, 20, 16, 2, 0);
-    // Ceiling lights
+    mkWall(20.4, wallH, 0.5, 0, wallBase, WALL_N);
+    mkWall(20.4, wallH, 0.5, 0, wallBase, WALL_S);
+    mkWall(0.5, wallH, 36.5, WALL_W, wallBase, 0);
+    mkWall(0.5, wallH, 36.5, WALL_E, wallBase, 0);
+
     for (let i = -4; i <= 4; i++) {
-      const light = new THREE.PointLight(0xffe800, 0.28, 11);
-      light.position.set(i * 3.2, 3.5, 0); this.shipRoot.add(light);
+      const light = new THREE.PointLight(0xffe800, 0.3, 12);
+      light.position.set(0, MAIN_Y + 3.2, i * 3.5); this.shipRoot.add(light);
     }
-    // Mission Ops — north side, blue (seen looking north from ramp top)
-    // Armory / backpack / support along west-east
-    // Stratagems + Character to the sides
-    // Four hellpods behind Mission Ops (further north)
+
     this.shipStations = [
-      { id: 'ops', x: 0, z: -7.2, label: 'MISSION OPS', color: 0x3388ff },
-      { id: 'armory', x: -10, z: 2, label: 'ARMORY', color: 0x4466aa },
-      { id: 'backpack', x: -5, z: 4.5, label: 'BACKPACK', color: 0x3a5a28 },
-      { id: 'support', x: 5, z: 4.5, label: 'SUPPORT WEAPON', color: 0xaa4444 },
-      { id: 'stratopedia', x: -10, z: -4, label: 'STRATAGEMS', color: 0x8866cc },
-      { id: 'character', x: 10, z: -4, label: 'CHARACTER', color: 0xccaa44 },
-      { id: 'drop0', x: -4.5, z: -9.0, label: 'HELLPOD 1', color: 0xffe800, dropPod: true },
-      { id: 'drop1', x: -1.5, z: -9.0, label: 'HELLPOD 2', color: 0xffe800, dropPod: true },
-      { id: 'drop2', x: 1.5, z: -9.0, label: 'HELLPOD 3', color: 0xffe800, dropPod: true },
-      { id: 'drop3', x: 4.5, z: -9.0, label: 'HELLPOD 4', color: 0xffe800, dropPod: true }
+      { id: 'ops', x: 0, z: -12.5, label: 'MISSION OPS', color: 0x3388ff },
+      { id: 'armory', x: -7, z: 2, label: 'ARMORY', color: 0x4466aa },
+      { id: 'backpack', x: -4, z: 6, label: 'BACKPACK', color: 0x3a5a28 },
+      { id: 'support', x: 4, z: 6, label: 'SUPPORT WEAPON', color: 0xaa4444 },
+      { id: 'stratopedia', x: -7, z: -6, label: 'STRATAGEMS', color: 0x8866cc },
+      { id: 'character', x: 7, z: -6, label: 'CHARACTER', color: 0xccaa44 },
+      { id: 'drop0', x: -4.5, z: -16.0, label: 'HELLPOD 1', color: 0xffe800, dropPod: true },
+      { id: 'drop1', x: -1.5, z: -16.0, label: 'HELLPOD 2', color: 0xffe800, dropPod: true },
+      { id: 'drop2', x: 1.5, z: -16.0, label: 'HELLPOD 3', color: 0xffe800, dropPod: true },
+      { id: 'drop3', x: 4.5, z: -16.0, label: 'HELLPOD 4', color: 0xffe800, dropPod: true }
     ];
     this.dropPodMeshes = {};
     for (const s of this.shipStations) {
       const st = new THREE.Group();
       if (s.dropPod) {
-        // Hellpod capsule
         const body = new THREE.Mesh(
           new THREE.CylinderGeometry(0.7, 0.85, 2.2, 8),
           new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.55 })
         );
-        body.position.y = 1.1; st.add(body);
+        body.position.y = MAIN_Y + 1.1; st.add(body);
+        const top = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 0.22, 10), yellowMat);
+        top.position.y = MAIN_Y + 2.25; st.add(top);
         const tip = new THREE.Mesh(
-          new THREE.ConeGeometry(0.7, 0.7, 8),
+          new THREE.ConeGeometry(0.7, 0.65, 8),
           new THREE.MeshStandardMaterial({ color: 0x2a3038 })
         );
-        tip.position.y = -0.15; st.add(tip);
-        const glow = new THREE.PointLight(0xffe800, 0.35, 4);
-        glow.position.y = 1.2; st.add(glow);
+        tip.position.y = MAIN_Y - 0.1; st.add(tip);
+        const glow = new THREE.PointLight(0xffe800, 0.4, 5);
+        glow.position.y = MAIN_Y + 1.4; st.add(glow);
         st.position.set(s.x, 0, s.z);
         this.dropPodMeshes[s.id] = st;
       } else {
-        const base = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: 0x333840, metalness: 0.5 }));
-        base.position.y = 0.6; st.add(base);
+        const base = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.2, 1.0), new THREE.MeshStandardMaterial({ color: 0x333840, metalness: 0.5 }));
+        base.position.y = MAIN_Y + 0.6; st.add(base);
         const screen = new THREE.Mesh(
-          new THREE.BoxGeometry(1.5, 0.7, 0.1),
-          new THREE.MeshStandardMaterial({ color: s.color, emissive: s.color, emissiveIntensity: 0.45 })
+          new THREE.BoxGeometry(1.4, 0.65, 0.1),
+          new THREE.MeshStandardMaterial({ color: s.color, emissive: s.color, emissiveIntensity: 0.5 })
         );
-        screen.position.set(0, 1.35, 0.55); st.add(screen);
-        const pl = new THREE.PointLight(s.color, 0.5, 5); pl.position.set(0, 1.5, 0.8); st.add(pl);
+        screen.position.set(0, MAIN_Y + 1.35, 0.5); st.add(screen);
+        const pl = new THREE.PointLight(s.color, 0.55, 5); pl.position.set(0, MAIN_Y + 1.5, 0.8); st.add(pl);
         st.position.set(s.x, 0, s.z);
       }
       this.shipRoot.add(st); s.mesh = st;
     }
-    // Space stars
+
     const starGeo = new THREE.BufferGeometry();
     const starPos = [];
     for (let i = 0; i < 350; i++) {
@@ -1614,20 +1691,23 @@ const Game = {
       starPos.push(x, y, z);
     }
     starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
-    const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.25, sizeAttenuation: true }));
-    stars.name = 'stars';
-    this.shipRoot.add(stars);
+    this.shipRoot.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.25, sizeAttenuation: true })));
     this.scene.add(this.shipRoot);
-    // Colliders: walls + terminals + pods
+
+    // Colliders: outer walls + bay rails only. Stations use small footprints so paths stay open.
+    const T = 0.4;
     this.shipColliders = [
-      { minX: -16, maxX: 16, minZ: -10.4, maxZ: -9.6 },
-      { minX: -16, maxX: 16, minZ: 9.6, maxZ: 10.4 },
-      { minX: -16.4, maxX: -15.6, minZ: -10, maxZ: 10 },
-      { minX: 15.6, maxX: 16.4, minZ: -10, maxZ: 10 }
+      { minX: WALL_W, maxX: WALL_E, minZ: WALL_N - T, maxZ: WALL_N + T },
+      { minX: WALL_W, maxX: WALL_E, minZ: WALL_S - T, maxZ: WALL_S + T },
+      { minX: WALL_W - T, maxX: WALL_W + T, minZ: WALL_N, maxZ: WALL_S },
+      { minX: WALL_E - T, maxX: WALL_E + T, minZ: WALL_N, maxZ: WALL_S },
+      { minX: BAY_X1 - T, maxX: BAY_X1 + T, minZ: BAY_Z0, maxZ: BAY_Z1 },
+      { minX: SEAM_X, maxX: BAY_X1, minZ: BAY_Z1 - T, maxZ: BAY_Z1 + T }
     ];
     for (const s of this.shipStations) {
-      const r = s.dropPod ? 0.9 : 1.15;
-      const d = s.dropPod ? 0.9 : 0.75;
+      // Small colliders — leave walkways to pods and terminals
+      const r = s.dropPod ? 0.65 : 0.85;
+      const d = s.dropPod ? 0.65 : 0.55;
       this.shipColliders.push({ minX: s.x - r, maxX: s.x + r, minZ: s.z - d, maxZ: s.z + d });
     }
     this._shipStatus();
@@ -1647,9 +1727,9 @@ const Game = {
         x += (x > 0 ? 1 : -1) * rad;
       }
     }
-    // Keep inside floor bounds
-    x = Math.max(-15.2, Math.min(15.2, x));
-    z = Math.max(-9.2, Math.min(9.2, z));
+    // Keep inside hull (matches WALL_W/E ±10, WALL_N/S ±18)
+    x = Math.max(-9.5, Math.min(9.5, x));
+    z = Math.max(-17.5, Math.min(17.5, z));
     return { x, z };
   },
 
@@ -1932,12 +2012,19 @@ const Game = {
       this._pauseReturnState = null;
       // Never jump into extract/playing while we were on the destroyer
       if (ret === 'ship' || ret === 'hellpod') {
-        this.state = ret === 'hellpod' ? 'ship' : 'ship';
+        this.state = 'ship';
         this.extractCalled = false;
         const et = document.getElementById('extract-timer');
         if (et) et.classList.remove('show');
         const obj = document.getElementById('objective');
         if (obj) obj.textContent = '';
+        // Re-seat player on ship decks after menu (prevents floor clip)
+        const lp = this.players.get(this.localId);
+        if (lp) {
+          lp.y = this._shipFloorY(lp.x, lp.z);
+          const mesh = this.meshes.players.get(lp.id);
+          if (mesh) mesh.position.y = lp.y;
+        }
       } else if (ret === 'extract' && this.extractCalled) {
         this.state = 'extract';
       } else if (ret === 'playing' || ret === 'extract') {
@@ -1973,14 +2060,137 @@ const Game = {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
   },
 
+
+  _shipFloorY(x, z) {
+    const mainY = this._shipMainY != null ? this._shipMainY : 2;
+    const bayY = this._shipBayY != null ? this._shipBayY : 0;
+    const S = this._shipSeam || {
+      SEAM_X: 5.5, RAMP_X0: 2.0, RAMP_Z0: 12.0, RAMP_Z1: 15.5,
+      BAY_X1: 10.0, BAY_Z0: 11.0, BAY_Z1: 17.8
+    };
+    // Bay platform
+    if (x >= S.SEAM_X && x <= S.BAY_X1 + 0.2 && z >= S.BAY_Z0 && z <= S.BAY_Z1)
+      return bayY;
+    // Ramp corridor (walkable slope) — collision via height, not AABB
+    if (x >= S.RAMP_X0 && x <= S.SEAM_X && z >= S.RAMP_Z0 && z <= S.RAMP_Z1) {
+      const u = (S.SEAM_X - x) / (S.SEAM_X - S.RAMP_X0); // 0 at bay, 1 at main
+      return bayY + Math.max(0, Math.min(1, u)) * (mainY - bayY);
+    }
+    return mainY;
+  },
+
+  _updateScoutMission(dt) {
+    if (!this.scoutMode || (this.state !== 'playing' && this.state !== 'extract')) return;
+    const p = this.players.get(this.localId);
+    if (!p || !p.alive) return;
+    const drop = this.scoutDrop || { x: 0, z: 0 };
+    const dist = Math.hypot(p.x - drop.x, p.z - drop.z);
+    if (dist > (this.scoutMaxDist || 0)) {
+      const prev = this.scoutMaxDist || 0;
+      this.scoutMaxDist = dist;
+      // Credits for new distance scouting
+      const gained = Math.floor(dist / 10) - Math.floor(prev / 10);
+      if (gained > 0) {
+        this.scoutCreditAcc = (this.scoutCreditAcc || 0) + gained;
+        this.credits = (this.credits || 0) + gained;
+      }
+    }
+    // Difficulty scales with distance (enemy speed/spawn pressure)
+    this.scoutDiffMult = 1 + Math.min(3.5, (this.scoutMaxDist || 0) / 80);
+    const obj = document.getElementById('objective');
+    if (obj && !this.extractCalled) {
+      obj.textContent = 'SCOUT — Range ' + Math.floor(this.scoutMaxDist || 0) + 'm · Credits +' + (this.scoutCreditAcc || 0) + ' · Field Extract stratagem';
+    }
+    this._ensureScoutChunks(p.x, p.z);
+  },
+
+  _ensureScoutChunks(px, pz) {
+    if (!this.scoutChunks) this.scoutChunks = new Set();
+    const cs = 28; // chunk size
+    const cx0 = Math.floor(px / cs), cz0 = Math.floor(pz / cs);
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dz = -2; dz <= 2; dz++) {
+        const cx = cx0 + dx, cz = cz0 + dz;
+        const key = cx + ',' + cz;
+        if (this.scoutChunks.has(key)) continue;
+        // Skip origin chunk (pre-seeded)
+        if (Math.abs(cx) <= 1 && Math.abs(cz) <= 1) { this.scoutChunks.add(key); continue; }
+        this.scoutChunks.add(key);
+        this._generateScoutChunk(cx, cz, cs);
+      }
+    }
+  },
+
+  _generateScoutChunk(cx, cz, cs) {
+    const baseX = cx * cs + cs / 2;
+    const baseZ = cz * cs + cs / 2;
+    const dist = Math.hypot(baseX, baseZ);
+    const dens = 1 + Math.min(2.5, dist / 100);
+    // Rocks
+    const rockN = (3 + Math.random() * 4 * dens) | 0;
+    for (let i = 0; i < rockN; i++) {
+      const x = baseX + (Math.random() - 0.5) * cs;
+      const z = baseZ + (Math.random() - 0.5) * cs;
+      if (Math.hypot(x, z) < 12) continue;
+      const s = 0.4 + Math.random() * 1.3;
+      const y = this.getHeight(x, z);
+      const pl = PLANETS[this.selectedPlanet] || PLANETS[0];
+      let rockColor = pl.rock != null ? pl.rock : 0x888888;
+      const mesh = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(s * 0.55, 0),
+        new THREE.MeshStandardMaterial({ color: rockColor, roughness: 0.92, flatShading: true })
+      );
+      mesh.position.set(x, y + s * 0.25, z);
+      mesh.rotation.set(Math.random(), Math.random(), Math.random());
+      this.scene.add(mesh);
+      if (!this.rockMeshes) this.rockMeshes = [];
+      this.rockMeshes.push(mesh);
+      if (!this.rocks) this.rocks = [];
+      this.rocks.push({ x, z, r: s * 0.5 });
+    }
+    // Occasional nest / holes farther out
+    if (Math.random() < 0.35 * dens) {
+      const nx = baseX + (Math.random() - 0.5) * cs * 0.5;
+      const nz = baseZ + (Math.random() - 0.5) * cs * 0.5;
+      if (Math.hypot(nx, nz) > 20) {
+        const ny = this.getHeight(nx, nz);
+        const patch = new THREE.Mesh(
+          new THREE.CircleGeometry(5, 16),
+          new THREE.MeshStandardMaterial({ color: 0x0a0806, roughness: 1, side: THREE.DoubleSide })
+        );
+        patch.rotation.x = -Math.PI / 2;
+        patch.position.set(nx, ny + 0.04, nz);
+        this.scene.add(patch);
+        if (!this.nestMeshes) this.nestMeshes = [];
+        this.nestMeshes.push(patch);
+        const hc = 2 + (Math.random() * 3 * dens) | 0;
+        for (let h = 0; h < hc; h++) {
+          const a = Math.random() * Math.PI * 2;
+          const d = 1 + Math.random() * 3.5;
+          if (typeof this._addHole === 'function') this._addHole(nx + Math.cos(a) * d, nz + Math.sin(a) * d);
+        }
+      }
+    }
+    // Patrol enemies
+    const en = (1 + Math.random() * 2 * dens) | 0;
+    for (let i = 0; i < en; i++) {
+      const x = baseX + (Math.random() - 0.5) * cs * 0.8;
+      const z = baseZ + (Math.random() - 0.5) * cs * 0.8;
+      if (Math.hypot(x, z) > 18 && typeof this._spawnEnemyAt === 'function') this._spawnEnemyAt(x, z);
+    }
+  },
+
   _getProvidedStratagems() {
-    // Only Resupply and Reinforce are universally provided
-    return ['Resupply', 'Reinforce'];
+    const list = ['Resupply', 'Reinforce'];
+    const mt = MISSION_TYPES[this.selectedMission] || {};
+    if (mt.id === 'scout') list.push('Field Extraction');
+    return list;
   },
 
   _stratagemBeaconColor(name) {
     const n = (name || '').toLowerCase();
-    // Blue: turrets + support/logistics — Red: orbital & eagle strikes
+    // Blue: turrets + support/logistics — Red: orbital & eagle — Cyan: field extract
+    if (n.includes('field extract')) return 0x44ddff;
     if (n.includes('turret') || n.includes('resupply') || n.includes('reinforce') ||
         n.includes('guard') || n.includes('supply') || n.includes('support'))
       return 0x3388ff;
@@ -2448,7 +2658,24 @@ const Game = {
       }
       this._placeHolesAndAmmo();
       this.objectives.push({ type: 'fabs', need: 3, have: 0 });
+    } else if (mt.id === 'scout') {
+      // Endless scout: no fixed extract zone; procgen active; Field Extraction stratagem provided
+      this.scoutMode = true;
+      this.scoutMaxDist = 0;
+      this.scoutCreditAcc = 0;
+      this.scoutChunks = new Set();
+      this.scoutDrop = { x: 0, z: 0 };
+      // Light initial content; more streams in via chunks
+      this._placeHolesAndAmmo();
+      this.objectives.push({ type: 'scout', need: 1, have: 0, side: true, x: 0, z: 0 });
+      // Hide classic extract terminal/zone for this mode
+      if (this.extractMesh) this.extractMesh.visible = false;
+      if (this.terminalMesh) this.terminalMesh.visible = false;
+      this.terminal = { x: 99999, z: 99999, r: 0 };
+    } else {
+      this.scoutMode = false;
     }
+    if (mt.id !== 'scout') this.scoutMode = false;
   },
 
   _spawnObjectiveMarker(x, z, color, label) {
@@ -2758,17 +2985,21 @@ const Game = {
   resetWorld() {
     for (const g of this.meshes.players.values()) this.scene.remove(g);
     for (const g of this.meshes.enemies.values()) this.scene.remove(g);
-    for (const m of this.meshes.projectiles) this.scene.remove(m);
+    for (const m of this.meshes.projectiles) this._releaseProjectileMesh(m);
     for (const m of this.meshes.grenades) this.scene.remove(m);
     for (const m of this.meshes.packs) this.scene.remove(m);
     for (const g of this.meshes.holes.values()) this.scene.remove(g);
     for (const m of this.meshes.ammoDrops) this.scene.remove(m);
-    for (const m of this.meshes.effects) this.scene.remove(m);
+    for (const m of this.meshes.effects) this._releaseExplosionMesh(m);
     this.meshes.players.clear(); this.meshes.enemies.clear();
     this.meshes.projectiles = []; this.meshes.grenades = []; this.meshes.packs = [];
     this.meshes.holes.clear(); this.meshes.ammoDrops = []; this.meshes.effects = [];
     this.players.clear(); this.enemies = []; this.projectiles = []; this.grenades = [];
     this.packs = []; this.holes = []; this.ammoDrops = []; this.effects = [];
+    if (this.weaponDrops) {
+      for (const w of this.weaponDrops) { if (w.mesh) this.scene.remove(w.mesh); }
+    }
+    this.weaponDrops = [];
     this.extractTimer = 0; this.missionTime = 0; this.kills = 0;
     this.extractCalled = false; this.stratBuffer = []; this.activeStratagems = {};
     this.primedStratagem = null; this.objectives = []; this.samples = [];
@@ -2861,7 +3092,8 @@ const Game = {
       }
     }
     // Soft edge wall — high enough to block walk/climb, jump-pack can clear slightly
-    const half = this.mapSize / 2 - 0.8;
+    // Scout (endless) uses a much wider playable ring
+    const half = ((this.scoutMode ? Math.max(this.mapSize, 480) : this.mapSize) / 2) - 0.8;
     const edge = half;
     if (Math.abs(x) > edge || Math.abs(z) > edge) {
       const jump = this.keys['Space'] && (this.players.get(this.localId) || {}).backpack === 'jumppack';
@@ -2884,7 +3116,7 @@ const Game = {
     const roll = Math.random();
     // Rare bile titan, uncommon charger, common bug
     const type = roll < 0.04 ? 'titan' : (roll < 0.16 ? 'charger' : 'bug');
-    const mult = ((difficultyForId(this.selectedDiffId || (this.selectedDiff|0)+1)||{}).enemyMult || 1);
+    const mult = ((difficultyForId(this.selectedDiffId || (this.selectedDiff|0)+1)||{}).enemyMult || 1) * (this.scoutDiffMult || 1);
     const stats = {
       bug:    { hp: 35, speed: 1.9 + Math.random() * 0.6, armor: 0, damage: 8, radius: 0.4, color: 0xc4a574 },
       charger:{ hp: 120, speed: 2.6, armor: 40, damage: 18, radius: 0.85, color: 0x3a3a40 },
@@ -2974,6 +3206,41 @@ const Game = {
     this._emitVoice('grenade');
   },
 
+  _notifyPickup(text) {
+    const host = document.getElementById('pickup-toast');
+    if (!host || !text) return;
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = text;
+    host.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => {
+      el.classList.remove('show');
+      setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 250);
+    }, 2200);
+  },
+
+  _dropWeaponAt(x, z, kind, data) {
+    // kind: 'support' | 'primary' | 'secondary'
+    if (!this.weaponDrops) this.weaponDrops = [];
+    const y = (typeof this.getHeight === 'function' ? this.getHeight(x, z) : 0) + 0.35;
+    const color = kind === 'support' ? 0xff9944 : kind === 'secondary' ? 0x66aaff : 0xaacc66;
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.55, 0.2, 1.1),
+      new THREE.MeshStandardMaterial({ color, metalness: 0.5, roughness: 0.4 })
+    );
+    mesh.position.set(x, y, z);
+    mesh.rotation.y = Math.random() * Math.PI;
+    this.scene.add(mesh);
+    this.weaponDrops.push({
+      x, z, kind,
+      supportId: data && data.supportId,
+      weaponIndex: data && data.weaponIndex,
+      ammo: data && data.ammo,
+      mesh, alive: true
+    });
+  },
+
   _pickupNearby() {
     const p = this.players.get(this.localId);
     if (!p || !p.alive || !this.nearPickup) return;
@@ -2985,12 +3252,14 @@ const Game = {
       p.stims = Math.min(2, (p.stims || 0) + 1);
       p.backpack = 'supply';
       AudioSys.pickup();
+      this._notifyPickup('SUPPLY PACK');
       this.scene.remove(this.meshes.packs[n.index]);
       this.meshes.packs.splice(n.index, 1);
       this.packs.splice(n.index, 1);
     } else if (n.type === 'ammo' && this.ammoDrops[n.index]) {
       p.ammo = p.maxAmmo;
       AudioSys.pickup();
+      this._notifyPickup('AMMO');
       this.scene.remove(this.meshes.ammoDrops[n.index]);
       this.meshes.ammoDrops.splice(n.index, 1);
       this.ammoDrops.splice(n.index, 1);
@@ -3001,15 +3270,49 @@ const Game = {
       if (s.rarity === 'rare') {
         this.sampleRare = (this.sampleRare || 0) + 1;
         p.carriedRare = (p.carriedRare || 0) + 1;
+        this._notifyPickup('RARE SAMPLE');
       } else {
         this.sampleCommon = (this.sampleCommon || 0) + 1;
         p.carriedCommon = (p.carriedCommon || 0) + 1;
+        this._notifyPickup('COMMON SAMPLE');
       }
       this.samples = (this.sampleCommon || 0) + (this.sampleRare || 0);
       AudioSys.sample();
+    } else if (n.type === 'weapon' && this.weaponDrops && this.weaponDrops[n.index] && this.weaponDrops[n.index].alive) {
+      const w = this.weaponDrops[n.index];
+      if (w.kind === 'support') {
+        // Drop current support if replacing
+        if (this.loadoutSupport && this.loadoutSupport !== 'none') {
+          this._dropWeaponAt(p.x + 0.6, p.z, 'support', {
+            supportId: this.loadoutSupport,
+            ammo: this.supportAmmo
+          });
+        }
+        this.loadoutSupport = w.supportId || 'hmg';
+        const def = (typeof SUPPORT_WEAPONS !== 'undefined' ? SUPPORT_WEAPONS.find(s => s.id === this.loadoutSupport) : null);
+        this.supportAmmo = w.ammo != null ? w.ammo : (def && def.ammo) || 50;
+        p.usingSupport = true;
+        p.weaponSlot = 'support';
+        const nm = def ? def.name : 'SUPPORT WEAPON';
+        this._notifyPickup(nm.toUpperCase());
+      } else if (w.kind === 'primary' || w.kind === 'secondary') {
+        const idx = w.weaponIndex != null ? w.weaponIndex : 0;
+        p.weapon = idx;
+        p.usingSupport = false;
+        const wd = Weapons[idx] || Weapons[0];
+        if (w.ammo != null) p.ammo = w.ammo;
+        else p.ammo = wd.mag || p.maxAmmo;
+        p.maxAmmo = wd.mag || p.maxAmmo;
+        this._notifyPickup((wd.name || 'WEAPON').toUpperCase());
+      }
+      w.alive = false;
+      if (w.mesh) this.scene.remove(w.mesh);
+      this.weaponDrops.splice(n.index, 1);
+      AudioSys.pickup();
     }
     this.nearPickup = null;
   },
+
 
   _spawnExtractShip() {
     if (this.extractShip) return;
@@ -3214,6 +3517,22 @@ const Game = {
 
   _resolveStratagem(kind, x, z) {
     const p = this.players.get(this.localId);
+    if (kind === 'Field Extraction') {
+      // Throwable extract call-in (Scout mode and usable elsewhere)
+      if (this.extractCalled) return;
+      this.extractCalled = true;
+      this.state = 'extract';
+      this.extractTimer = 25;
+      this.extractZone = { x, z, r: 8 };
+      if (this.extractMesh) {
+        this.extractMesh.visible = true;
+        this.extractMesh.position.set(x, this.getHeight(x, z) + 0.06, z);
+      }
+      const obj = document.getElementById('objective');
+      if (obj) obj.textContent = 'FIELD EXTRACTION — Hold the zone!';
+      AudioSys.stratagemReady();
+      return;
+    }
     if (kind === 'Resupply') {
       this._spawnSupplyPack(x + 0.8, z);
       this._spawnSupplyPack(x - 0.8, z);
@@ -3351,36 +3670,125 @@ const Game = {
     }
   },
 
+  _ensurePools() {
+    if (!this._projPool) this._projPool = [];
+    if (!this._fxPool) this._fxPool = [];
+  },
+
+  _acquireProjectileMesh(color, size) {
+    this._ensurePools();
+    const col = color != null ? color : 0xffe8a0;
+    const sz = size != null ? size : 0.08;
+    let group = this._projPool.pop();
+    if (!group) {
+      group = new THREE.Group();
+      const core = new THREE.Mesh(
+        new THREE.SphereGeometry(1, 6, 4),
+        new THREE.MeshBasicMaterial({ color: col })
+      );
+      core.name = 'core';
+      group.add(core);
+      const streak = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.35, 0.12, 1, 4),
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85 })
+      );
+      streak.name = 'streak';
+      streak.rotation.x = Math.PI / 2;
+      group.add(streak);
+      try {
+        const glow = new THREE.PointLight(col, 0.55, 3.5);
+        glow.name = 'glow';
+        group.add(glow);
+      } catch (e) {}
+    }
+    group.visible = true;
+    const core = group.getObjectByName('core');
+    const streak = group.getObjectByName('streak');
+    const glow = group.getObjectByName('glow');
+    if (core) {
+      core.scale.setScalar(sz);
+      if (core.material) core.material.color.setHex(col);
+    }
+    if (streak) {
+      const len = Math.max(0.5, sz * 10);
+      streak.scale.set(sz, len, sz);
+      streak.position.z = -len * 0.45;
+      if (streak.material) {
+        streak.material.color.setHex(col);
+        streak.material.opacity = 0.85;
+      }
+    }
+    if (glow && glow.isLight) {
+      glow.color.setHex(col);
+      glow.intensity = 0.55;
+      glow.distance = 3.5;
+    }
+    return group;
+  },
+
+  _releaseProjectileMesh(mesh) {
+    if (!mesh) return;
+    this._ensurePools();
+    if (mesh.parent) mesh.parent.remove(mesh);
+    else this.scene.remove(mesh);
+    mesh.visible = false;
+    if (this._projPool.length < 96) this._projPool.push(mesh);
+    else {
+      try {
+        mesh.traverse(o => {
+          if (o.geometry) o.geometry.dispose();
+          if (o.material) {
+            if (Array.isArray(o.material)) o.material.forEach(m => m.dispose && m.dispose());
+            else if (o.material.dispose) o.material.dispose();
+          }
+        });
+      } catch (e) {}
+    }
+  },
+
+  _acquireExplosionMesh() {
+    this._ensurePools();
+    let mesh = this._fxPool.pop();
+    if (!mesh) {
+      mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4, 12, 10),
+        new THREE.MeshBasicMaterial({ color: 0xff6622, transparent: true, opacity: 0.85 })
+      );
+    }
+    mesh.visible = true;
+    mesh.scale.set(1, 1, 1);
+    if (mesh.material) {
+      mesh.material.opacity = 0.85;
+      mesh.material.color.setHex(0xff6622);
+    }
+    return mesh;
+  },
+
+  _releaseExplosionMesh(mesh) {
+    if (!mesh) return;
+    this._ensurePools();
+    if (mesh.parent) mesh.parent.remove(mesh);
+    else this.scene.remove(mesh);
+    mesh.visible = false;
+    if (this._fxPool.length < 48) this._fxPool.push(mesh);
+    else {
+      try {
+        if (mesh.geometry) mesh.geometry.dispose();
+        if (mesh.material && mesh.material.dispose) mesh.material.dispose();
+      } catch (e) {}
+    }
+  },
+
   _addProjectile(pr, color, size) {
     if (!pr || !this.scene) return;
     if (!this.projectiles) this.projectiles = [];
     if (!this.meshes) this.meshes = {};
     if (!this.meshes.projectiles) this.meshes.projectiles = [];
     this.projectiles.push(pr);
-    const col = color != null ? color : 0xffe8a0;
-    const sz = size != null ? size : 0.08;
-    const group = new THREE.Group();
-    const core = new THREE.Mesh(
-      new THREE.SphereGeometry(sz, 6, 4),
-      new THREE.MeshBasicMaterial({ color: col })
-    );
-    group.add(core);
-    // Light streak trail
-    const len = Math.max(0.5, sz * 10);
-    const streak = new THREE.Mesh(
-      new THREE.CylinderGeometry(sz * 0.35, sz * 0.12, len, 4),
-      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85 })
-    );
-    streak.rotation.x = Math.PI / 2;
-    streak.position.z = -len * 0.45;
-    group.add(streak);
-    try {
-      const glow = new THREE.PointLight(col, 0.55, 3.5);
-      group.add(glow);
-    } catch (e) {}
+    const group = this._acquireProjectileMesh(color, size);
     group.position.set(pr.x, pr.y || 1, pr.z);
     if (pr.vx !== undefined) {
-      group.lookAt(pr.x + pr.vx, (pr.y || 1) + (pr.vy || 0), pr.z + (pr.vz || 0));
+      group.lookAt(pr.x + pr.vx, (pr.y || 1) + (pr.vy || 0), pr.z + pr.vz);
     }
     this.scene.add(group);
     this.meshes.projectiles.push(group);
@@ -3675,6 +4083,22 @@ const Game = {
       this.sampleRare = Math.max(0, (this.sampleRare || 0) - r);
       this.samples = (this.sampleCommon || 0) + (this.sampleRare || 0);
     }
+    // Drop weapon loot on death (copies — loadout restored on reinforce)
+    if (this.loadoutSupport && this.loadoutSupport !== 'none') {
+      this._dropWeaponAt(p.x + 0.5, p.z + 0.3, 'support', {
+        supportId: this.loadoutSupport,
+        ammo: this.supportAmmo
+      });
+    }
+    if (p.weapon != null) {
+      const wd = Weapons[p.weapon] || Weapons[0];
+      const kind = (wd.slot === 'secondary') ? 'secondary' : 'primary';
+      this._dropWeaponAt(p.x - 0.4, p.z + 0.2, kind, {
+        weaponIndex: p.weapon,
+        ammo: p.ammo
+      });
+    }
+    p.usingSupport = false;
     // Solo / non-spectator: auto respawn if lives remain
     const isSolo = this.players.size <= 1;
     const useDowned = this.downedReviveEnabled;
@@ -3767,6 +4191,18 @@ const Game = {
         p.x = p.reinforceX;
         p.z = p.reinforceZ;
         p.y = this.getHeight(p.x, p.z);
+        // Restore loadout weapons after death drops
+        p.weapon = this.loadoutPrimary != null ? this.loadoutPrimary : (p.weapon || 0);
+        const wd = Weapons[p.weapon] || Weapons[0];
+        p.maxAmmo = wd.mag || 30;
+        p.ammo = p.maxAmmo;
+        p.usingSupport = false;
+        if (this.loadoutSupport && this.loadoutSupport !== 'none') {
+          const sd = SUPPORT_WEAPONS.find(s => s.id === this.loadoutSupport);
+          this.supportAmmo = sd && sd.ammo != null ? sd.ammo : 50;
+        }
+        p.grenades = Math.max(p.grenades || 0, 2);
+        p.stims = Math.max(p.stims || 0, 1);
         this._explosion(p.x, p.z, 2.5, 0);
         AudioSys.boom();
         const obj = document.getElementById('objective');
@@ -3886,10 +4322,10 @@ const Game = {
   _explosion(x, z, radius, damage, opts) {
     opts = opts || {};
     AudioSys.boom();
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 10), new THREE.MeshBasicMaterial({ color: 0xff6622, transparent: true, opacity: 0.85 }));
+    const mesh = this._acquireExplosionMesh();
     mesh.position.set(x, this.getHeight(x, z) + 0.5, z);
     this.scene.add(mesh);
-    this.effects.push({ mesh, life: 0.4, maxLife: 0.4, radius });
+    this.effects.push({ mesh, life: 0.4, maxLife: 0.4, radius, pooled: true });
     this.meshes.effects.push(mesh);
     for (const e of this.enemies) {
       if (!e.alive) continue;
@@ -3950,6 +4386,7 @@ const Game = {
             // Face north (−Z); minimap has −Z upward
             this.camYaw = Math.PI;
             lp.angle = Math.PI;
+            if (this.scoutMode) this.scoutDrop = { x: lp.x, z: lp.z };
           }
           this.camera.up.set(0, 1, 0);
           this.state = 'playing';
@@ -3969,6 +4406,7 @@ const Game = {
     if (this.state !== 'playing' && this.state !== 'extract' && this.state !== 'ship') return;
     this.missionTime += dt;
     this._syncModifiers();
+    if (this.scoutMode) this._updateScoutMission(dt);
 
     for (const k in this.activeStratagems) if (this.activeStratagems[k] > 0) this.activeStratagems[k] -= dt;
     if (this.stratUITimer > 0) this.stratUITimer -= dt;
@@ -4115,6 +4553,10 @@ const Game = {
           if (this.state === 'ship') {
             const sc = this._resolveShipCollision(p.x, p.z, 0.45);
             p.x = sc.x; p.z = sc.z;
+            // Keep inside hull
+            p.x = Math.max(-9.5, Math.min(9.5, p.x));
+            p.z = Math.max(-17.5, Math.min(17.5, p.z));
+            p.y = this._shipFloorY(p.x, p.z);
           } else {
             const resolved = this._resolveRocks(p.x, p.z, 0.45, prevX, prevZ);
             p.x = resolved.x; p.z = resolved.z;
@@ -4135,14 +4577,10 @@ const Game = {
         // Smooth height follow — reduces sprint stutter from per-frame height snaps
         let targetY = 0;
         if (this.state === 'ship') {
-          // SE bay is lowered; ramp blends height
-          if (p.x > 6 && p.z > 2) {
-            // Bay / ramp region
-            if (p.x > 10) targetY = -1.5;
-            else targetY = -1.5 + (10 - p.x) / 4 * 1.5; // ramp up westward
-          } else targetY = 0;
+          targetY = this._shipFloorY(p.x, p.z);
         } else targetY = this.getHeight(p.x, p.z);
         if (p.y === undefined) p.y = targetY;
+        else if (this.state === 'ship') p.y = targetY; // solid decks — no sink through
         else p.y += (targetY - p.y) * Math.min(1, 14 * dt);
 
         // Shoot along look with weapon recoil pattern (planet only)
@@ -4218,6 +4656,22 @@ const Game = {
             }
           }
         }
+        // Ground weapons (support / primary / secondary)
+        if (!this.nearPickup && this.weaponDrops) {
+          for (let i = 0; i < this.weaponDrops.length; i++) {
+            const w = this.weaponDrops[i];
+            if (!w.alive) continue;
+            if (Math.hypot(w.x - p.x, w.z - p.z) < 1.5) {
+              this.nearPickup = { type: 'weapon', index: i };
+              // Auto-pickup support only if empty support slot
+              if (w.kind === 'support' && this.autoPickupSupport &&
+                  (!this.loadoutSupport || this.loadoutSupport === 'none')) {
+                this._pickupNearby();
+              }
+              break;
+            }
+          }
+        }
 
         this.nearTerminal = this.state !== 'ship' && Math.hypot(p.x - this.terminal.x, p.z - this.terminal.z) < this.terminal.r;
         // Samples (common / rare)
@@ -4231,9 +4685,11 @@ const Game = {
                 if (s.rarity === 'rare') {
                   this.sampleRare = (this.sampleRare || 0) + 1;
                   p.carriedRare = (p.carriedRare || 0) + 1;
+                  this._notifyPickup('RARE SAMPLE');
                 } else {
                   this.sampleCommon = (this.sampleCommon || 0) + 1;
                   p.carriedCommon = (p.carriedCommon || 0) + 1;
+                  this._notifyPickup('COMMON SAMPLE');
                 }
                 this.samples = (this.sampleCommon || 0) + (this.sampleRare || 0);
                 AudioSys.sample();
@@ -4377,23 +4833,42 @@ const Game = {
         const gY = (typeof this.getHeight === 'function' ? this.getHeight(cx, cz) : 0) + 0.75;
         if (cy < gY) cy = gY;
       } else {
-        // Destroyer interior clamp
-        cx = Math.max(-14.5, Math.min(14.5, cx));
-        cz = Math.max(-8.5, Math.min(8.5, cz));
-        cy = Math.max(0.6, Math.min(4.5, cy));
+        // Destroyer interior clamp (matches long N–S hull)
+        cx = Math.max(-9.4, Math.min(9.4, cx));
+        cz = Math.max(-17.4, Math.min(17.4, cz));
+        const floorY = this._shipFloorY ? this._shipFloorY(cx, cz) : 0;
+        cy = Math.max(floorY + 0.45, Math.min(floorY + 4.2, cy));
       }
 
-      const lerp = this.reduceMotion ? 1 : 0.22;
+      // Keep a minimum distance so the camera never sits inside the body
+      const toCamX = cx - pivX, toCamY = cy - pivY, toCamZ = cz - pivZ;
+      const camD = Math.hypot(toCamX, toCamY, toCamZ) || 0.001;
+      const minD = 2.2;
+      if (camD < minD) {
+        const s = minD / camD;
+        cx = pivX + toCamX * s;
+        cy = pivY + toCamY * s;
+        cz = pivZ + toCamZ * s;
+      }
+
+      const lerp = this.reduceMotion ? 1 : (this.state === 'ship' ? 0.35 : 0.22);
       this.camera.position.x += (cx - this.camera.position.x) * lerp;
       this.camera.position.y += (cy - this.camera.position.y) * lerp;
       this.camera.position.z += (cz - this.camera.position.z) * lerp;
 
       // Look along aim through a point ahead of the diver (matches reticle / gun)
-      const lookDist = 20;
+      // Blend look target slightly with player so camera never faces away from body
+      const lookDist = 18;
       const lookX = pivX + aimFx * lookDist;
       const lookY = pivY + aimFy * lookDist;
       const lookZ = pivZ + aimFz * lookDist;
-      this.camera.lookAt(lookX, lookY, lookZ);
+      // Soft bias toward character center when camera is very close
+      const bias = Math.max(0, 1 - camD / 6) * 0.35;
+      this.camera.lookAt(
+        lookX * (1 - bias) + pivX * bias,
+        lookY * (1 - bias) + pivY * bias,
+        lookZ * (1 - bias) + pivZ * bias
+      );
     }
 
     // Planet-only systems
@@ -4440,8 +4915,10 @@ const Game = {
       h.spawnCd -= dt;
       if (this.state !== 'ship' && h.spawnCd <= 0) {
         const aliveBugs = this.enemies.filter(e => e.alive).length;
-        if (aliveBugs < 18) this._spawnEnemyFromHole(h);
-        h.spawnCd = 3.5 + Math.random() * 2.5;
+        const cap = 18 + (this.scoutMode ? Math.min(25, ((this.scoutMaxDist || 0) / 20) | 0) : 0);
+        if (aliveBugs < cap) this._spawnEnemyFromHole(h);
+        const cdScale = this.scoutMode ? Math.max(0.45, 1 - (this.scoutMaxDist || 0) / 200) : 1;
+        h.spawnCd = (3.5 + Math.random() * 2.5) * cdScale;
       }
     }
 
@@ -4665,7 +5142,8 @@ const Game = {
         }
       }
       if (pr.life <= 0 || hit) {
-        if (mesh) this.scene.remove(mesh);
+        if (mesh) this._releaseProjectileMesh(mesh);
+        else if (pr.mesh) this._releaseProjectileMesh(pr.mesh);
         this.meshes.projectiles.splice(i, 1);
         this.projectiles.splice(i, 1);
       }
@@ -4718,7 +5196,14 @@ const Game = {
       ef.life -= dt;
       const a = ef.life / ef.maxLife;
       if (ef.mesh) { ef.mesh.scale.setScalar(ef.radius * (1.2 - a * 0.5)); ef.mesh.material.opacity = a * 0.8; }
-      if (ef.life <= 0) { if (ef.mesh) this.scene.remove(ef.mesh); this.meshes.effects.splice(i, 1); this.effects.splice(i, 1); }
+      if (ef.life <= 0) {
+        if (ef.mesh) {
+          if (ef.pooled) this._releaseExplosionMesh(ef.mesh);
+          else this.scene.remove(ef.mesh);
+        }
+        this.meshes.effects.splice(i, 1);
+        this.effects.splice(i, 1);
+      }
     }
 
     // Dead enemy cleanup (supports Mesh and Group e.g. bile titan)
@@ -5191,6 +5676,11 @@ const Game = {
     $('#auto-ammo').checked = !!ld.autoPickupAmmo;
     $('#auto-ammo').onchange = e => { Game.autoPickupAmmo = e.target.checked; Storage.update({ autoPickupAmmo: e.target.checked }); };
   }
+  if ($('#auto-support')) {
+    $('#auto-support').checked = !!ld.autoPickupSupport;
+    Game.autoPickupSupport = !!ld.autoPickupSupport;
+    $('#auto-support').onchange = e => { Game.autoPickupSupport = e.target.checked; Storage.update({ autoPickupSupport: e.target.checked }); };
+  }
   if ($('#auto-supply')) {
     $('#auto-supply').checked = !!ld.autoPickupSupply;
     $('#auto-supply').onchange = e => { Game.autoPickupSupply = e.target.checked; Storage.update({ autoPickupSupply: e.target.checked }); };
@@ -5629,7 +6119,15 @@ const Game = {
           ih.textContent = '[E] BOARD PELICAN';
         } else if (Game.nearPickup) {
           ih.classList.add('show');
-          ih.textContent = Game.nearPickup.type === 'supply' ? '[E] SUPPLY PACK' : (Game.nearPickup.type === 'sample' ? '[E] SAMPLE' : '[E] AMMO');
+          {
+            const t = Game.nearPickup.type;
+            if (t === 'supply') ih.textContent = '[E] SUPPLY PACK';
+            else if (t === 'sample') ih.textContent = '[E] SAMPLE';
+            else if (t === 'weapon') {
+              const w = Game.weaponDrops && Game.weaponDrops[Game.nearPickup.index];
+              ih.textContent = w && w.kind === 'support' ? '[E] SUPPORT WEAPON' : '[E] WEAPON';
+            } else ih.textContent = '[E] AMMO';
+          }
         } else if (Game.nearTerminal && !Game.extractCalled && !Game.extractShip && Game.state === 'playing') {
           ih.classList.add('show');
           ih.textContent = '[E] CALL EXTRACT';
