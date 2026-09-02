@@ -137,8 +137,8 @@
     #ship-menu {
       position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
       background: rgba(0,0,0,0.92); border: 1px solid var(--accent); padding: 16px 20px;
-      min-width: 280px; display: none; z-index: 50; text-align: center;
-      pointer-events: auto; max-height: 70vh; overflow-y: auto;
+      min-width: 280px; max-width: 520px; width: min(520px, 92vw); display: none; z-index: 50; text-align: center;
+      pointer-events: auto; max-height: 78vh; overflow-y: auto;
     }
     #ship-menu button { pointer-events: auto; cursor: pointer; }
     #ship-menu.show { display: block; }
@@ -156,15 +156,26 @@
     }
     #strat-loadout-menu.show { display: block; }
     #strat-loadout-menu h3 { color: var(--accent); margin: 0 0 8px; }
+    #strat-loadout-ready {
+      background: #111 !important; color: #888 !important; border-color: #333 !important;
+    }
+    #strat-loadout-ready.ready {
+      background: #2a2400 !important; color: #ffe800 !important; border-color: #ffe800 !important;
+    }
+    #strat-loadout-list {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-height: 36vh; overflow-y: auto;
+    }
     .strat-pick {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 6px 8px; margin: 3px 0; border: 1px solid var(--border); cursor: pointer;
-      font-size: 0.75rem; color: var(--text); background: rgba(20,24,30,0.9);
+      padding: 5px 6px; margin: 0; border: 1px solid var(--border); cursor: pointer;
+      font-size: 0.68rem; color: var(--text); background: rgba(20,24,30,0.9);
+      min-width: 0;
     }
     .strat-pick:hover { border-color: var(--accent); }
     .strat-pick.selected { border-color: var(--accent); background: rgba(255,232,0,0.12); }
     .strat-pick.provided { border-color: #3a6; }
-    .strat-pick .code { color: var(--muted); letter-spacing: 0.12em; }
+    .strat-pick .code { color: var(--muted); letter-spacing: 0.08em; font-size: 0.62rem; flex-shrink: 0; }
+    .strat-pick span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     #fs-warn p { color: var(--muted); font-size: 0.82rem; margin: 0 0 12px; line-height: 1.45; }
     #fs-warn h3 { color: var(--danger); margin: 0 0 10px; font-size: 0.95rem; }
     #ship-menu h3 { color: var(--accent); margin: 0 0 10px; font-size: 0.95rem; }
@@ -187,7 +198,24 @@
       border: 2px solid var(--border); border-radius: 50%; background: rgba(0,0,0,0.65);
       image-rendering: pixelated;
     }
-    #sample-hud { position: absolute; top: 158px; right: 14px; font-size: 0.72rem; color: var(--accent); text-align: right; }
+    
+    #stamina-wrap {
+      position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+      z-index: 25; pointer-events: none; text-align: center;
+    }
+    #stamina-wrap .hud-label { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.12em; margin-bottom: 2px; }
+    #stamina-bar {
+      width: 160px; height: 8px; background: #1a1a1a; border: 1px solid var(--border); border-radius: 2px; overflow: hidden;
+    }
+    #stamina-fill { height: 100%; width: 100%; background: #3af; transition: width 0.1s; }
+    #edge-warn {
+      position: absolute; left: 50%; top: 18%; transform: translateX(-50%);
+      display: none; z-index: 40; pointer-events: none;
+      background: rgba(80,20,0,0.85); border: 1px solid #f80; color: #fa8;
+      padding: 8px 16px; font-size: 0.85rem; letter-spacing: 0.06em; border-radius: 4px;
+    }
+    #edge-warn.show { display: block; }
+#sample-hud { position: absolute; top: 158px; right: 14px; font-size: 0.72rem; color: var(--accent); text-align: right; }
     #mission-obj {
       position: absolute; top: 10px; right: 165px; max-width: 220px; text-align: right;
       font-size: 0.72rem; color: var(--accent); line-height: 1.35;
@@ -207,10 +235,11 @@
     #pause-menu, #mission-end {
       position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
       background: rgba(0,0,0,0.82); pointer-events: auto; z-index: 100;
+      /* fullscreen button sits above (z-index 200) */
     }
     #pause-menu.show, #mission-end.show { display: flex; }
     #btn-fullscreen {
-      position: absolute; top: 10px; right: 10px; z-index: 50;
+      position: absolute; top: 10px; right: 10px; z-index: 200; pointer-events: auto;
       padding: 0.4rem 0.7rem; font-size: 0.7rem; background: rgba(20,24,32,0.85);
       border: 1px solid var(--border); color: var(--text); border-radius: 3px; cursor: pointer;
     }
@@ -229,13 +258,15 @@
           <label for="username">CALLSIGN</label>
           <input type="text" id="username" maxlength="16" placeholder="Enter callsign" autocomplete="off" spellcheck="false">
         </div>
-        <div class="button-row"><button id="btn-solo" class="btn primary">SOLO DEPLOY</button></div>
+        <div class="button-row"><button id="btn-solo" class="btn primary">ENTER DESTROYER</button></div>
         <div class="button-row">
           <button id="btn-host" class="btn">HOST SQUAD</button>
           <button id="btn-join" class="btn">JOIN SQUAD</button>
         </div>
-        <div class="button-row">
-          <button id="btn-lan" class="btn small full">SCAN LAN / QUICK JOIN</button>
+        <div id="join-choice-panel" class="sub-panel" style="display:none;margin-top:0.5rem">
+          <button id="btn-join-code" class="btn full">JOIN BY CODE</button>
+          <button id="btn-join-lan" class="btn full" style="margin-top:0.4rem">SCAN LAN / QUICK JOIN</button>
+          <button id="btn-join-choice-back" class="btn small full" style="margin-top:0.4rem">BACK</button>
         </div>
         <div id="join-panel" class="subpanel">
           <input type="text" id="room-code" maxlength="16" placeholder="ROOM CODE (e.g. DEMO)" autocomplete="off">
@@ -252,7 +283,7 @@
           <button id="btn-options" class="btn small">OPTIONS</button>
           <button id="btn-stats" class="btn small">STATS</button>
         </div>
-        <p id="status-msg" class="status">Ready — Solo Deploy works immediately</p>
+        <p id="status-msg" class="status">Ready — Enter Destroyer to open the ship</p>
         <p class="footer">Ship: Planet/Mission/Diff/Gear → Hellpod · F melee · B salute · Q ping · X support<br>
         Samples · Patrols · Breaches · Friendly fire · Minimap</p>
       </div>
@@ -268,6 +299,7 @@
           <button type="button" class="btn small" data-opt="misc">Misc</button>
         </div>
         <div class="opt-pane active" id="opt-gameplay">
+          <div class="form-group"><label style="display:flex;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="friendly-fire" checked> Friendly fire (turrets, orbitals, teammates)</label></div>
           <div class="form-group"><label style="display:flex;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="auto-climb"> Auto-climb while sprinting</label></div>
           <div class="form-group"><label style="display:flex;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="reinforce-budget" checked> Reinforcement budget</label></div>
           <div class="form-group"><label style="display:flex;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="downed-revive"> Downed + revive (multiplayer)</label></div>
@@ -296,9 +328,18 @@
           <div class="form-group"><label style="display:flex;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="scroll-cam-zoom"> Scroll wheel zooms camera (else minimap)</label></div>
         </div>
         <div class="opt-pane" id="opt-controls">
-          <p class="footer" style="margin:0">WASD move · Mouse look · Shift sprint · Space climb<br>
-          Ctrl+dirs stratagem · LMB fire/throw · G grenade · 1/2/3 weapons<br>
-          Hold C — active effects · Scroll — zoom · E interact</p>
+          <div class="form-group">
+            <label>Movement keys</label>
+            <select id="move-scheme" style="width:100%;padding:0.45rem;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:inherit">
+              <option value="both">WASD + Arrow keys</option>
+              <option value="wasd">WASD only</option>
+              <option value="arrows">Arrow keys only</option>
+            </select>
+          </div>
+          <div class="form-group"><label style="color:var(--muted);font-size:0.75rem">Click a button, then press a key to rebind</label></div>
+          <div id="keybind-list" style="display:flex;flex-direction:column;gap:0.35rem;font-size:0.78rem"></div>
+          <button type="button" class="btn small full" id="btn-reset-binds" style="margin-top:0.5rem">RESET TO DEFAULTS</button>
+          <p class="footer" style="margin:0.6rem 0 0">Mouse look · Ctrl+dirs stratagem · LMB fire/throw · 1/2/3 weapons · Scroll minimap zoom</p>
         </div>
         <div class="opt-pane" id="opt-misc">
           <div class="form-group">
@@ -389,8 +430,14 @@
           <p style="color:var(--muted);font-size:0.75rem;margin:0 0 8px">Select stratagems (5 on diff 1–3, else 4). ★ = provided. Click map to set drop.</p>
           <div id="strat-loadout-slots" style="margin-bottom:8px;color:var(--accent);font-size:0.78rem"></div>
           <div id="strat-loadout-list" style="max-height:40vh;overflow-y:auto;text-align:left"></div>
-          <button type="button" class="btn primary full" id="strat-loadout-confirm" style="margin-top:10px">CONFIRM &amp; DROP</button>
+          <div id="strat-ready-status" style="margin-top:8px;font-size:0.78rem;color:var(--muted)">Press <b>E</b> to toggle READY</div>
+          <button type="button" class="btn primary full" id="strat-loadout-ready" style="margin-top:8px">TOGGLE READY (E)</button>
+          <button type="button" class="btn full" id="strat-loadout-confirm" style="margin-top:6px">FORCE DROP (solo)</button>
           <button type="button" class="btn full" id="strat-loadout-back" style="margin-top:6px">BACK</button>
+          <div id="drop-mp-actions" style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
+            <button type="button" class="btn small full" id="btn-drop-host">HOST SQUAD</button>
+            <button type="button" class="btn small full" id="btn-drop-join" style="margin-top:0.35rem">JOIN SQUAD</button>
+          </div>
         </div>
         <div id="strat-cds"></div>
         <div id="strat-ui">
@@ -406,9 +453,14 @@
           <p class="small" style="margin-bottom:1rem">Click Resume or press Esc · Mouse unlocks while paused</p>
           <button id="btn-resume" class="btn primary full">RESUME</button>
           <button id="btn-pause-options" class="btn full" style="margin-top:0.5rem">OPTIONS</button>
-          <button id="btn-leave" class="btn full" style="margin-top:0.5rem">LEAVE MISSION</button>
+          <div id="pause-mp-actions" style="margin-top:0.5rem;display:none">
+            <button id="btn-pause-host" class="btn full">HOST SQUAD</button>
+            <button id="btn-pause-join" class="btn full" style="margin-top:0.4rem">JOIN SQUAD</button>
+          </div>
+          <button id="btn-leave" class="btn full" style="margin-top:0.5rem">LEAVE MISSION / SHIP</button>
         </div>
       </div>
+      <div id="edge-warn">WARNING: You are leaving the mission area</div>
       <div id="extract-timer">EXTRACT IN <span>25</span>s</div>
       <div id="mission-end">
         <div class="menu-panel">
@@ -433,7 +485,13 @@ const Storage = {
   KEY: 'hellbrowsers_v3',
   load() {
     try { const r = localStorage.getItem(this.KEY); if (r) return JSON.parse(r); } catch (e) {}
-    return { username: '', volume: 0.7, showFps: false, reduceMotion: false, autoClimb: false,
+    return { username: '', volume: 0.7, showFps: false, reduceMotion: false, autoClimb: false, friendlyFire: true, maxDifficultyUnlocked: 10,
+      moveScheme: 'both', // 'wasd' | 'arrows' | 'both'
+      keybinds: {
+        forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD',
+        sprint: 'ShiftLeft', climb: 'Space', interact: 'KeyE', grenade: 'KeyG',
+        stim: 'KeyV', salute: 'KeyB', ping: 'KeyQ', effects: 'KeyC', melee: 'KeyF'
+      },
       stats: { missions: 0, kills: 0, deaths: 0, extracts: 0, playTime: 0 } };
   },
   save(d) { try { localStorage.setItem(this.KEY, JSON.stringify(d)); } catch (e) {} },
@@ -506,10 +564,11 @@ const PRIMARY_IDS = [0, 1];
 const SECONDARY_IDS = [2, 3];
 
 const PLANETS = [
-  { id: 'malevelon', name: 'Malevelon Creek', biome: 'forest', fog: 0x0a1a0e, fogNear: 55, fogFar: 140, ground: 0x1a2a1c, ash: 0.15 },
-  { id: 'fori', name: 'Fori Prime', biome: 'desert', fog: 0x1a1508, fogNear: 60, fogFar: 160, ground: 0x3a3020, ash: 0.35 },
-  { id: 'tien', name: 'Tien Kwan', biome: 'ice', fog: 0x0a1520, fogNear: 50, fogFar: 130, ground: 0x2a3540, ash: 0.5 },
-  { id: 'angel', name: "Angel's Venture", biome: 'ash', fog: 0x1a0a08, fogNear: 45, fogFar: 120, ground: 0x2a1810, ash: 0.7 }
+  { id: 'malevelon', name: 'Malevelon Creek', biome: 'forest', fog: 0x0a1a0e, fogNear: 55, fogFar: 140, ground: 0x1a2a1c, rock: 0xb0b0b0, ash: 0.15 },
+  { id: 'fori', name: 'Fori Prime', biome: 'desert', fog: 0x2a2210, fogNear: 60, fogFar: 160, ground: 0xc2a06a, rock: 0x8a5a32, ash: 0.35 },
+  { id: 'tien', name: 'Tien Kwan', biome: 'ice', fog: 0x0a1520, fogNear: 50, fogFar: 130, ground: 0x2a3540, rock: 0x9aa8b4, ash: 0.5 },
+  { id: 'angel', name: "Angel's Venture", biome: 'ash', fog: 0x1a0a08, fogNear: 45, fogFar: 120, ground: 0x2a1810, rock: 0x4a4038, ash: 0.7 },
+  { id: 'mycota', name: 'Mycota Prime', biome: 'mushroom', fog: 0x060818, fogNear: 40, fogFar: 110, ground: 0x0a1028, rock: 0x888890, ash: 0.2 }
 ];
 const DIFFICULTIES = [
   { id: 1, name: 'Trivial', enemyMult: 0.55, patrols: 1, breaches: 0.2 },
@@ -523,6 +582,20 @@ const DIFFICULTIES = [
   { id: 9, name: 'Helldive', enemyMult: 1.9, patrols: 5, breaches: 1.35 },
   { id: 10, name: 'Super Helldive', enemyMult: 2.15, patrols: 6, breaches: 1.5 }
 ];
+function difficultyForId(id) {
+  id = Math.max(1, id | 0);
+  if (id <= 10) return DIFFICULTIES[id - 1];
+  // Uncapped scale past Super Helldive
+  const base = DIFFICULTIES[9];
+  const extra = id - 10;
+  return {
+    id,
+    name: 'Super Helldive +' + extra,
+    enemyMult: base.enemyMult + extra * 0.12,
+    patrols: base.patrols + Math.floor(extra / 2),
+    breaches: base.breaches + extra * 0.08
+  };
+}
 const MISSION_TYPES = [
   { id: 'holes', name: 'Eradicate Bug Holes', obj: 'Destroy all bug holes' },
   { id: 'icbm', name: 'Launch ICBM', obj: 'Activate the ICBM silo' },
@@ -549,15 +622,22 @@ const Stratagems = {
     { name: 'Reinforce', code: ['up', 'down', 'right', 'left', 'up'], cooldown: 55 },
     { name: 'Eagle Strafing', code: ['up', 'right', 'right'], cooldown: 22 },
     { name: 'Orbital Barrage', code: ['right', 'down', 'down', 'right'], cooldown: 40 },
-    { name: 'Orbital Laser', code: ['down', 'up', 'right', 'right'], cooldown: 50 }
+    { name: 'Orbital Laser', code: ['down', 'up', 'right', 'right'], cooldown: 50 },
+    { name: 'Gatling Turret', code: ['down', 'up', 'right', 'down'], cooldown: 45 },
+    { name: 'Laser Turret', code: ['down', 'up', 'left', 'down'], cooldown: 50 }
   ],
   match(buf) {
+    // Prefer the longest matching code so Orbital Laser (↓↑→→) is not
+    // stolen by Eagle Strafing (↑→→) as a suffix.
+    let best = null;
     for (const s of this.list) {
       if (buf.length < s.code.length) continue;
       const slice = buf.slice(-s.code.length);
-      if (slice.every((v, i) => v === s.code[i])) return s;
+      if (slice.every((v, i) => v === s.code[i])) {
+        if (!best || s.code.length > best.code.length) best = s;
+      }
     }
-    return null;
+    return best;
   }
 };
 
@@ -628,10 +708,26 @@ const Network = {
       this.players.set(from, { name: data.name, ready: true });
       this.broadcast({ type: 'roster', players: [...this.players.entries()] });
       if (this.onPlayerJoin) this.onPlayerJoin(from, data.name);
+      // Late join during active mission → send them straight to drop-pod flow
+      try {
+        if (typeof Game !== 'undefined' && (Game.state === 'playing' || Game.state === 'extract' || Game.state === 'hellpod')) {
+          const conn = this.connections.get(from);
+          if (conn && conn.open) {
+            conn.send({
+              type: 'mission_join',
+              planet: Game.selectedPlanet,
+              mission: Game.selectedMission,
+              diff: Game.selectedDiffId || Game.selectedDiff,
+              mapSize: Game.mapSize
+            });
+          }
+        }
+      } catch (e) {}
     } else if (data.type === 'roster') {
       this.players = new Map(data.players);
       if (this.onPlayerJoin) this.onPlayerJoin(null, null);
     } else if (data.type === 'start' && this.onStart) this.onStart(data);
+    else if (data.type === 'mission_join' && this.onMissionJoin) this.onMissionJoin(data);
     else if (data.type === 'input' && this.isHost && this.onInput) this.onInput(from, data.input);
     else if (data.type === 'state' && !this.isHost && this.onState) this.onState(data.state);
     else if (data.type === 'voice') {
@@ -653,9 +749,25 @@ const Network = {
   }
 };
 
+
+const DEFAULT_KEYBINDS = {
+  forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD',
+  sprint: 'ShiftLeft', climb: 'Space', interact: 'KeyE', grenade: 'KeyG',
+  stim: 'KeyV', salute: 'KeyB', ping: 'KeyQ', effects: 'KeyC', melee: 'KeyF'
+};
+
+function getKeybinds() {
+  const d = Storage.load();
+  return Object.assign({}, DEFAULT_KEYBINDS, d.keybinds || {});
+}
+
+function getMoveScheme() {
+  return Storage.load().moveScheme || 'both';
+}
+
 const Game = {
   renderer: null, scene: null, camera: null, wrap: null,
-  mapSize: 160,
+  mapSize: 240,
   players: new Map(), localId: null,
   enemies: [], projectiles: [], grenades: [], packs: [], holes: [], ammoDrops: [],
   effects: [], rocks: [],
@@ -665,7 +777,7 @@ const Game = {
   extractZone: { x: 0, z: 0, r: 8 },
   keys: {},
   mouse: { locked: false, dx: 0, dy: 0, rmb: false },
-  camYaw: 0, camPitch: 0.55, camDist: 14, camDistTarget: 14,
+  camYaw: 0, camPitch: 0.55, camDist: 11, camDistTarget: 11,
   ctrlHeld: false, stratBuffer: [], stratUITimer: 0, activeStratagems: {},
   grenadePrimed: false, grenadePrimeTime: 0, primedStratagem: null,
   nearTerminal: false, nearPickup: null,
@@ -750,6 +862,40 @@ const Game = {
     return sum / norm;
   },
   /** World XZ → height (Y) */
+
+  _cameraCollision(px, py, pz, dx, dy, dz) {
+    // March from pivot toward desired camera; stop just before obstacles
+    const steps = 14;
+    let x = px, y = py + 0.5, z = pz;
+    for (let i = steps; i >= 1; i--) {
+      const u = i / steps;
+      const tx = px + (dx - px) * u;
+      const ty = py + (dy - py) * u;
+      const tz = pz + (dz - pz) * u;
+      let blocked = false;
+      if (this.rocks) {
+        for (const r of this.rocks) {
+          if (Math.hypot(tx - r.x, tz - r.z) < (r.r || 0.5) + 0.5) { blocked = true; break; }
+        }
+      }
+      if (!blocked && this.state === 'ship' && this.shipColliders) {
+        for (const c of this.shipColliders) {
+          if (tx > c.minX - 0.4 && tx < c.maxX + 0.4 && tz > c.minZ - 0.4 && tz < c.maxZ + 0.4) {
+            blocked = true; break;
+          }
+        }
+      }
+      if (!blocked && this.state !== 'ship' && typeof this.getHeight === 'function') {
+        if (ty < this.getHeight(tx, tz) + 0.6) blocked = true;
+      }
+      if (!blocked) {
+        return { x: tx, y: ty, z: tz };
+      }
+    }
+    // Fully blocked — hug the pivot
+    return { x: px + (dx - px) * 0.08, y: py + 0.5, z: pz + (dz - pz) * 0.08 };
+  },
+
   getHeight(x, z) {
     if (!this.heightmap) return 0;
     const res = this.terrainRes;
@@ -862,6 +1008,19 @@ const Game = {
     this.ground.receiveShadow = true;
     this.ground.castShadow = true;
     this.scene.add(this.ground);
+    this.terrainMesh = this.ground;
+    // Flat continuation past map edge (immersion)
+    if (this.outerGround) { this.scene.remove(this.outerGround); this.outerGround = null; }
+    const pl = PLANETS[this.selectedPlanet] || PLANETS[0];
+    const og = new THREE.Mesh(
+      new THREE.CircleGeometry((this.mapSize || 240) * 1.35, 48),
+      new THREE.MeshStandardMaterial({ color: pl.ground || 0x1a2a1c, roughness: 1 })
+    );
+    og.rotation.x = -Math.PI / 2;
+    og.position.y = -0.2;
+    og.receiveShadow = true;
+    this.scene.add(og);
+    this.outerGround = og;
   },
 
   init(wrapEl) {
@@ -931,40 +1090,42 @@ const Game = {
   },
 
   _scatterRocks() {
-    // Remove previous rocks
     if (this.rockMeshes) {
       for (const m of this.rockMeshes) this.scene.remove(m);
     }
     this.rockMeshes = [];
     this.rocks = [];
-    const rockMat = new THREE.MeshStandardMaterial({ color: 0x4a4a42, roughness: 0.92, flatShading: true });
-    for (let i = 0; i < 40; i++) {
-      const s = 0.45 + Math.random() * 1.35;
-      const a = Math.random() * Math.PI * 2;
-      const d = 7 + Math.random() * 28;
-      const x = Math.cos(a) * d, z = Math.sin(a) * d;
-      if (Math.hypot(x, z) < 5.5 || Math.hypot(x - this.terminal.x, z - this.terminal.z) < 3.5) continue;
-      // Sample terrain at corners so rock sits on surface (no float)
-      const y = Math.min(
-        this.getHeight(x, z),
-        this.getHeight(x + s * 0.3, z),
-        this.getHeight(x - s * 0.3, z),
-        this.getHeight(x, z + s * 0.3),
-        this.getHeight(x, z - s * 0.3)
+    const pl = PLANETS[this.selectedPlanet] || PLANETS[0];
+    let rockColor = pl.rock != null ? pl.rock : 0x4a4a42;
+    if (pl.biome === 'forest') rockColor = 0xb0b0b0;
+    if (pl.biome === 'desert') rockColor = 0x8a5a32;
+    if (pl.biome === 'mushroom') rockColor = 0x888890;
+    if (pl.biome === 'ice') rockColor = 0x9aa8b4;
+    const rockMat = new THREE.MeshStandardMaterial({ color: rockColor, roughness: 0.92, flatShading: true });
+    const half = (this.mapSize || 240) / 2 - 4;
+    const count = 90;
+    for (let i = 0; i < count; i++) {
+      const s = 0.4 + Math.random() * 1.5;
+      const x = (Math.random() * 2 - 1) * half;
+      const z = (Math.random() * 2 - 1) * half;
+      // Keep drop / extract LZ clearer
+      if (Math.hypot(x, z) < 6) continue;
+      if (this.extractZone && Math.hypot(x - this.extractZone.x, z - this.extractZone.z) < 5) continue;
+      const y = this.getHeight(x, z);
+      const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(s * 0.55, 0),
+        rockMat
       );
-      const h = s * 0.55;
-      const rock = new THREE.Mesh(new THREE.BoxGeometry(s, h, s * (0.7 + Math.random() * 0.4)), rockMat);
-      // Bottom of box at terrain
-      rock.position.set(x, y + h * 0.5 - 0.05, z);
-      rock.rotation.y = Math.random() * Math.PI;
-      rock.rotation.x = (Math.random() - 0.5) * 0.15;
-      rock.rotation.z = (Math.random() - 0.5) * 0.15;
-      rock.castShadow = true; rock.receiveShadow = true;
+      rock.position.set(x, y + s * 0.25, z);
+      rock.rotation.set(Math.random(), Math.random(), Math.random());
+      rock.castShadow = true;
+      rock.receiveShadow = true;
       this.scene.add(rock);
       this.rockMeshes.push(rock);
       this.rocks.push({ x, z, r: s * 0.5 });
     }
   },
+
 
   _onResize() {
     if (!this.wrap || !this.renderer) return;
@@ -1023,8 +1184,24 @@ const Game = {
       }
 
       // Ship interactions always available on destroyer
-      if (e.code === 'KeyE') {
-        if (this.state === 'ship') { this._shipInteract(); e.preventDefault(); }
+      if (this.diffMenuOpen && (e.code === 'KeyQ' || e.code === 'KeyE')) {
+        e.preventDefault();
+        let maxUnlock = this._maxDiffUnlocked || 10;
+        let id = this.selectedDiffId || 1;
+        if (e.code === 'KeyQ') id = Math.max(1, id - 1);
+        else id = Math.min(maxUnlock, id + 1);
+        this.selectedDiffId = id;
+        if (this._diffSliderEl) this._diffSliderEl.value = String(id);
+        if (this._diffUpdateLabel) this._diffUpdateLabel();
+        AudioSys.ui();
+        return;
+      }
+      const kbIn = this._keybinds || (typeof getKeybinds === 'function' ? getKeybinds() : {});
+      if (e.code === 'KeyE' || e.code === kbIn.interact) {
+        if (this.dropMenuOpen) {
+          e.preventDefault();
+          this._toggleDropReady();
+        } else if (this.state === 'ship') { this._shipInteract(); e.preventDefault(); }
         else if (this.state === 'playing' || this.state === 'extract') {
           if (this.extractShipPhase === 'landed') this._boardExtractShip();
           else if (this.nearPickup) this._pickupNearby();
@@ -1056,7 +1233,7 @@ const Game = {
           }
         }
 
-        if (e.code === 'KeyG' && !e.repeat) {
+        if ((e.code === 'KeyG' || e.code === (this._keybinds || {}).grenade) && !e.repeat) {
           this.grenadePrimed = true;
           this.grenadePrimeTime = 0;
         }
@@ -1064,7 +1241,7 @@ const Game = {
           const p = this.players.get(this.localId);
           if (p && p.alive && p.reloadTimer <= 0 && p.ammo < p.maxAmmo) p.reloadTimer = 1.3;
         }
-        if (e.code === 'KeyV') this._useStim();
+        if ((e.code === 'KeyV' || e.code === (this._keybinds || {}).stim)) this._useStim();
         if (e.code === 'Digit5') this._useBackpack();
         if (e.code === 'KeyF') this._melee();
         if (e.code === 'KeyB') this._salute();
@@ -1085,9 +1262,12 @@ const Game = {
           p.usingSupport = false;
         }
         if (p && e.code === 'Digit3') {
-          p.weaponSlot = 'support';
-          p.usingSupport = true;
-          p.recoilIndex = 0; p.recoilYaw = 0; p.recoilPitch = 0;
+          // Only select support if a support weapon is equipped
+          if (this.loadoutSupport && this.loadoutSupport !== 'none') {
+            p.weaponSlot = 'support';
+            p.usingSupport = true;
+            p.recoilIndex = 0; p.recoilYaw = 0; p.recoilPitch = 0;
+          }
         }
       }
 
@@ -1111,12 +1291,12 @@ const Game = {
         }
       }
 
-      if (e.code === 'KeyG' && this.grenadePrimed) {
+      if ((e.code === 'KeyG' || e.code === (this._keybinds || {}).grenade) && this.grenadePrimed) {
         this.grenadePrimed = false;
         if (this.state === 'playing' || this.state === 'extract') this._throwGrenade();
       }
       // Throw primed stratagem with G if no grenade was held
-      if (e.code === 'KeyG' && this.primedStratagem && (this.state === 'playing' || this.state === 'extract')) {
+      if ((e.code === 'KeyG' || e.code === (this._keybinds || {}).grenade) && this.primedStratagem && (this.state === 'playing' || this.state === 'extract')) {
         this._throwPrimedStratagem();
       }
     });
@@ -1145,14 +1325,28 @@ const Game = {
     document.addEventListener('mousemove', (e) => {
       if (!this.mouse.locked) return;
       if (this.state !== 'playing' && this.state !== 'extract' && this.state !== 'ship') return;
+    // Edge-of-map warning
+    if (this.state === 'playing' || this.state === 'extract') {
+      const lp = this.players.get(this.localId);
+      const ew = document.getElementById('edge-warn');
+      if (lp && ew) {
+        const half = (this.mapSize || 240) / 2;
+        const prox = Math.max(Math.abs(lp.x) / half, Math.abs(lp.z) / half);
+        ew.classList.toggle('show', prox > 0.88);
+      }
+    } else {
+      const ew = document.getElementById('edge-warn');
+      if (ew) ew.classList.remove('show');
+    }
+
       this.mouse.dx += e.movementX || 0;
       this.mouse.dy += e.movementY || 0;
     });
 
     document.addEventListener('mousedown', (e) => {
       if (this.state === 'playing' || this.state === 'extract' || this.state === 'ship' || this.state === 'hellpod') {
-        // Never force-lock while ship station menu is open (need free cursor)
-        if (this.shipMenuOpen) return;
+        // Never force-lock while ship/loadout menus need free cursor
+        if (this.shipMenuOpen || this.dropMenuOpen) return;
         if (this.state !== 'hellpod' && !this.mouse.locked) this._requestLock();
         if (e.button === 0) {
           this.keys['Mouse0'] = true;
@@ -1161,12 +1355,12 @@ const Game = {
             this.keys['Mouse0'] = false;
           }
         }
-        if (e.button === 2) { this.mouse.rmb = true; this.camDistTarget = 5.5; }
+        if (e.button === 2) { this.mouse.rmb = true; this.camDistTarget = 4.5; }
       }
     });
     document.addEventListener('mouseup', (e) => {
       if (e.button === 0) this.keys['Mouse0'] = false;
-      if (e.button === 2) { this.mouse.rmb = false; this.camDistTarget = 14; }
+      if (e.button === 2) { this.mouse.rmb = false; this.camDistTarget = 11; }
     });
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('wheel', (e) => {
@@ -1184,7 +1378,7 @@ const Game = {
     // Click canvas to lock
     if (this.wrap) {
       this.wrap.addEventListener('click', () => {
-        if (this.shipMenuOpen) return;
+        if (this.shipMenuOpen || this.dropMenuOpen) return;
         if (this.state === 'playing' || this.state === 'extract' || this.state === 'ship') this._requestLock();
       });
     }
@@ -1196,14 +1390,62 @@ const Game = {
   },
 
   startShip(name) {
+    this._keybinds = getKeybinds();
+    this._moveScheme = getMoveScheme();
     this.resetWorld();
     this.isHost = true;
     this.localId = 'local';
+    // Hard-clear mission / UI flags so ship is fully interactive
+    this.shipMenuOpen = false;
+    this.dropMenuOpen = false;
+    this.diffMenuOpen = false;
+    this._pauseReturnState = null;
+    this.extractCalled = false;
+    this.extractTimer = 0;
+    this.extractShipPhase = null;
+    this.extractShip = null;
+    this.primedStratagem = null;
+    this.terminal = { x: 9999, z: 9999, r: 0 };
+    this.nearTerminal = false;
+    this.nearPickup = null;
+    this.nearStation = null;
+    this.objectives = [];
+    this.enemies = [];
+    this.holes = [];
+    this.ctrlHeld = false;
+    this.stratBuffer = [];
+    this.keys = {};
+    this._setPlanetVisible && this._setPlanetVisible(false);
+    this._hidePlanetProps && this._hidePlanetProps();
     this._buildShip();
-    this._addPlayer('local', name, 0, 0, 0xffe800);
+    if (!this.shipStations || this.shipStations.length < 3) {
+      console.warn('HellBrowsers: shipStations missing, rebuilding');
+      this._buildShip();
+    }
+    this._addPlayer('local', name, 12, 7, 0xffe800);
     const p = this.players.get('local');
-    if (p) { p.y = 0; p.backpack = this.loadoutBackpack || 'supply'; }
+    if (p) {
+      p.x = 12; p.z = 7; p.y = -1.5;
+      p.alive = true;
+      p._hiddenInPod = false;
+      p.backpack = this.loadoutBackpack || 'supply';
+      this.camYaw = -Math.PI * 0.75;
+      this.camPitch = 0.35;
+    }
     this.state = 'ship';
+    // Strip any leftover extract / objective HUD
+    for (const id of ['extract-timer', 'edge-warn', 'interact-hint', 'objective', 'strat-cds', 'fs-warn']) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      if (id === 'objective') el.textContent = '';
+      else el.classList.remove('show');
+    }
+    const pm = document.getElementById('pause-menu');
+    if (pm) pm.classList.remove('show');
+    const me = document.getElementById('mission-end');
+    if (me) me.classList.remove('show');
+    const sm = document.getElementById('ship-menu');
+    if (sm) sm.classList.remove('show');
     this._onResize();
     this._requestLock();
     setTimeout(() => this._requestLock(), 100);
@@ -1218,11 +1460,25 @@ const Game = {
 
   _hidePlanetProps() {
     if (this.ground) this.ground.visible = false;
+    if (this.terrainMesh) this.terrainMesh.visible = false;
+    if (this.outerGround) this.outerGround.visible = false;
     if (this.extractMesh) this.extractMesh.visible = false;
     if (this.terminalMesh) this.terminalMesh.visible = false;
-    if (this.rockMeshes) for (const m of this.rockMeshes) m.visible = false;
-    if (this.trees) for (const tr of this.trees) { if (tr.mesh) tr.mesh.visible = false; }
-    if (this.bilePods) for (const b of this.bilePods) { if (b.mesh) b.mesh.visible = false; }
+    // Remove any lingering enemies from the destroyer
+    if (this.enemies) {
+      for (const e of this.enemies) {
+        const m = this.meshes.enemies.get(e.id);
+        if (m) this.scene.remove(m);
+      }
+      this.enemies = [];
+      if (this.meshes.enemies) this.meshes.enemies.clear();
+    }
+    if (this.rockMeshes) for (const m of this.rockMeshes) { m.visible = false; this.scene.remove(m); }
+    this.rockMeshes = []; this.rocks = [];
+    if (this.trees) for (const tr of this.trees) { if (tr.mesh) { tr.mesh.visible = false; this.scene.remove(tr.mesh); } }
+    this.trees = [];
+    if (this.bilePods) for (const b of this.bilePods) { if (b.mesh) { b.mesh.visible = false; this.scene.remove(b.mesh); } }
+    this.bilePods = [];
     if (this.samplesFound) for (const s of this.samplesFound) { if (s.mesh) s.mesh.visible = false; }
     if (this.droppedSampleBags) for (const b of this.droppedSampleBags) { if (b.mesh) this.scene.remove(b.mesh); }
     this.droppedSampleBags = [];
@@ -1270,59 +1526,109 @@ const Game = {
     }
     if (this.shipRoot) this.scene.remove(this.shipRoot);
     this.shipRoot = new THREE.Group();
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(32, 0.4, 20), new THREE.MeshStandardMaterial({ color: 0x2a2e35, metalness: 0.4, roughness: 0.6 }));
-    floor.position.y = -0.2; floor.receiveShadow = true; this.shipRoot.add(floor);
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x2a2e35, metalness: 0.4, roughness: 0.6 });
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x1a1e24, metalness: 0.3, roughness: 0.7 });
-    const mkWall = (w, h, d, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat); m.position.set(x, y, z); this.shipRoot.add(m); };
+    const accentMat = new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.5, roughness: 0.5 });
+    // Main deck
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(32, 0.4, 20), floorMat);
+    floor.position.y = -0.2; floor.receiveShadow = true; this.shipRoot.add(floor);
+    // SE lowered bay (spawn area)
+    const bay = new THREE.Mesh(new THREE.BoxGeometry(10, 0.4, 8), floorMat);
+    bay.position.set(11, -1.7, 6); bay.receiveShadow = true; this.shipRoot.add(bay);
+    // Ramp: east low → west high (up toward main deck, looking west then north)
+    const ramp = new THREE.Mesh(new THREE.BoxGeometry(7, 0.35, 3.2), accentMat);
+    ramp.position.set(7.2, -0.85, 6);
+    ramp.rotation.z = -0.28; // rises toward -X (west)
+    this.shipRoot.add(ramp);
+    // Outer walls
+    const mkWall = (w, h, d, x, y, z) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+      m.position.set(x, y, z); this.shipRoot.add(m); return m;
+    };
     mkWall(32, 4, 0.4, 0, 2, -10); mkWall(32, 4, 0.4, 0, 2, 10);
     mkWall(0.4, 4, 20, -16, 2, 0); mkWall(0.4, 4, 20, 16, 2, 0);
+    // Ceiling lights
     for (let i = -4; i <= 4; i++) {
-      const light = new THREE.PointLight(0xffe800, 0.3, 11);
+      const light = new THREE.PointLight(0xffe800, 0.28, 11);
       light.position.set(i * 3.2, 3.5, 0); this.shipRoot.add(light);
     }
+    // Mission Ops — north side, blue (seen looking north from ramp top)
+    // Armory / backpack / support along west-east
+    // Stratagems + Character to the sides
+    // Four hellpods behind Mission Ops (further north)
     this.shipStations = [
-      { id: 'planet', x: -10, z: -6, label: 'PLANET SELECT', color: 0x44aa66 },
-      { id: 'mission', x: -5, z: -6, label: 'MISSION TYPE', color: 0x6688cc },
-      { id: 'difficulty', x: 0, z: -6, label: 'DIFFICULTY', color: 0xcc6644 },
-      { id: 'armory', x: -10, z: 5, label: 'ARMORY', color: 0x4466aa },
-      { id: 'backpack', x: -5, z: 5, label: 'BACKPACK', color: 0x3a5a28 },
-      { id: 'support', x: 0, z: 5, label: 'SUPPORT WEAPON', color: 0xaa4444 },
-      { id: 'deploy', x: 10, z: 0, label: 'HELLPOD', color: 0xffe800 }
+      { id: 'ops', x: 0, z: -7.2, label: 'MISSION OPS', color: 0x3388ff },
+      { id: 'armory', x: -10, z: 2, label: 'ARMORY', color: 0x4466aa },
+      { id: 'backpack', x: -5, z: 4.5, label: 'BACKPACK', color: 0x3a5a28 },
+      { id: 'support', x: 5, z: 4.5, label: 'SUPPORT WEAPON', color: 0xaa4444 },
+      { id: 'stratopedia', x: -10, z: -4, label: 'STRATAGEMS', color: 0x8866cc },
+      { id: 'character', x: 10, z: -4, label: 'CHARACTER', color: 0xccaa44 },
+      { id: 'drop0', x: -4.5, z: -9.0, label: 'HELLPOD 1', color: 0xffe800, dropPod: true },
+      { id: 'drop1', x: -1.5, z: -9.0, label: 'HELLPOD 2', color: 0xffe800, dropPod: true },
+      { id: 'drop2', x: 1.5, z: -9.0, label: 'HELLPOD 3', color: 0xffe800, dropPod: true },
+      { id: 'drop3', x: 4.5, z: -9.0, label: 'HELLPOD 4', color: 0xffe800, dropPod: true }
     ];
+    this.dropPodMeshes = {};
     for (const s of this.shipStations) {
       const st = new THREE.Group();
-      const base = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: 0x333840, metalness: 0.5 }));
-      base.position.y = 0.6; st.add(base);
-      const screen = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.7, 0.1), new THREE.MeshStandardMaterial({ color: s.color, emissive: s.color, emissiveIntensity: 0.4 }));
-      screen.position.set(0, 1.1, 0.55); st.add(screen);
-      const pl = new THREE.PointLight(s.color, 0.45, 5); pl.position.set(0, 1.5, 0.8); st.add(pl);
-      st.position.set(s.x, 0, s.z); this.shipRoot.add(st); s.mesh = st;
+      if (s.dropPod) {
+        // Hellpod capsule
+        const body = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.7, 0.85, 2.2, 8),
+          new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.55 })
+        );
+        body.position.y = 1.1; st.add(body);
+        const tip = new THREE.Mesh(
+          new THREE.ConeGeometry(0.7, 0.7, 8),
+          new THREE.MeshStandardMaterial({ color: 0x2a3038 })
+        );
+        tip.position.y = -0.15; st.add(tip);
+        const glow = new THREE.PointLight(0xffe800, 0.35, 4);
+        glow.position.y = 1.2; st.add(glow);
+        st.position.set(s.x, 0, s.z);
+        this.dropPodMeshes[s.id] = st;
+      } else {
+        const base = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: 0x333840, metalness: 0.5 }));
+        base.position.y = 0.6; st.add(base);
+        const screen = new THREE.Mesh(
+          new THREE.BoxGeometry(1.5, 0.7, 0.1),
+          new THREE.MeshStandardMaterial({ color: s.color, emissive: s.color, emissiveIntensity: 0.45 })
+        );
+        screen.position.set(0, 1.35, 0.55); st.add(screen);
+        const pl = new THREE.PointLight(s.color, 0.5, 5); pl.position.set(0, 1.5, 0.8); st.add(pl);
+        st.position.set(s.x, 0, s.z);
+      }
+      this.shipRoot.add(st); s.mesh = st;
     }
-    // Simple space stars backdrop
+    // Space stars
     const starGeo = new THREE.BufferGeometry();
     const starPos = [];
-    for (let i = 0; i < 400; i++) {
-      starPos.push((Math.random() - 0.5) * 200, (Math.random() - 0.5) * 100, (Math.random() - 0.5) * 200);
+    for (let i = 0; i < 350; i++) {
+      let x, y, z, d;
+      do {
+        x = (Math.random() - 0.5) * 400;
+        y = (Math.random() - 0.5) * 200;
+        z = (Math.random() - 0.5) * 400;
+        d = Math.sqrt(x * x + y * y + z * z);
+      } while (d < 80);
+      starPos.push(x, y, z);
     }
     starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
-    const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.35 }));
-    stars.name = 'spaceStars';
+    const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.25, sizeAttenuation: true }));
+    stars.name = 'stars';
     this.shipRoot.add(stars);
-
     this.scene.add(this.shipRoot);
-    this.getHeight = (x, z) => 0;
-    this.scene.background = new THREE.Color(0x02040a);
-    this.scene.fog = null;
-    // Wall + console colliders (AABB)
+    // Colliders: walls + terminals + pods
     this.shipColliders = [
-      // outer walls (inner faces)
       { minX: -16, maxX: 16, minZ: -10.4, maxZ: -9.6 },
       { minX: -16, maxX: 16, minZ: 9.6, maxZ: 10.4 },
       { minX: -16.4, maxX: -15.6, minZ: -10, maxZ: 10 },
-      { minX: 15.6, maxX: 16.4, minZ: -10, maxZ: 10 },
+      { minX: 15.6, maxX: 16.4, minZ: -10, maxZ: 10 }
     ];
     for (const s of this.shipStations) {
-      this.shipColliders.push({ minX: s.x - 1.2, maxX: s.x + 1.2, minZ: s.z - 0.8, maxZ: s.z + 0.8 });
+      const r = s.dropPod ? 0.9 : 1.15;
+      const d = s.dropPod ? 0.9 : 0.75;
+      this.shipColliders.push({ minX: s.x - r, maxX: s.x + r, minZ: s.z - d, maxZ: s.z + d });
     }
     this._shipStatus();
   },
@@ -1351,7 +1657,7 @@ const Game = {
     const el = document.getElementById('objective');
     if (!el) return;
     const pl = PLANETS[this.selectedPlanet];
-    const diff = DIFFICULTIES[this.selectedDiff];
+    const diff = this._currentDiff ? this._currentDiff() : (DIFFICULTIES[this.selectedDiff] || DIFFICULTIES[0]);
     const mis = MISSION_TYPES[this.selectedMission];
     const bp = BACKPACKS.find(b => b.id === this.loadoutBackpack) || BACKPACKS[0];
     const sw = SUPPORT_WEAPONS.find(s => s.id === this.loadoutSupport) || SUPPORT_WEAPONS[0];
@@ -1363,22 +1669,36 @@ const Game = {
   _shipInteract() {
     const p = this.players.get(this.localId);
     if (!p) return;
-    // Close open menu with E
-    if (this.shipMenuOpen) {
-      this._closeShipMenu();
-      return;
-    }
-    let nearest = null, best = 5.5;
-    for (const s of this.shipStations) {
+    if (this.state !== 'ship') return;
+    // Ignore E only when a menu is actually visible
+    const sm = document.getElementById('ship-menu');
+    const dm = document.getElementById('strat-loadout-menu');
+    if ((sm && sm.classList.contains('show')) || (dm && dm.classList.contains('show'))) return;
+    this.shipMenuOpen = false;
+    this.dropMenuOpen = false;
+    this.diffMenuOpen = false;
+    let nearest = null, best = 3.2;
+    for (const s of this.shipStations || []) {
       const d = Math.hypot(p.x - s.x, p.z - s.z);
       if (d < best) { best = d; nearest = s; }
     }
     if (!nearest) {
-      best = 9;
-      for (const s of this.shipStations) {
+      best = 4.5;
+      for (const s of this.shipStations || []) {
         const d = Math.hypot(p.x - s.x, p.z - s.z);
         if (d < best) { best = d; nearest = s; }
       }
+    }
+    if (nearest && nearest.dropPod) {
+      // Enter hellpod: open loadout, hide diver on ship
+      this._pendingDropName = p.name || 'Diver';
+      this._inDropPod = true;
+      this._dropPodStationId = nearest.id;
+      p._hiddenInPod = true;
+      const mesh = this.meshes.players.get(p.id);
+      if (mesh) mesh.visible = false;
+      this._openStratLoadoutMenu();
+      return;
     }
     if (!nearest) {
       const obj = document.getElementById('objective');
@@ -1408,38 +1728,134 @@ const Game = {
       b.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); fn(); AudioSys.ui(); };
       body.appendChild(b);
     };
-    if (station.id === 'planet') {
-      PLANETS.forEach((pl, i) => addBtn((i === this.selectedPlanet ? '✓ ' : '') + pl.name, () => {
-        this.selectedPlanet = i; this._shipStatus(); this._openShipMenu(station);
-      }));
-    } else if (station.id === 'mission') {
-      MISSION_TYPES.forEach((m, i) => addBtn((i === this.selectedMission ? '✓ ' : '') + m.name, () => {
-        this.selectedMission = i; this._shipStatus(); this._openShipMenu(station);
-      }));
-    } else if (station.id === 'difficulty') {
+    if (station.id === 'ops') {
+      this.diffMenuOpen = true;
+      let maxUnlock = 10;
+      try { maxUnlock = Math.max(10, Storage.load().maxDifficultyUnlocked || 10); } catch (e) {}
+      this._maxDiffUnlocked = maxUnlock;
+      if (this.selectedDiffId == null) {
+        const d0 = DIFFICULTIES[this.selectedDiff] || DIFFICULTIES[0];
+        this.selectedDiffId = d0.id;
+      }
+      // Layout: planet LEFT | mission RIGHT, difficulty BELOW
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0;text-align:left';
+      const left = document.createElement('div');
+      const right = document.createElement('div');
+      const head = (txt) => {
+        const h = document.createElement('div');
+        h.style.cssText = 'color:var(--accent);font-size:0.72rem;margin:0 0 6px;letter-spacing:0.08em';
+        h.textContent = txt;
+        return h;
+      };
+      left.appendChild(head('PLANET'));
+      right.appendChild(head('MISSION TYPE'));
+      PLANETS.forEach((pl, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn small full';
+        b.style.marginBottom = '4px';
+        b.textContent = (i === this.selectedPlanet ? '✓ ' : '') + pl.name;
+        b.onclick = () => {
+          this.selectedPlanet = i; this._invalidateDropMapCache(); this._shipStatus(); this._openShipMenu(station);
+        };
+        left.appendChild(b);
+      });
+      MISSION_TYPES.forEach((m, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn small full';
+        b.style.marginBottom = '4px';
+        b.textContent = (i === this.selectedMission ? '✓ ' : '') + m.name;
+        b.onclick = () => {
+          this.selectedMission = i; this._invalidateDropMapCache(); this._shipStatus(); this._openShipMenu(station);
+        };
+        right.appendChild(b);
+      });
+      grid.appendChild(left);
+      grid.appendChild(right);
+      body.appendChild(grid);
+      // Difficulty full width under both
+      const diffHead = document.createElement('div');
+      diffHead.style.cssText = 'color:var(--accent);font-size:0.72rem;margin:10px 0 4px;letter-spacing:0.08em;text-align:left';
+      diffHead.textContent = 'DIFFICULTY (Q − / E +)';
+      body.appendChild(diffHead);
       const wrap = document.createElement('div');
-      wrap.style.cssText = 'margin:8px 0;text-align:left';
+      wrap.style.cssText = 'margin:4px 0 8px;text-align:left';
       const label = document.createElement('div');
       label.id = 'diff-slider-label';
       label.style.cssText = 'color:var(--accent);margin-bottom:6px;font-size:0.85rem';
-      const d0 = DIFFICULTIES[this.selectedDiff] || DIFFICULTIES[0];
-      label.textContent = d0.id + ' — ' + d0.name;
-      const sl = document.createElement('input');
-      sl.type = 'range'; sl.min = '1'; sl.max = '10'; sl.step = '1';
-      sl.value = String((DIFFICULTIES[this.selectedDiff] || DIFFICULTIES[0]).id);
-      sl.style.width = '100%';
-      sl.oninput = () => {
-        const id = parseInt(sl.value, 10);
-        const idx = DIFFICULTIES.findIndex(d => d.id === id);
-        this.selectedDiff = idx >= 0 ? idx : 0;
-        const d = DIFFICULTIES[this.selectedDiff];
+      const updateLabel = () => {
+        const d = difficultyForId(this.selectedDiffId);
         label.textContent = d.id + ' — ' + d.name;
+        this.selectedDiff = Math.min(9, Math.max(0, d.id - 1));
         this._shipStatus();
       };
+      updateLabel();
+      const sl = document.createElement('input');
+      sl.type = 'range'; sl.min = '1'; sl.max = String(maxUnlock); sl.step = '1';
+      sl.value = String(this.selectedDiffId);
+      sl.style.width = '100%';
+      sl.oninput = () => { this.selectedDiffId = parseInt(sl.value, 10); updateLabel(); };
+      this._diffSliderEl = sl;
+      this._diffUpdateLabel = updateLabel;
       wrap.appendChild(label);
       wrap.appendChild(sl);
       body.appendChild(wrap);
-      addBtn('DONE', () => this._closeShipMenu());
+      addBtn('DONE', () => { this.diffMenuOpen = false; this._closeShipMenu(); });
+    } else if (station.id === 'stratopedia') {
+      const unlocked = (Storage.load().unlockedStratagems) || Stratagems.list.map(s => s.name);
+      const arrow = { up: '↑', down: '↓', left: '←', right: '→' };
+      Stratagems.list.forEach(s => {
+        const isOn = unlocked.includes(s.name);
+        const code = (s.code || []).map(d => arrow[d] || d).join('');
+        addBtn((isOn ? '✓ ' : '🔒 ') + s.name + '  ' + code, () => {
+          // Future: spend samples/credits to unlock
+          const st = document.getElementById('ship-menu-title');
+          if (st) st.textContent = s.name + (isOn ? ' — UNLOCKED' : ' — LOCKED (future unlock)');
+        });
+      });
+      addBtn('CLOSE', () => this._closeShipMenu());
+    } else if (station.id === 'character') {
+      const d = Storage.load();
+      const stats = d.stats || {};
+      const info = document.createElement('div');
+      info.style.cssText = 'text-align:left;font-size:0.78rem;color:var(--muted);line-height:1.5;margin:8px 0';
+      info.innerHTML =
+        '<div style="color:var(--accent)">HELLDIVER PROFILE</div>' +
+        '<div>Callsign: ' + (d.username || 'Recruit') + '</div>' +
+        '<div>Credits: ' + (d.credits || 0) + '</div>' +
+        '<div>Missions: ' + (stats.missions || 0) + ' · Kills: ' + (stats.kills || 0) + '</div>' +
+        '<div style="margin-top:8px;color:var(--text)">Classes / levelling — coming soon</div>';
+      body.appendChild(info);
+      const colors = [0xffe800, 0x33aaff, 0xff66aa, 0x66ff99, 0xff9944, 0xcc66ff, 0x66ffff, 0xff6666];
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin:8px 0';
+      colors.forEach(c => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn small';
+        b.style.cssText = 'width:28px;height:28px;padding:0;background:#' + c.toString(16).padStart(6,'0');
+        b.onclick = () => {
+          Storage.update({ playerColor: c });
+          const p = this.players.get(this.localId);
+          if (p) {
+            p.color = c;
+            const mesh = this.meshes.players.get(p.id);
+            if (mesh) {
+              mesh.traverse(ch => {
+                if (ch.isMesh && ch.material && ch.material.color && ch.name !== 'visor') {
+                  try { ch.material.color.setHex(c); } catch (e) {}
+                }
+              });
+            }
+          }
+          AudioSys.ui();
+        };
+        row.appendChild(b);
+      });
+      body.appendChild(row);
+      addBtn('CLOSE', () => this._closeShipMenu());
     } else if (station.id === 'armory') {
       addBtn('— PRIMARY —', () => {});
       PRIMARY_IDS.forEach(id => addBtn((this.loadoutPrimary === id ? '✓ ' : '') + Weapons[id].name, () => {
@@ -1464,11 +1880,13 @@ const Game = {
       SUPPORT_WEAPONS.forEach(sw => addBtn((this.loadoutSupport === sw.id ? '✓ ' : '') + sw.name, () => {
         this.loadoutSupport = sw.id; this._shipStatus(); this._openShipMenu(station);
       }));
-    } else if (station.id === 'deploy') {
-      addBtn('OPEN LOADOUT & DROP', () => {
+    } else if (station.dropPod || (station.id && station.id.startsWith('drop'))) {
+      addBtn('ENTER HELLPOD', () => {
         this._closeShipMenu();
         const p = this.players.get(this.localId);
         this._pendingDropName = p ? p.name : 'Diver';
+        this._inDropPod = true;
+        if (p) { const mesh = this.meshes.players.get(p.id); if (mesh) mesh.visible = false; }
         this._openStratLoadoutMenu();
       });
     }
@@ -1477,20 +1895,21 @@ const Game = {
 
   _closeShipMenu() {
     this.shipMenuOpen = false;
+    this.diffMenuOpen = false;
     const menu = document.getElementById('ship-menu');
     if (menu) menu.classList.remove('show');
     if (this.state === 'ship') this._requestLock();
   },
 
   _handleMenuToggle() {
-    // Shared by ESC and Tab — close nested UI first, then pause/unpause
+    // ESC / Tab: close open UI first; otherwise toggle pause only (never opens terminals)
     const fsWarn = document.getElementById('fs-warn');
     const stratMenu = document.getElementById('strat-loadout-menu');
     const shipMenu = document.getElementById('ship-menu');
     const options = document.getElementById('options');
+    const pm = document.getElementById('pause-menu');
     if (fsWarn && fsWarn.classList.contains('show')) {
       fsWarn.classList.remove('show');
-      this.shipMenuOpen = false;
       return;
     }
     if (stratMenu && stratMenu.classList.contains('show')) {
@@ -1502,39 +1921,50 @@ const Game = {
       return;
     }
     if (options && options.classList.contains('active')) {
-      // leave options via existing back if possible
       const back = document.getElementById('btn-options-back');
       if (back) back.click();
       return;
     }
-    if (this.state === 'playing' || this.state === 'extract') {
+    // Already paused → resume to exact prior state (ship stays ship)
+    if (this.state === 'paused' || (pm && pm.classList.contains('show'))) {
+      if (pm) pm.classList.remove('show');
+      const ret = this._pauseReturnState || 'ship';
+      this._pauseReturnState = null;
+      // Never jump into extract/playing while we were on the destroyer
+      if (ret === 'ship' || ret === 'hellpod') {
+        this.state = ret === 'hellpod' ? 'ship' : 'ship';
+        this.extractCalled = false;
+        const et = document.getElementById('extract-timer');
+        if (et) et.classList.remove('show');
+        const obj = document.getElementById('objective');
+        if (obj) obj.textContent = '';
+      } else if (ret === 'extract' && this.extractCalled) {
+        this.state = 'extract';
+      } else if (ret === 'playing' || ret === 'extract') {
+        this.state = this.extractCalled ? 'extract' : 'playing';
+      } else {
+        this.state = ret;
+      }
+      if (this.state === 'playing' || this.state === 'extract' || this.state === 'ship') this._requestLock();
+      return;
+    }
+    // Open pause only
+    if (this.state === 'playing' || this.state === 'extract' || this.state === 'ship' || this.state === 'hellpod') {
+      this._pauseReturnState = this.state === 'hellpod' ? 'ship' : this.state;
       this.state = 'paused';
       this._exitLock();
       this.ctrlHeld = false;
       this.stratBuffer = [];
       this.grenadePrimed = false;
-      const pm = document.getElementById('pause-menu');
+      // Keep shipMenuOpen false so terminals stay usable after resume
       if (pm) pm.classList.add('show');
-    } else if (this.state === 'paused') {
-      const pm = document.getElementById('pause-menu');
-      if (pm) pm.classList.remove('show');
-      if (this.extractCalled) this.state = 'extract';
-      else this.state = 'playing';
-      this._requestLock();
-    } else if (this.state === 'ship') {
-      // Open nearest station menu or unlock cursor for menu use
-      this._exitLock();
-      this.shipMenuOpen = false;
-      // Prefer opening hellpod loadout if near deploy, else nearest station
-      const p = this.players.get(this.localId);
-      if (p) {
-        let nearest = null, best = 6;
-        for (const s of (this.shipStations || [])) {
-          const d = Math.hypot(p.x - s.x, p.z - s.z);
-          if (d < best) { best = d; nearest = s; }
-        }
-        if (nearest) this._openShipMenu(nearest);
-        else this.shipMenuOpen = true; // free cursor
+      const mp = document.getElementById('pause-mp-actions');
+      if (mp) mp.style.display = (this._pauseReturnState === 'ship') ? 'block' : 'none';
+      const leaveBtn = document.getElementById('btn-leave');
+      if (leaveBtn) {
+        leaveBtn.textContent = (this._pauseReturnState === 'ship')
+          ? 'RETURN TO MAIN MENU'
+          : 'LEAVE MISSION';
       }
     }
   },
@@ -1544,41 +1974,125 @@ const Game = {
   },
 
   _getProvidedStratagems() {
-    // Always provided
-    const list = ['Resupply', 'Reinforce'];
-    const pl = PLANETS[this.selectedPlanet] || PLANETS[0];
-    const mis = MISSION_TYPES[this.selectedMission] || MISSION_TYPES[0];
-    // Planet-specific
-    if (pl.id === 'malevelon' || pl.biome === 'forest') list.push('Eagle Strafing');
-    if (pl.id === 'angel' || pl.biome === 'ash') list.push('Orbital Barrage');
-    if (pl.id === 'tien' || pl.biome === 'ice') list.push('Orbital Laser');
-    if (pl.id === 'fori' || pl.biome === 'desert') list.push('Orbital Strike');
-    // Mission-specific
-    if (mis.id === 'holes' || mis.id === 'fabs') list.push('Orbital Strike');
-    if (mis.id === 'icbm' || mis.id === 'upload') list.push('Eagle Strafing');
-    return [...new Set(list)];
+    // Only Resupply and Reinforce are universally provided
+    return ['Resupply', 'Reinforce'];
+  },
+
+  _stratagemBeaconColor(name) {
+    const n = (name || '').toLowerCase();
+    // Blue: turrets + support/logistics — Red: orbital & eagle strikes
+    if (n.includes('turret') || n.includes('resupply') || n.includes('reinforce') ||
+        n.includes('guard') || n.includes('supply') || n.includes('support'))
+      return 0x3388ff;
+    if (n.includes('orbital') || n.includes('eagle'))
+      return 0xff2211;
+    return 0xff3322;
+  },
+
+
+  _currentDiff() {
+    const id = this.selectedDiffId != null ? this.selectedDiffId : ((DIFFICULTIES[this.selectedDiff] || DIFFICULTIES[0]).id);
+    return difficultyForId(id);
   },
 
   _maxStratSlots() {
-    const d = DIFFICULTIES[this.selectedDiff] || DIFFICULTIES[0];
+    const d = this._currentDiff();
     return (d.id < 4) ? 5 : 4;
+  },
+
+  _invalidateDropMapCache() {
+    this._dropMapCache = null;
+    this._dropMapCacheKey = null;
+  },
+
+  _ensureDropMapCache() {
+    const pl = PLANETS[this.selectedPlanet] || PLANETS[0];
+    const mis = MISSION_TYPES[this.selectedMission] || MISSION_TYPES[0];
+    const key = (pl.id || pl.name) + '|' + (mis.id || mis.name) + '|' + (this.mapSize || 240);
+    if (this._dropMapCache && this._dropMapCacheKey === key) return;
+    // Deterministic height-style preview from planet + mission seed
+    const W = 220, H = 220;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const ground = pl.ground || 0x1a2a1c;
+    const gr = (ground >> 16) & 255, gg = (ground >> 8) & 255, gb = ground & 255;
+    // Seeded noise
+    let seed = 0;
+    const sstr = key;
+    for (let i = 0; i < sstr.length; i++) seed = (seed * 31 + sstr.charCodeAt(i)) >>> 0;
+    const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    const img = ctx.createImageData(W, H);
+    const res = 48;
+    const heights = new Float32Array(res * res);
+    for (let iz = 0; iz < res; iz++) {
+      for (let ix = 0; ix < res; ix++) {
+        let h = 0, amp = 1, freq = 1;
+        for (let o = 0; o < 4; o++) {
+          const fx = ix * freq * 0.15 + rand() * 0.01;
+          const fz = iz * freq * 0.15;
+          h += Math.sin(fx * 1.7 + fz * 0.9) * Math.cos(fz * 1.3 - fx * 0.5) * amp;
+          amp *= 0.5; freq *= 2;
+        }
+        heights[iz * res + ix] = h;
+      }
+    }
+    // Re-seed for consistent secondary detail
+    seed = 0;
+    for (let i = 0; i < sstr.length; i++) seed = (seed * 31 + sstr.charCodeAt(i)) >>> 0;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const u = (x / W) * (res - 1);
+        const v = (y / H) * (res - 1);
+        const x0 = u | 0, z0 = v | 0;
+        const x1 = Math.min(res - 1, x0 + 1), z1 = Math.min(res - 1, z0 + 1);
+        const tx = u - x0, tz = v - z0;
+        const h00 = heights[z0 * res + x0], h10 = heights[z0 * res + x1];
+        const h01 = heights[z1 * res + x0], h11 = heights[z1 * res + x1];
+        const h = h00 * (1 - tx) * (1 - tz) + h10 * tx * (1 - tz) + h01 * (1 - tx) * tz + h11 * tx * tz;
+        const shade = 0.55 + h * 0.2;
+        const i = (y * W + x) * 4;
+        img.data[i] = Math.max(0, Math.min(255, gr * shade));
+        img.data[i + 1] = Math.max(0, Math.min(255, gg * shade));
+        img.data[i + 2] = Math.max(0, Math.min(255, gb * shade));
+        img.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    // Foliage / feature dots (deterministic)
+    for (let i = 0; i < 60; i++) {
+      const px = rand() * W, py = rand() * H;
+      ctx.fillStyle = pl.biome === 'ice' ? 'rgba(180,200,220,0.25)' :
+        pl.biome === 'desert' ? 'rgba(120,100,60,0.2)' :
+        pl.biome === 'ash' ? 'rgba(40,20,15,0.3)' : 'rgba(20,50,25,0.35)';
+      ctx.beginPath();
+      ctx.arc(px, py, 1.5 + rand() * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    this._dropMapCache = ctx.getImageData(0, 0, W, H);
+    this._dropMapCacheKey = key;
   },
 
   _openStratLoadoutMenu() {
     this._exitLock();
     this.shipMenuOpen = true;
+    this.dropMenuOpen = true;
+    this.dropReady = false;
+    // Keep unlocking — pointer lock can re-grab on click otherwise
+    const unlockLoop = () => {
+      if (!this.dropMenuOpen) return;
+      this._exitLock();
+      this.shipMenuOpen = true;
+      setTimeout(unlockLoop, 200);
+    };
+    setTimeout(unlockLoop, 50);
     const provided = this._getProvidedStratagems();
-    const maxSlots = this._maxStratSlots();
-    if (!this.stratagemLoadout || !this.stratagemLoadout.length) {
-      this.stratagemLoadout = provided.slice(0, maxSlots);
-    }
-    // Trim if difficulty raised
+    const maxSlots = this._maxStratSlots(); // elective slots only (provided do NOT count)
+    // Separate elective loadout from provided
+    if (!this.stratagemLoadout) this.stratagemLoadout = [];
+    // Remove provided from elective list for counting; always re-merge later
+    this.stratagemLoadout = this.stratagemLoadout.filter(n => !provided.includes(n));
     while (this.stratagemLoadout.length > maxSlots) this.stratagemLoadout.pop();
-    for (const p of provided) {
-      if (!this.stratagemLoadout.includes(p) && this.stratagemLoadout.length < maxSlots) {
-        this.stratagemLoadout.push(p);
-      }
-    }
     // Default drop location
     if (this.dropPickX == null) {
       this.dropPickX = 0;
@@ -1591,12 +2105,12 @@ const Game = {
       this._confirmHellpodDrop(this._pendingDropName || 'Diver');
       return;
     }
-    // Map preview canvas
+    // Map preview — static terrain baked once per planet/mission selection
     let prev = document.getElementById('drop-map-preview');
     if (!prev) {
       const holder = document.createElement('div');
       holder.style.cssText = 'margin:8px 0;';
-      holder.innerHTML = '<div style="color:var(--muted);font-size:0.7rem;margin-bottom:4px">Click map to set drop point</div>';
+      holder.innerHTML = '<div style="color:var(--muted);font-size:0.7rem;margin-bottom:4px">Click map to set drop point (static preview)</div>';
       prev = document.createElement('canvas');
       prev.id = 'drop-map-preview';
       prev.width = 220; prev.height = 220;
@@ -1604,26 +2118,45 @@ const Game = {
       holder.appendChild(prev);
       menu.insertBefore(holder, list);
     }
+    this._ensureDropMapCache();
     const drawPreview = () => {
       const ctx = prev.getContext('2d');
       const W = prev.width, H = prev.height;
-      const pl = PLANETS[this.selectedPlanet] || PLANETS[0];
-      ctx.fillStyle = '#' + (pl.ground || 0x1a2a1c).toString(16).padStart(6, '0');
-      ctx.fillRect(0, 0, W, H);
-      // Simple terrain-ish noise
-      for (let i = 0; i < 80; i++) {
-        ctx.fillStyle = 'rgba(0,0,0,' + (0.08 + Math.random() * 0.12) + ')';
-        ctx.beginPath();
-        ctx.arc(Math.random() * W, Math.random() * H, 4 + Math.random() * 14, 0, Math.PI * 2);
-        ctx.fill();
+      // Blit cached static map (does not regenerate)
+      if (this._dropMapCache) {
+        ctx.putImageData(this._dropMapCache, 0, 0);
+      } else {
+        ctx.fillStyle = '#1a2a1c';
+        ctx.fillRect(0, 0, W, H);
       }
-      // Extract zone marker
-      const scale = W / 160;
+      const scale = W / (this.mapSize || 240);
+      const wx = (x) => W / 2 + x * scale;
+      const wz = (z) => H / 2 + z * scale;
+      // Objectives (same colors as in-mission minimap)
+      const complete = this._objectivesComplete && this._objectivesComplete();
+      for (const o of this.objectives || []) {
+        if (o.x == null && o.z == null) continue;
+        const done = (o.have || 0) >= (o.need || 1);
+        ctx.fillStyle = o.side ? '#88ddff' : (done ? '#666666' : '#ff8800');
+        ctx.beginPath(); ctx.arc(wx(o.x), wz(o.z), 4, 0, 7); ctx.fill();
+      }
+      if (this.terminal) {
+        ctx.fillStyle = complete ? '#ff8800' : '#666666';
+        ctx.beginPath(); ctx.arc(wx(this.terminal.x), wz(this.terminal.z), 4.5, 0, 7); ctx.fill();
+      }
+      // Teammates
+      for (const pl of this.players.values()) {
+        if (pl._hiddenInPod) continue;
+        const col = '#' + (pl.color != null ? pl.color : 0xffe800).toString(16).padStart(6, '0');
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(wx(pl.x || 0), wz(pl.z || 0), 3.5, 0, 7); ctx.fill();
+      }
+      // Extract LZ ring
       const ex = W / 2, ez = H / 2;
       ctx.strokeStyle = '#ffe800'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(ex, ez, 10, 0, Math.PI * 2); ctx.stroke();
       ctx.fillStyle = '#ffe800'; ctx.font = '9px monospace'; ctx.fillText('LZ', ex + 12, ez);
-      // Drop pick
+      // Drop marker only
       const dx = W / 2 + (this.dropPickX || 0) * scale;
       const dz = H / 2 + (this.dropPickZ || 0) * scale;
       ctx.fillStyle = '#3af';
@@ -1635,56 +2168,120 @@ const Game = {
       const rect = prev.getBoundingClientRect();
       const mx = (ev.clientX - rect.left) / rect.width * prev.width;
       const mz = (ev.clientY - rect.top) / rect.height * prev.height;
-      const scale = prev.width / 160;
+      const scale = prev.width / (this.mapSize || 240);
       this.dropPickX = (mx - prev.width / 2) / scale;
       this.dropPickZ = (mz - prev.height / 2) / scale;
-      // Clamp to map
-      const half = 70;
+      const half = (this.mapSize || 240) / 2 - 10;
       this.dropPickX = Math.max(-half, Math.min(half, this.dropPickX));
       this.dropPickZ = Math.max(-half, Math.min(half, this.dropPickZ));
-      drawPreview();
+      drawPreview(); // only re-blits cache + markers
     };
     drawPreview();
 
     const arrow = { up: '↑', down: '↓', left: '←', right: '→' };
+    const updateReadyUI = () => {
+      const st = document.getElementById('strat-ready-status');
+      if (st) {
+        st.innerHTML = this.dropReady
+          ? '<span style="color:var(--accent)">READY</span> — waiting for squad (or Force Drop if solo)'
+          : 'Press <b>E</b> to toggle READY';
+      }
+      const btn = document.getElementById('strat-loadout-ready');
+      if (btn) btn.classList.toggle('ready', !!this.dropReady);
+    };
     const render = () => {
       const maxS = this._maxStratSlots();
-      slots.textContent = 'Selected: ' + (this.stratagemLoadout.join(', ') || 'none') + ' (' + this.stratagemLoadout.length + '/' + maxS + ')'
-        + (maxS >= 5 ? ' · +1 slot (diff < 4)' : '');
+      const elective = this.stratagemLoadout.filter(n => !provided.includes(n));
+      slots.textContent = 'Elective: ' + (elective.join(', ') || 'none') + ' (' + elective.length + '/' + maxS + ')'
+        + ' · Provided: ' + provided.join(', ')
+        + (maxS >= 5 ? ' · +1 elective (diff < 4)' : '');
       list.innerHTML = '';
+      // Provided always shown selected (not counting toward limit)
       for (const s of Stratagems.list) {
         const isProv = provided.includes(s.name);
-        const isSel = this.stratagemLoadout.includes(s.name);
+        const isSel = isProv || this.stratagemLoadout.includes(s.name);
         const row = document.createElement('div');
         row.className = 'strat-pick' + (isSel ? ' selected' : '') + (isProv ? ' provided' : '');
         const code = (s.code || []).map(d => arrow[d] || d).join('');
         row.innerHTML = '<span>' + (isProv ? '★ ' : '') + s.name + '</span><span class="code">' + code + '</span>';
         row.onclick = () => {
-          if (isSel) {
-            if (isProv) return;
+          if (isProv) return; // provided always on
+          if (this.stratagemLoadout.includes(s.name)) {
             this.stratagemLoadout = this.stratagemLoadout.filter(n => n !== s.name);
           } else {
-            if (this.stratagemLoadout.length >= maxS) {
-              const idx = [...this.stratagemLoadout].reverse().findIndex(n => !provided.includes(n));
-              if (idx >= 0) {
-                const real = this.stratagemLoadout.length - 1 - idx;
-                this.stratagemLoadout[real] = s.name;
-              } else return;
-            } else this.stratagemLoadout.push(s.name);
+            const elect = this.stratagemLoadout.filter(n => !provided.includes(n));
+            if (elect.length >= maxS) {
+              // replace oldest elective
+              const firstElect = elect[0];
+              this.stratagemLoadout = this.stratagemLoadout.filter(n => n !== firstElect);
+            }
+            this.stratagemLoadout.push(s.name);
           }
+          this.dropReady = false;
+          updateReadyUI();
           render();
         };
         list.appendChild(row);
       }
+      updateReadyUI();
     };
+    this._renderStratLoadout = render;
+    this._updateDropReadyUI = updateReadyUI;
     render();
     menu.classList.add('show');
+  },
+
+  _toggleDropReady() {
+    if (!this.dropMenuOpen) return;
+    this.dropReady = !this.dropReady;
+    const btn = document.getElementById('strat-loadout-ready');
+    if (btn) btn.classList.toggle('ready', !!this.dropReady);
+    if (this._updateDropReadyUI) this._updateDropReadyUI();
+    AudioSys.ui();
+    // Solo: ready alone is enough to drop
+    if (this.dropReady && this.players.size <= 1) {
+      this._confirmHellpodDrop(this._pendingDropName || 'Diver');
+      return;
+    }
+    // Multi: if all ready, drop everyone
+    if (this.dropReady) this._checkAllDropReady();
+  },
+
+  _checkAllDropReady() {
+    // Local-only multiplayer readiness for now (host triggers when all peers signal ready)
+    // Host/solo: if only local ready and no peers, already handled; with peers require all
+    const peers = (typeof Network !== 'undefined' && Network.peers) ? Network.peers.size : 0;
+    if (peers === 0) {
+      if (this.dropReady) this._confirmHellpodDrop(this._pendingDropName || 'Diver');
+      return;
+    }
+    // Broadcast ready state (backend)
+    if (typeof Network !== 'undefined' && Network.broadcast) {
+      try { Network.broadcast({ type: 'drop_ready', ready: this.dropReady, id: this.localId }); } catch (e) {}
+    }
+    // Host collects — for minimal build, host drops when local is ready and peers connected
+    if (this.isHost && this.dropReady) {
+      // Wait briefly; full peer ready sync can expand later
+      this._confirmHellpodDrop(this._pendingDropName || 'Diver');
+    }
   },
 
   _closeStratLoadoutMenu() {
     const menu = document.getElementById('strat-loadout-menu');
     if (menu) menu.classList.remove('show');
+    this.dropMenuOpen = false;
+    this.dropReady = false;
     this.shipMenuOpen = false;
+    // Leaving drop pod without dropping — reappear on ship
+    if (this._inDropPod && this.state === 'ship') {
+      this._inDropPod = false;
+      const p = this.players.get(this.localId);
+      if (p) {
+        p._hiddenInPod = false;
+        const mesh = this.meshes.players.get(p.id);
+        if (mesh) mesh.visible = true;
+      }
+    }
   },
 
   _confirmHellpodDrop(name) {
@@ -1710,13 +2307,10 @@ const Game = {
     const provided = this._getProvidedStratagems ? this._getProvidedStratagems() : ['Resupply', 'Reinforce'];
     if (!this.stratagemLoadout) this.stratagemLoadout = [];
     const maxSlots = this._maxStratSlots ? this._maxStratSlots() : 4;
-    while (this.stratagemLoadout.length > maxSlots) this.stratagemLoadout.pop();
-    for (const p of provided) {
-      if (!this.stratagemLoadout.includes(p)) {
-        if (this.stratagemLoadout.length < maxSlots) this.stratagemLoadout.push(p);
-        else this.stratagemLoadout[this.stratagemLoadout.length - 1] = p;
-      }
-    }
+    // Elective only limited; provided always appended
+    let elective = this.stratagemLoadout.filter(n => !provided.includes(n));
+    while (elective.length > maxSlots) elective.pop();
+    this.stratagemLoadout = [...provided, ...elective.filter(n => !provided.includes(n))];
     const fw = document.getElementById('fs-warn'); if (fw) fw.classList.remove('show');
     const sm = document.getElementById('strat-loadout-menu'); if (sm) sm.classList.remove('show');
     this.shipMenuOpen = false;
@@ -1764,8 +2358,10 @@ const Game = {
     this.scene.add(pod);
     this.hellpodMesh = pod;
     this.hellpodT = 0;
+    this._keybinds = getKeybinds();
+    this._moveScheme = getMoveScheme();
     this.state = 'hellpod'; // AFTER reset so state sticks
-    this.reinforceBudget = this.reinforceBudgetEnabled ? (5 + this.selectedDiff) : 99;
+    this.reinforceBudget = this.reinforceBudgetEnabled ? (5 + (this._currentDiff().id || 1)) : 99;
     this.hellpodPos = {
       x: this.dropPickX != null ? this.dropPickX : 0,
       z: this.dropPickZ != null ? this.dropPickZ : 2
@@ -1833,7 +2429,9 @@ const Game = {
     const mt = MISSION_TYPES[this.selectedMission];
     if (mt.id === 'holes') {
       this._placeHolesAndAmmo();
-      this.objectives.push({ type: 'holes', need: this.holes.length, have: 0 });
+      let hx = 0, hz = 0, n = 0;
+      for (const h of this.holes) { hx += h.x; hz += h.z; n++; }
+      this.objectives.push({ type: 'holes', need: this.holes.length, have: 0, x: n ? hx/n : 0, z: n ? hz/n : 0 });
     } else if (mt.id === 'icbm') {
       this._placeHolesAndAmmo();
       this.objectives.push({ type: 'icbm', need: 1, have: 0, x: 12, z: 8 });
@@ -1877,7 +2475,7 @@ const Game = {
   },
 
   _placePatrolsAndSamples() {
-    const diff = DIFFICULTIES[this.selectedDiff] || DIFFICULTIES[1];
+    const diff = this._currentDiff();
     this.patrols = [];
     for (let i = 0; i < diff.patrols; i++) {
       const a = Math.random() * Math.PI * 2;
@@ -1889,8 +2487,8 @@ const Game = {
     this.sampleCommon = 0;
     this.sampleRare = 0;
     this.droppedSampleBags = [];
-    const nCommon = 6 + this.selectedDiff;
-    const nRare = 1 + Math.floor(this.selectedDiff / 2);
+    const nCommon = 6 + (this._currentDiff().id || 1);
+    const nRare = 1 + Math.floor((this._currentDiff().id || 1) / 2);
     for (let i = 0; i < nCommon; i++) {
       const a = Math.random() * Math.PI * 2;
       const d = 5 + Math.random() * 25;
@@ -1916,21 +2514,34 @@ const Game = {
   },
 
   _placeTurrets() {
-    this.turrets = [];
-    for (let i = 0; i < 3; i++) {
-      const a = (i / 3) * Math.PI * 2 + 0.4;
-      const d = 10 + Math.random() * 8;
-      const x = Math.cos(a) * d, z = Math.sin(a) * d;
-      const y = this.getHeight(x, z);
-      const mesh = new THREE.Group();
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.5 }));
-      base.position.y = 0.25; mesh.add(base);
-      const gun = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.7), new THREE.MeshStandardMaterial({ color: 0x555560 }));
-      gun.position.set(0, 0.7, 0.2); gun.name = 'gun'; mesh.add(gun);
-      mesh.position.set(x, y, z);
-      this.scene.add(mesh);
-      this.turrets.push({ x, z, mesh, hp: 80, alive: true, fireCd: 0, heat: 0 });
-    }
+    // Turrets are called in via stratagems — none pre-placed
+    if (!this.turrets) this.turrets = [];
+  },
+
+  _spawnStratagemTurret(x, z, type) {
+    if (!this.turrets) this.turrets = [];
+    const y = this.getHeight(x, z);
+    const mesh = new THREE.Group();
+    const isLaser = type === 'laser';
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.45, 0.55, 0.55, 8),
+      new THREE.MeshStandardMaterial({ color: isLaser ? 0x2a3540 : 0x3a4048, metalness: 0.55 })
+    );
+    base.position.y = 0.28; mesh.add(base);
+    const gun = new THREE.Mesh(
+      new THREE.BoxGeometry(isLaser ? 0.18 : 0.25, 0.2, isLaser ? 0.9 : 0.75),
+      new THREE.MeshStandardMaterial({ color: isLaser ? 0x4488aa : 0x555560 })
+    );
+    gun.position.set(0, 0.75, 0.25); gun.name = 'gun'; mesh.add(gun);
+    mesh.position.set(x, y, z);
+    this.scene.add(mesh);
+    // Drop pod flash
+    this._explosion(x, z, 2, 0);
+    this.turrets.push({
+      x, z, mesh, hp: isLaser ? 100 : 90, alive: true, fireCd: 0.4, heat: 0,
+      type: isLaser ? 'laser' : 'gatling'
+    });
+    AudioSys.extract();
   },
 
   _updateTurrets(dt) {
@@ -1946,17 +2557,21 @@ const Game = {
         if (d < best) { best = d; target = e; }
       }
       if (target && turr.fireCd <= 0 && (turr.heat || 0) < 90) {
-        turr.fireCd = 0.28;
-        turr.heat = (turr.heat || 0) + 12;
+        const isLaser = turr.type === 'laser';
+        turr.fireCd = isLaser ? 0.35 : 0.12;
+        turr.heat = (turr.heat || 0) + (isLaser ? 10 : 6);
         const gy = this.getHeight(turr.x, turr.z) + 0.8;
         const pr = {
           x: turr.x, y: gy, z: turr.z,
-          vx: (target.x - turr.x) * 4, vz: (target.z - turr.z) * 4, vy: 0.2,
-          life: 0.8, damage: 14, owner: 'turret'
+          vx: (target.x - turr.x) * (isLaser ? 5 : 4.5),
+          vz: (target.z - turr.z) * (isLaser ? 5 : 4.5),
+          vy: 0.15,
+          life: isLaser ? 0.9 : 0.55,
+          damage: isLaser ? 18 : 10,
+          owner: 'turret'
         };
-        this._addProjectile(pr, 0x88ffaa, 0.09);
-        const gun = turr.mesh.getObjectByName('gun');
-        if (gun) turr.mesh.lookAt(target.x, gy, target.z);
+        this._addProjectile(pr, isLaser ? 0x44aaff : 0xffaa44, isLaser ? 0.1 : 0.08);
+        if (turr.mesh) turr.mesh.lookAt(target.x, gy, target.z);
       }
     }
   },
@@ -2035,21 +2650,49 @@ const Game = {
   },
 
   _placeHolesAndAmmo() {
-    // Bug holes
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2 + 0.4;
-      const d = 14 + (i % 2) * 6;
-      this._addHole(Math.cos(a) * d, Math.sin(a) * d);
+    // Bug nests: clustered holes on darkened ground patches
+    if (this.nestMeshes) {
+      for (const m of this.nestMeshes) this.scene.remove(m);
     }
-    // Ammo packs scattered
-    for (let i = 0; i < 8; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const d = 6 + Math.random() * 22;
-      this._addAmmoDrop(Math.cos(a) * d, Math.sin(a) * d);
+    this.nestMeshes = [];
+    const half = (this.mapSize || 240) / 2 - 12;
+    const nestCount = 3;
+    for (let n = 0; n < nestCount; n++) {
+      const nx = (Math.random() * 2 - 1) * half * 0.75;
+      const nz = (Math.random() * 2 - 1) * half * 0.75;
+      if (Math.hypot(nx, nz) < 12) { n--; continue; }
+      const ny = this.getHeight(nx, nz);
+      // Dark nest ground
+      const patch = new THREE.Mesh(
+        new THREE.CircleGeometry(6.5, 20),
+        new THREE.MeshStandardMaterial({ color: 0x0a0806, roughness: 1, side: THREE.DoubleSide })
+      );
+      patch.rotation.x = -Math.PI / 2;
+      patch.position.set(nx, ny + 0.04, nz);
+      this.scene.add(patch);
+      this.nestMeshes.push(patch);
+      // 3–5 holes per nest
+      const holesInNest = 3 + (Math.random() * 3) | 0;
+      for (let h = 0; h < holesInNest; h++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = 1.2 + Math.random() * 4.2;
+        this._addHole(nx + Math.cos(a) * d, nz + Math.sin(a) * d);
+      }
+    }
+    // Ammo packs across map
+    for (let i = 0; i < 14; i++) {
+      const x = (Math.random() * 2 - 1) * half;
+      const z = (Math.random() * 2 - 1) * half;
+      if (Math.hypot(x, z) < 5) continue;
+      this._addAmmoDrop(x, z);
     }
   },
 
   _addPlayer(id, name, x, z, color) {
+    try {
+      const stored = Storage.load().playerColor;
+      if (id === this.localId && stored != null) color = stored;
+    } catch (e) {}
     const p = {
       id, name, x, y: this.getHeight(x, z), z, vx: 0, vz: 0, angle: 0,
       hp: 100, maxHp: 100, ammo: 30, maxAmmo: 30, grenades: 3,
@@ -2128,12 +2771,76 @@ const Game = {
     this.packs = []; this.holes = []; this.ammoDrops = []; this.effects = [];
     this.extractTimer = 0; this.missionTime = 0; this.kills = 0;
     this.extractCalled = false; this.stratBuffer = []; this.activeStratagems = {};
+    this.primedStratagem = null; this.objectives = []; this.samples = [];
+    this.sampleCommon = 0; this.sampleRare = 0;
     if (this.extractShip && this.extractShip.mesh) this.scene.remove(this.extractShip.mesh);
     this.extractShip = null; this.extractShipPhase = null; this.nearPickup = null;
     this.grenadePrimed = false; this.ctrlHeld = false; this.keys = {};
-    this.camYaw = 0; this.camPitch = 0.55; this.camDist = 14; this.camDistTarget = 14;
+    this.camYaw = 0; this.camPitch = 0.55; this.camDist = 11; this.camDistTarget = 11;
     this.state = 'menu';
-    if (this.extractMesh) this.extractMesh.material.color.set(0x33aaff);
+    // Clear mission props left on planet
+    if (this.trees) {
+      for (const tr of this.trees) { if (tr.mesh) this.scene.remove(tr.mesh); }
+      this.trees = [];
+    }
+    if (this.bilePods) {
+      for (const b of this.bilePods) { if (b.mesh) this.scene.remove(b.mesh); }
+      this.bilePods = [];
+    }
+    if (this.nestMeshes) {
+      for (const m of this.nestMeshes) this.scene.remove(m);
+      this.nestMeshes = [];
+    }
+    if (this.rockMeshes) {
+      for (const m of this.rockMeshes) this.scene.remove(m);
+      this.rockMeshes = [];
+    }
+    this.rocks = [];
+    if (this.turrets) {
+      for (const tu of this.turrets) { if (tu.mesh) this.scene.remove(tu.mesh); }
+      this.turrets = [];
+    }
+    if (this.stratagemBeacons) {
+      for (const b of this.stratagemBeacons) { if (b.mesh) this.scene.remove(b.mesh); }
+      this.stratagemBeacons = [];
+    }
+    if (this.activeLasers) {
+      for (const L of this.activeLasers) {
+        if (L.mesh) this.scene.remove(L.mesh);
+        if (L.core) this.scene.remove(L.core);
+        if (L.light) this.scene.remove(L.light);
+        if (L.ring) this.scene.remove(L.ring);
+      }
+      this.activeLasers = [];
+    }
+    if (this.objMarkers) {
+      for (const m of this.objMarkers) this.scene.remove(m);
+      this.objMarkers = [];
+    }
+    if (this.guardDog && this.guardDog.mesh) this.scene.remove(this.guardDog.mesh);
+    this.guardDog = null;
+    // Hide planet surfaces while on ship
+    if (this.terrainMesh) this.terrainMesh.visible = false;
+    if (this.extractMesh) {
+      this.extractMesh.visible = false;
+      this.extractMesh.material.color.set(0x33aaff);
+    }
+    if (this.terminalMesh) this.terminalMesh.visible = false;
+    // Clear extract UI leftovers
+    const et = document.getElementById('extract-timer');
+    if (et) et.classList.remove('show');
+    const obj = document.getElementById('objective');
+    if (obj) obj.textContent = '';
+    const ih = document.getElementById('interact-hint');
+    if (ih) ih.classList.remove('show');
+  },
+
+  _setPlanetVisible(vis) {
+    if (this.terrainMesh) this.terrainMesh.visible = !!vis;
+    if (this.ground) this.ground.visible = !!vis;
+    if (this.outerGround) this.outerGround.visible = !!vis;
+    if (this.extractMesh) this.extractMesh.visible = !!vis;
+    if (this.terminalMesh) this.terminalMesh.visible = !!vis;
   },
 
   _resolveRocks(x, z, rad, prevX, prevZ) {
@@ -2174,47 +2881,92 @@ const Game = {
     const ang = Math.random() * Math.PI * 2;
     const x = hole.x + Math.cos(ang) * 1.5;
     const z = hole.z + Math.sin(ang) * 1.5;
-    const type = Math.random() < 0.12 ? 'charger' : 'bug';
+    const roll = Math.random();
+    // Rare bile titan, uncommon charger, common bug
+    const type = roll < 0.04 ? 'titan' : (roll < 0.16 ? 'charger' : 'bug');
+    const mult = ((difficultyForId(this.selectedDiffId || (this.selectedDiff|0)+1)||{}).enemyMult || 1);
+    const stats = {
+      bug:    { hp: 35, speed: 1.9 + Math.random() * 0.6, armor: 0, damage: 8, radius: 0.4, color: 0xc4a574 },
+      charger:{ hp: 120, speed: 2.6, armor: 40, damage: 18, radius: 0.85, color: 0x3a3a40 },
+      titan:  { hp: 520, speed: 1.35, armor: 70, damage: 32, radius: 1.6, color: 0x2a4028 }
+    }[type];
     const e = {
       id: 'e' + Math.random().toString(36).slice(2, 8),
       x, z, type,
-      hp: type === 'charger' ? 120 : 35, maxHp: type === 'charger' ? 120 : 35,
-      speed: (type === 'charger' ? 2.6 : 1.9 + Math.random() * 0.6) * ((DIFFICULTIES[this.selectedDiff]||{}).enemyMult || 1),
-      armor: type === 'charger' ? 40 : 0, stagger: 0,
-      damage: type === 'charger' ? 18 : 8,
-      radius: type === 'charger' ? 0.85 : 0.4,
-      attackCd: 0, alive: true, aggro: false
+      hp: stats.hp, maxHp: stats.hp,
+      speed: stats.speed * mult,
+      armor: stats.armor, stagger: 0,
+      damage: stats.damage,
+      radius: stats.radius,
+      attackCd: 0, alive: true, aggro: false,
+      vx: 0, vz: 0
     };
     this.enemies.push(e);
-    const color = type === 'charger' ? 0x3a3a40 : 0xc4a574;
-    const geo = type === 'charger' ? new THREE.BoxGeometry(1.1, 0.95, 1.5) : new THREE.SphereGeometry(0.4, 10, 8);
     const y = this.getHeight(x, z);
-    const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color, roughness: 0.7 }));
-    mesh.position.set(x, y + (type === 'charger' ? 0.48 : 0.4), z);
-    mesh.castShadow = true;
+    let mesh;
+    if (type === 'titan') {
+      mesh = new THREE.Group();
+      const body = new THREE.Mesh(
+        new THREE.SphereGeometry(1.1, 10, 8),
+        new THREE.MeshStandardMaterial({ color: 0x2a4028, roughness: 0.85 })
+      );
+      body.position.y = 2.2; mesh.add(body);
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.55, 8, 6),
+        new THREE.MeshStandardMaterial({ color: 0x3a5530 })
+      );
+      head.position.set(0, 3.1, 0.45); mesh.add(head);
+      // Cylinder legs
+      const legMat = new THREE.MeshStandardMaterial({ color: 0x1a2818, roughness: 0.9 });
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 2.2, 6), legMat);
+        leg.position.set(Math.cos(a) * 0.85, 1.1, Math.sin(a) * 0.85);
+        leg.rotation.z = Math.cos(a) * 0.25;
+        leg.rotation.x = Math.sin(a) * 0.25;
+        mesh.add(leg);
+      }
+      mesh.position.set(x, y, z);
+    } else if (type === 'charger') {
+      mesh = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.95, 1.5), new THREE.MeshStandardMaterial({ color: stats.color, roughness: 0.7 }));
+      mesh.position.set(x, y + 0.5, z);
+    } else {
+      mesh = new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 8), new THREE.MeshStandardMaterial({ color: stats.color, roughness: 0.7 }));
+      mesh.position.set(x, y + 0.4, z);
+    }
     this.scene.add(mesh);
     this.meshes.enemies.set(e.id, mesh);
+  },
+
+  _throwAimVelocity() {
+    // Character aim: camYaw + camPitch → world velocity for throwable arc
+    const yaw = this.camYaw;
+    const pitch = this.camPitch; // -1.2 look up … +1.2 look down
+    // Convert to throw elevation: looking up = positive vy
+    const elev = -pitch * 0.85; // radians-ish scale
+    const speed = 14 + Math.max(0, elev) * 6; // look up throws farther/harder
+    const horiz = Math.cos(elev);
+    return {
+      vx: Math.sin(yaw) * speed * horiz,
+      vz: Math.cos(yaw) * speed * horiz,
+      vy: Math.sin(elev) * speed * 0.95 + 4.5
+    };
   },
 
   _throwGrenade() {
     const p = this.players.get(this.localId);
     if (!p || !p.alive || p.grenades <= 0) return;
     p.grenades--;
-    // Pitch: higher camPitch = looking more down in our scheme (0.2 up-ish → 1.25 down)
-    // Map to throw distance: look up = far, look down = short
-    const pitchT = (this.camPitch - 0.2) / (1.25 - 0.2); // 0 look-up … 1 look-down
-    const dist = 4 + (1 - pitchT) * 16; // ~4m to ~20m
-    const tx = p.x + Math.sin(p.angle) * dist;
-    const tz = p.z + Math.cos(p.angle) * dist;
+    const y0 = (p.y || this.getHeight(p.x, p.z)) + 1.05;
+    const vel = this._throwAimVelocity();
     const g = {
-      x: p.x, z: p.z, tx, tz,
-      fuse: 0.9 + pitchT * 0.4,
-      exploded: false,
-      arc: 1.2 + (1 - pitchT) * 2.2
+      x: p.x, y: y0, z: p.z,
+      vx: vel.vx, vy: vel.vy, vz: vel.vz,
+      fuse: 1.35, exploded: false, grounded: false
     };
     this.grenades.push(g);
     const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), new THREE.MeshStandardMaterial({ color: 0x335533, metalness: 0.4 }));
-    mesh.position.set(p.x, (p.y || this.getHeight(p.x, p.z)) + 0.5, p.z);
+    mesh.position.set(p.x, y0, p.z);
     this.scene.add(mesh);
     this.meshes.grenades.push(mesh);
     AudioSys.grenade();
@@ -2353,16 +3105,25 @@ const Game = {
     }
   },
 
+  _objectivesComplete() {
+    if (!this.objectives || !this.objectives.length) return true;
+    for (const o of this.objectives) {
+      if ((o.have || 0) < (o.need || 1)) return false;
+    }
+    return true;
+  },
+
   _tryTerminal() {
     const p = this.players.get(this.localId);
     if (!p || !p.alive) return;
     const d = Math.hypot(p.x - this.terminal.x, p.z - this.terminal.z);
     if (d > this.terminal.r) return;
     if (this.extractCalled) return;
-    // Require holes cleared or at least some progress
-    const holesAlive = this.holes.filter(h => h.alive).length;
-    if (holesAlive > 2) {
-      // allow but warn via objective — still callable for accessibility
+    if (!this._objectivesComplete()) {
+      const obj = document.getElementById('objective');
+      if (obj) obj.textContent = 'COMPLETE THE MISSION OBJECTIVE BEFORE EXTRACT';
+      AudioSys.ui();
+      return;
     }
     this.extractCalled = true;
     this.state = 'extract';
@@ -2380,31 +3141,24 @@ const Game = {
     AudioSys.stratagemReady();
     const p = this.players.get(this.localId);
     if (!p) return;
-    // Aim like grenade: pitch controls distance
-    const pitchNorm = (this.camPitch + 1.2) / 2.4; // 0 look up … 1 look down (after we expand pitch)
-    const dist = 5 + (1 - Math.max(0, Math.min(1, (this.camPitch + 0.2) / 1.6))) * 18;
-    const aimPitch = this.camPitch; // used for arc
-    const tx = p.x + Math.sin(this.camYaw) * dist;
-    const tz = p.z + Math.cos(this.camYaw) * dist;
-    const color = (s.name === 'Resupply' || s.name === 'Reinforce') ? 0x3388ff : 0xff3322;
+    const y0 = (p.y || this.getHeight(p.x, p.z)) + 1.05;
+    const vel = this._throwAimVelocity();
+    const color = this._stratagemBeaconColor(s.name);
     const beacon = {
-      x: p.x, z: p.z, tx, tz, t: 0, landT: 0.5, wait: 1.0, done: false,
+      x: p.x, y: y0, z: p.z,
+      vx: vel.vx, vy: vel.vy, vz: vel.vz,
+      grounded: false, landed: false,
+      wait: 1.15, done: false,
       kind: s.name, color
     };
-    this.stratagemBeacons.push(beacon);
+    // Ballistic ball only while in flight — call-in light after impact
     const g = new THREE.Group();
-    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.5, 6), new THREE.MeshStandardMaterial({ color: 0x333333 }));
-    rod.position.y = 0.25; g.add(rod);
-    const light = new THREE.PointLight(color, 1.2, 10);
-    light.position.y = 0.6; g.add(light);
-    const beam = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.15, 0.4, 8, 8, 1, true),
-      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.25, side: THREE.DoubleSide })
-    );
-    beam.position.y = 4; beam.name = 'beam'; g.add(beam);
-    g.position.set(p.x, this.getHeight(p.x, p.z), p.z);
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.45, 6), new THREE.MeshStandardMaterial({ color: 0x444448, metalness: 0.5 }));
+    g.add(rod);
+    g.position.set(p.x, y0, p.z);
     this.scene.add(g);
     beacon.mesh = g;
+    this.stratagemBeacons.push(beacon);
     this._applyPlayerAnim(p, 'throw');
   },
 
@@ -2412,30 +3166,45 @@ const Game = {
   _updateBeacons(dt) {
     for (let i = this.stratagemBeacons.length - 1; i >= 0; i--) {
       const b = this.stratagemBeacons[i];
-      b.t += dt;
-      if (b.t < b.landT) {
-        const u = b.t / b.landT;
-        b.x = b.x + (b.tx - b.x) * 0.2;
-        b.z = b.z + (b.tz - b.z) * 0.2;
-        // snap toward target
-        b.x = b.tx * u + (b.x) * (1 - u) * 0.5 + b.x * 0.5; // simplify
-        b.x = b.tx * u + (this.players.get(this.localId)?.x || 0) * (1 - u);
-        b.z = b.tz * u + (this.players.get(this.localId)?.z || 0) * (1 - u);
+      if (!b.grounded) {
+        b.vy = (b.vy || 0) - 18 * dt;
+        b.x += (b.vx || 0) * dt;
+        b.y = (b.y || 1) + (b.vy || 0) * dt;
+        b.z += (b.vz || 0) * dt;
+        const gy = this.getHeight(b.x, b.z);
+        if (b.mesh) b.mesh.position.set(b.x, b.y, b.z);
+        if (b.y <= gy + 0.15) {
+          b.y = gy + 0.05;
+          b.grounded = true;
+          b.landed = true;
+          b.tx = b.x; b.tz = b.z;
+          // Call-in light only after the throwable hits the ground
+          if (b.mesh) {
+            // clear flight mesh children extras
+            while (b.mesh.children.length) b.mesh.remove(b.mesh.children[0]);
+            const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.55, 6), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+            rod.position.y = 0.28; b.mesh.add(rod);
+            const light = new THREE.PointLight(b.color, 1.5, 14);
+            light.position.y = 0.7; light.name = 'callLight'; b.mesh.add(light);
+            const beam = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.18, 0.45, 10, 8, 1, true),
+              new THREE.MeshBasicMaterial({ color: b.color, transparent: true, opacity: 0.35, side: THREE.DoubleSide })
+            );
+            beam.position.y = 5; beam.name = 'beam'; b.mesh.add(beam);
+            b.mesh.position.set(b.x, gy, b.z);
+          }
+        }
+      } else {
         if (b.mesh) {
           const y = this.getHeight(b.x, b.z);
           b.mesh.position.set(b.x, y, b.z);
           const beam = b.mesh.getObjectByName('beam');
-          if (beam) beam.material.opacity = 0.15 + u * 0.2;
+          if (beam) beam.material.opacity = 0.25 + Math.sin(performance.now() * 0.01) * 0.1;
         }
-      } else {
-        if (b.mesh) {
-          const y = this.getHeight(b.tx, b.tz);
-          b.mesh.position.set(b.tx, y, b.tz);
-        }
-        b.wait -= dt;
+        b.wait = (b.wait || 1) - dt;
         if (b.wait <= 0 && !b.done) {
           b.done = true;
-          this._resolveStratagem(b.kind, b.tx, b.tz);
+          this._resolveStratagem(b.kind, b.x, b.z);
           if (b.mesh) this.scene.remove(b.mesh);
           this.stratagemBeacons.splice(i, 1);
         }
@@ -2468,16 +3237,20 @@ const Game = {
       }
     } else if (kind === 'Orbital Barrage') {
       const self = this;
-      for (let i = 0; i < 6; i++) {
-        const ax = x + (Math.random() - 0.5) * 12;
-        const az = z + (Math.random() - 0.5) * 12;
+      for (let i = 0; i < 8; i++) {
+        const ax = x + (Math.random() - 0.5) * 16;
+        const az = z + (Math.random() - 0.5) * 16;
         setTimeout(() => {
           if (self.state === 'playing' || self.state === 'extract' || self.state === 'paused')
-            self._explosion(ax, az, 4.2, 60);
-        }, 200 + i * 320);
+            self._explosion(ax, az, 7.5, 95);
+        }, 150 + i * 280);
       }
     } else if (kind === 'Orbital Laser') {
       this._startOrbitalLaser(x, z);
+    } else if (kind === 'Gatling Turret') {
+      this._spawnStratagemTurret(x, z, 'gatling');
+    } else if (kind === 'Laser Turret') {
+      this._spawnStratagemTurret(x, z, 'laser');
     } else if (kind === 'Reinforce') {
       if (p) {
         if (!p.alive) { p.alive = true; p.hp = p.maxHp * 0.7; p.invuln = 2.5; }
@@ -2578,17 +3351,49 @@ const Game = {
     }
   },
 
+  _addProjectile(pr, color, size) {
+    if (!pr || !this.scene) return;
+    if (!this.projectiles) this.projectiles = [];
+    if (!this.meshes) this.meshes = {};
+    if (!this.meshes.projectiles) this.meshes.projectiles = [];
+    this.projectiles.push(pr);
+    const col = color != null ? color : 0xffe8a0;
+    const sz = size != null ? size : 0.08;
+    const group = new THREE.Group();
+    const core = new THREE.Mesh(
+      new THREE.SphereGeometry(sz, 6, 4),
+      new THREE.MeshBasicMaterial({ color: col })
+    );
+    group.add(core);
+    // Light streak trail
+    const len = Math.max(0.5, sz * 10);
+    const streak = new THREE.Mesh(
+      new THREE.CylinderGeometry(sz * 0.35, sz * 0.12, len, 4),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85 })
+    );
+    streak.rotation.x = Math.PI / 2;
+    streak.position.z = -len * 0.45;
+    group.add(streak);
+    try {
+      const glow = new THREE.PointLight(col, 0.55, 3.5);
+      group.add(glow);
+    } catch (e) {}
+    group.position.set(pr.x, pr.y || 1, pr.z);
+    if (pr.vx !== undefined) {
+      group.lookAt(pr.x + pr.vx, (pr.y || 1) + (pr.vy || 0), pr.z + (pr.vz || 0));
+    }
+    this.scene.add(group);
+    this.meshes.projectiles.push(group);
+    pr.mesh = group;
+  },
+
   _spawnBullet(p, a, speed, dmg, heavy) {
     const pr = {
       x: p.x + Math.sin(a) * 0.7, z: p.z + Math.cos(a) * 0.7,
       vx: Math.sin(a) * speed, vz: Math.cos(a) * speed,
       y: (p.y || 0) + 0.9, life: 1.1, damage: dmg, owner: p.id, heavy: !!heavy
     };
-    this.projectiles.push(pr);
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(heavy ? 0.1 : 0.07, 6, 4), new THREE.MeshBasicMaterial({ color: heavy ? 0xffaa66 : 0xffe8a0 }));
-    mesh.position.set(pr.x, pr.y, pr.z);
-    this.scene.add(mesh);
-    this.meshes.projectiles.push(mesh);
+    this._addProjectile(pr, heavy ? 0xffaa66 : 0xffe8a0, heavy ? 0.12 : 0.08);
   },
 
 
@@ -2614,26 +3419,35 @@ const Game = {
 
   _startOrbitalLaser(x, z) {
     if (!this.activeLasers) this.activeLasers = [];
-    const gy = this.getHeight(x, z) || 0;
-    const laser = { x, z, life: 5.5, dmgCd: 0 };
+    const gy = (typeof this.getHeight === 'function' ? this.getHeight(x, z) : 0) || 0;
+    const laser = { x, z, life: 6.5, dmgCd: 0 };
+    // Tall beam from sky to ground
     const beam = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.35, 0.9, 24, 10),
-      new THREE.MeshBasicMaterial({ color: 0xff3311, transparent: true, opacity: 0.7 })
+      new THREE.CylinderGeometry(0.55, 1.2, 40, 12),
+      new THREE.MeshBasicMaterial({ color: 0xff2200, transparent: true, opacity: 0.85 })
     );
-    beam.position.set(x, gy + 12, z);
+    beam.position.set(x, gy + 20, z);
     this.scene.add(beam);
     laser.mesh = beam;
     const core = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.12, 0.2, 24, 6),
+      new THREE.CylinderGeometry(0.18, 0.28, 40, 8),
       new THREE.MeshBasicMaterial({ color: 0xffe8a0 })
     );
-    core.position.set(x, gy + 12, z);
+    core.position.set(x, gy + 20, z);
     this.scene.add(core);
     laser.core = core;
-    const light = new THREE.PointLight(0xff3300, 3.5, 28);
-    light.position.set(x, gy + 5, z);
+    const light = new THREE.PointLight(0xff3300, 5, 40);
+    light.position.set(x, gy + 6, z);
     this.scene.add(light);
     laser.light = light;
+    // Immediate first damage pulse
+    for (const e of this.enemies) {
+      if (!e.alive) continue;
+      if (Math.hypot(e.x - x, e.z - z) < 5) {
+        e.hp -= 40; e.aggro = true;
+        if (e.hp <= 0) { e.alive = false; this.kills++; }
+      }
+    }
     // Impact ring
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(0.5, 2.2, 24),
@@ -2653,14 +3467,39 @@ const Game = {
     for (let i = this.activeLasers.length - 1; i >= 0; i--) {
       const L = this.activeLasers[i];
       L.life -= dt;
+      // Heat-seek: drift toward nearest living enemy
+      let best = null, bestD = 55;
+      for (const e of this.enemies) {
+        if (!e.alive) continue;
+        const d = Math.hypot(e.x - L.x, e.z - L.z);
+        if (d < bestD) { bestD = d; best = e; }
+      }
+      if (best) {
+        const spd = 7.5 * dt; // chase speed
+        const dx = best.x - L.x, dz = best.z - L.z;
+        const d = Math.hypot(dx, dz) || 1;
+        L.x += (dx / d) * Math.min(spd, d);
+        L.z += (dz / d) * Math.min(spd, d);
+        const gy = (typeof this.getHeight === 'function' ? this.getHeight(L.x, L.z) : 0) || 0;
+        if (L.mesh) L.mesh.position.set(L.x, gy + 20, L.z);
+        if (L.core) L.core.position.set(L.x, gy + 20, L.z);
+        if (L.light) L.light.position.set(L.x, gy + 6, L.z);
+        if (L.ring) L.ring.position.set(L.x, gy + 0.15, L.z);
+      }
       L.dmgCd = (L.dmgCd || 0) - dt;
       if (L.dmgCd <= 0) {
         L.dmgCd = 0.18;
         for (const e of this.enemies) {
           if (!e.alive) continue;
-          if (Math.hypot(e.x - L.x, e.z - L.z) < 4.2) {
+          if (Math.hypot(e.x - L.x, e.z - L.z) < 4.5) {
             e.hp -= 28; e.aggro = true; e.stagger = 0.3;
             if (e.hp <= 0) { e.alive = false; this.kills++; this.killStreak = (this.killStreak||0)+1; AudioSys.enemyDie(); }
+          }
+        }
+        if (this.friendlyFire !== false) {
+          for (const p of this.players.values()) {
+            if (!p.alive) continue;
+            if (Math.hypot(p.x - L.x, p.z - L.z) < 3.8) this._damagePlayer(p, 12, true);
           }
         }
         if (this.fabricators) {
@@ -2714,41 +3553,93 @@ const Game = {
   },
 
   _addEnvProps() {
-    // Destroyable trees
+    const pl = PLANETS[this.selectedPlanet] || PLANETS[0];
+    const half = (this.mapSize || 240) / 2 - 5;
+    const randPos = () => {
+      let x, z, n = 0;
+      do {
+        x = (Math.random() * 2 - 1) * half;
+        z = (Math.random() * 2 - 1) * half;
+        n++;
+      } while (n < 12 && Math.hypot(x, z) < 6);
+      return { x, z };
+    };
     this.trees = [];
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3a2a18 });
-    const leafMat = new THREE.MeshStandardMaterial({ color: 0x2a5a28 });
-    for (let i = 0; i < 18; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const d = 8 + Math.random() * 28;
-      const x = Math.cos(a) * d, z = Math.sin(a) * d;
-      if (Math.hypot(x, z) < 6) continue;
-      const y = this.getHeight(x, z);
-      const g = new THREE.Group();
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, 1.4, 6), trunkMat);
-      trunk.position.y = 0.7; g.add(trunk);
-      const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.7, 6, 5), leafMat);
-      leaf.position.y = 1.6; g.add(leaf);
-      g.position.set(x, y, z);
-      this.scene.add(g);
-      this.trees.push({ x, z, hp: 40, mesh: g, alive: true });
+    if (pl.biome === 'mushroom') {
+      for (let i = 0; i < 55; i++) {
+        const { x, z } = randPos();
+        const y = this.getHeight(x, z);
+        const g = new THREE.Group();
+        const stem = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.08, 0.12, 0.9 + Math.random() * 0.8, 6),
+          new THREE.MeshStandardMaterial({ color: 0x1a2040, emissive: 0x2233aa, emissiveIntensity: 0.25 })
+        );
+        stem.position.y = 0.5; g.add(stem);
+        const glowCol = Math.random() < 0.5 ? 0x66ccff : 0xaa66ff;
+        const cap = new THREE.Mesh(
+          new THREE.SphereGeometry(0.45 + Math.random() * 0.35, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+          new THREE.MeshStandardMaterial({ color: glowCol, emissive: glowCol, emissiveIntensity: 0.65, transparent: true, opacity: 0.95 })
+        );
+        cap.position.y = 1.0 + Math.random() * 0.3; g.add(cap);
+        const light = new THREE.PointLight(glowCol, 0.45, 5);
+        light.position.y = 1.1; g.add(light);
+        g.position.set(x, y, z);
+        this.scene.add(g);
+        this.trees.push({ x, z, hp: 25, mesh: g, alive: true });
+      }
+    } else if (pl.biome === 'desert') {
+      for (let i = 0; i < 30; i++) {
+        const { x, z } = randPos();
+        const y = this.getHeight(x, z);
+        const g = new THREE.Group();
+        const bush = new THREE.Mesh(
+          new THREE.SphereGeometry(0.4, 5, 4),
+          new THREE.MeshStandardMaterial({ color: 0x6a5a30, flatShading: true })
+        );
+        bush.position.y = 0.35; g.add(bush);
+        g.position.set(x, y, z);
+        this.scene.add(g);
+        this.trees.push({ x, z, hp: 20, mesh: g, alive: true });
+      }
+    } else {
+      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3a2a18 });
+      const leafMat = new THREE.MeshStandardMaterial({ color: pl.biome === 'ice' ? 0x88aacc : 0x2a5a28 });
+      for (let i = 0; i < 50; i++) {
+        const { x, z } = randPos();
+        const y = this.getHeight(x, z);
+        const g = new THREE.Group();
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, 1.4, 6), trunkMat);
+        trunk.position.y = 0.7; g.add(trunk);
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.7, 6, 5), leafMat);
+        leaf.position.y = 1.6; g.add(leaf);
+        g.position.set(x, y, z);
+        this.scene.add(g);
+        this.trees.push({ x, z, hp: 40, mesh: g, alive: true });
+      }
     }
-    // Bug bile exploding pods
+    // Yellow ground spores — explode on step
     this.bilePods = [];
-    for (let i = 0; i < 8; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const d = 10 + Math.random() * 22;
-      const x = Math.cos(a) * d, z = Math.sin(a) * d;
+    for (let i = 0; i < 22; i++) {
+      const { x, z } = randPos();
       const y = this.getHeight(x, z);
-      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.55, 8, 6), new THREE.MeshStandardMaterial({ color: 0x66aa22, emissive: 0x335500, emissiveIntensity: 0.3 }));
-      mesh.position.set(x, y + 0.5, z);
+      const mesh = new THREE.Mesh(
+        new THREE.CircleGeometry(0.55, 12),
+        new THREE.MeshStandardMaterial({
+          color: 0xffee44, emissive: 0xccaa00, emissiveIntensity: 0.55,
+          side: THREE.DoubleSide, roughness: 0.6
+        })
+      );
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(x, y + 0.06, z);
       this.scene.add(mesh);
-      this.bilePods.push({ x, z, mesh, alive: true, hp: 15 });
+      this.bilePods.push({ x, z, mesh, alive: true, hp: 8, spore: true });
     }
   },
 
+
   _damagePlayer(p, dmg, fromFriendly) {
     if (!p || !p.alive || (p.invuln || 0) > 0) return;
+    if (fromFriendly && this.friendlyFire === false) return;
     // Shield backpack absorbs first
     if (p.shield > 0) {
       const abs = Math.min(p.shield, dmg);
@@ -2992,7 +3883,8 @@ const Game = {
     this.meshes.packs.push(g);
   },
 
-  _explosion(x, z, radius, damage) {
+  _explosion(x, z, radius, damage, opts) {
+    opts = opts || {};
     AudioSys.boom();
     const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 10), new THREE.MeshBasicMaterial({ color: 0xff6622, transparent: true, opacity: 0.85 }));
     mesh.position.set(x, this.getHeight(x, z) + 0.5, z);
@@ -3005,6 +3897,15 @@ const Game = {
         e.hp -= damage;
         if (e.hp <= 0) { e.alive = false; this.kills++; const lp = this.players.get(this.localId); if (lp) lp.kills++; AudioSys.enemyDie(); }
         else AudioSys.enemyHit();
+      }
+    }
+    // Friendly fire from orbitals / eagles / grenades / etc.
+    if (this.friendlyFire !== false) {
+      for (const p of this.players.values()) {
+        if (!p.alive) continue;
+        if (Math.hypot(p.x - x, p.z - z) < radius) {
+          this._damagePlayer(p, damage * 0.55, true);
+        }
       }
     }
     for (const h of this.holes) {
@@ -3044,9 +3945,17 @@ const Game = {
           this.scene.remove(this.hellpodMesh);
           this.hellpodMesh = null;
           const lp = this.players.get(this.localId);
-          if (lp) { lp.x = this.hellpodPos.x; lp.z = this.hellpodPos.z; lp.y = groundY; }
+          if (lp) {
+            lp.x = this.hellpodPos.x; lp.z = this.hellpodPos.z; lp.y = groundY;
+            // Face north (−Z); minimap has −Z upward
+            this.camYaw = Math.PI;
+            lp.angle = Math.PI;
+          }
           this.camera.up.set(0, 1, 0);
           this.state = 'playing';
+          if (this._setPlanetVisible) this._setPlanetVisible(true);
+          if (this.terrainMesh) this.terrainMesh.visible = true;
+          if (this.ground) this.ground.visible = true;
           this._requestLock();
           const et = document.getElementById('extract-timer');
           if (et) et.classList.remove('show');
@@ -3149,10 +4058,17 @@ const Game = {
 
         let mx = 0, mz = 0;
         if (!this.ctrlHeld) {
-          if (this.keys['KeyW'] || this.keys['ArrowUp']) { mx += forwardX; mz += forwardZ; }
-          if (this.keys['KeyS'] || this.keys['ArrowDown']) { mx -= forwardX; mz -= forwardZ; }
-          if (this.keys['KeyA'] || this.keys['ArrowLeft']) { mx -= rightX; mz -= rightZ; }
-          if (this.keys['KeyD'] || this.keys['ArrowRight']) { mx += rightX; mz += rightZ; }
+          const scheme = this._moveScheme || getMoveScheme();
+          const kb = this._keybinds || getKeybinds();
+          const wasdFwd = this.keys['KeyW'], wasdBack = this.keys['KeyS'], wasdLeft = this.keys['KeyA'], wasdRight = this.keys['KeyD'];
+          const arrFwd = this.keys['ArrowUp'], arrBack = this.keys['ArrowDown'], arrLeft = this.keys['ArrowLeft'], arrRight = this.keys['ArrowRight'];
+          const useWasd = scheme === 'wasd' || scheme === 'both';
+          const useArr = scheme === 'arrows' || scheme === 'both';
+          // Custom binds (default WASD codes still map when scheme allows)
+          if ((useWasd && wasdFwd) || (useArr && arrFwd) || this.keys[kb.forward]) { mx += forwardX; mz += forwardZ; }
+          if ((useWasd && wasdBack) || (useArr && arrBack) || this.keys[kb.back]) { mx -= forwardX; mz -= forwardZ; }
+          if ((useWasd && wasdLeft) || (useArr && arrLeft) || this.keys[kb.left]) { mx -= rightX; mz -= rightZ; }
+          if ((useWasd && wasdRight) || (useArr && arrRight) || this.keys[kb.right]) { mx += rightX; mz += rightZ; }
         }
         if (mx || mz) {
           const len = Math.hypot(mx, mz);
@@ -3161,13 +4077,14 @@ const Game = {
           if (p.meleeCd > 0) p.meleeCd -= dt;
           if (p.supportCd > 0) p.supportCd -= dt;
           if (p.saluteT > 0) p.saluteT -= dt;
-          let sprint = (this.keys['ShiftLeft'] || this.keys['ShiftRight']) && p.stamina > 1 && (p.stagger || 0) <= 0;
+          const kbS = this._keybinds || getKeybinds();
+          let sprint = (this.keys[kbS.sprint] || this.keys['ShiftLeft'] || this.keys['ShiftRight']) && p.stamina > 1 && (p.stagger || 0) <= 0;
           if (sprint) {
             p.stamina = Math.max(0, p.stamina - 22 * dt);
             if (p.stamina <= 0) sprint = false;
           }
           // Stamina always regenerates over time (faster when idle / not sprinting)
-          const moving = !!(this.keys['KeyW'] || this.keys['KeyS'] || this.keys['KeyA'] || this.keys['KeyD'] || this.keys['ArrowUp'] || this.keys['ArrowDown'] || this.keys['ArrowLeft'] || this.keys['ArrowRight']);
+          const moving = !!(mx || mz);
           if (!sprint) {
             const regen = moving ? 14 : 22; // idle regens faster
             p.stamina = Math.min(p.maxStamina, p.stamina + regen * dt);
@@ -3203,8 +4120,28 @@ const Game = {
             p.x = resolved.x; p.z = resolved.z;
           }
         }
+        // Yellow spores explode when stepped on
+        if (p.id === this.localId && this.bilePods && (this.state === 'playing' || this.state === 'extract')) {
+          for (const b of this.bilePods) {
+            if (!b.alive) continue;
+            if (Math.hypot(p.x - b.x, p.z - b.z) < 0.75) {
+              b.alive = false;
+              if (b.mesh) this.scene.remove(b.mesh);
+              this._explosion(b.x, b.z, 3.5, 50);
+              this._damagePlayer(p, 25, false);
+            }
+          }
+        }
         // Smooth height follow — reduces sprint stutter from per-frame height snaps
-        const targetY = this.state === 'ship' ? 0 : this.getHeight(p.x, p.z);
+        let targetY = 0;
+        if (this.state === 'ship') {
+          // SE bay is lowered; ramp blends height
+          if (p.x > 6 && p.z > 2) {
+            // Bay / ramp region
+            if (p.x > 10) targetY = -1.5;
+            else targetY = -1.5 + (10 - p.x) / 4 * 1.5; // ramp up westward
+          } else targetY = 0;
+        } else targetY = this.getHeight(p.x, p.z);
         if (p.y === undefined) p.y = targetY;
         else p.y += (targetY - p.y) * Math.min(1, 14 * dt);
 
@@ -3242,8 +4179,8 @@ const Game = {
           p.recoilYaw = Math.max(-0.12, Math.min(0.12, (p.recoilYaw || 0) + patYaw));
           p.recoilPitch = Math.max(-0.02, Math.min(0.2, (p.recoilPitch || 0) + patPitch));
           // Camera kick — additive only; keep full look range (-1.2..1.2)
-          this.camYaw += patYaw * wdef.camKick * 0.5;
-          this.camPitch = Math.max(-1.2, Math.min(1.2, this.camPitch - patPitch * wdef.camKick * 0.35));
+          // Recoil is applied to p.recoilYaw/Pitch only (decays) — never permanently
+          // shift camYaw/camPitch or the view drifts away from the body when dry-firing.
           // Shot direction: aim + pattern + small random bloom
           const bloom = (Math.random() - 0.5) * wdef.baseSpread;
           const a = this.camYaw + p.recoilYaw + bloom;
@@ -3337,7 +4274,8 @@ const Game = {
         if (p.backpack === 'shield' && p.shield < 50) p.shield = Math.min(50, p.shield + 4 * dt);
 
         // Climb: hold Space, or auto while sprinting if option on
-        const wantClimb = this.keys['Space'] || (this.autoClimb && (this.keys['ShiftLeft'] || this.keys['ShiftRight']) && p.stamina > 1);
+        const kbC = this._keybinds || getKeybinds();
+        const wantClimb = this.keys[kbC.climb] || this.keys['Space'] || (this.autoClimb && (this.keys[kbC.sprint] || this.keys['ShiftLeft'] || this.keys['ShiftRight']) && p.stamina > 1);
         if (wantClimb && this.state !== 'ship') {
           const dirs = [0.4, 0.7, 1.0];
           const h0 = p.y !== undefined ? p.y : this.getHeight(p.x, p.z);
@@ -3377,7 +4315,8 @@ const Game = {
       const g = this.meshes.players.get(p.id);
       if (g) {
         if (p.y === undefined) p.y = this.getHeight(p.x, p.z);
-        g.position.x = p.x; g.position.y = p.y; g.position.z = p.z; g.rotation.y = p.angle; g.visible = p.alive;
+        g.position.x = p.x; g.position.y = p.y; g.position.z = p.z; g.rotation.y = p.angle;
+        g.visible = !!p.alive && !p._hiddenInPod;
         const bp = g.getObjectByName('backpack');
         if (bp && bp.material) {
           bp.material.color.set(p.backpack === 'supply' ? 0x3a5a28 : 0x444450);
@@ -3389,31 +4328,71 @@ const Game = {
     if (lp) {
       const py = lp.y !== undefined ? lp.y : this.getHeight(lp.x, lp.z);
       const dist = this.camDist;
-      const pitch = this.camPitch;
-      const yaw = this.camYaw;
+      const pitch = this.camPitch + (lp.recoilPitch || 0) * 0.45;
+      const yaw = this.camYaw + (lp.recoilYaw || 0);
       // Camera sits behind opposite to forward
-      // Over-shoulder camera: aim ray matches gun (camYaw/camPitch); body stays off crosshair
-      const shoulder = 1.25;
+      // Third-person orbit: camera stays behind aim (yaw + pitch) and shortens on collision
+      const aimPitch = pitch; // -1.2 look up … +1.2 look down
+      const cosP = Math.cos(aimPitch * 0.9);
+      const sinP = Math.sin(aimPitch * 0.9);
+      // Aim direction (same convention as gun)
+      const aimFx = Math.sin(yaw) * cosP;
+      const aimFy = -sinP;
+      const aimFz = Math.cos(yaw) * cosP;
+      // Shoulder offset in camera right space
       const rightX = -Math.cos(yaw), rightZ = Math.sin(yaw);
-      const aimPitch = pitch;
-      const aimFx = Math.sin(yaw) * Math.cos(aimPitch * 0.85);
-      const aimFz = Math.cos(yaw) * Math.cos(aimPitch * 0.85);
-      const aimFy = -Math.sin(aimPitch * 0.85);
-      // Camera sits behind + right of player
-      const back = dist * 0.85;
-      const cx = lp.x - Math.sin(yaw) * back + rightX * shoulder;
-      const cy = py + 1.55 + dist * 0.12;
-      const cz = lp.z - Math.cos(yaw) * back + rightZ * shoulder;
-      const lerp = this.reduceMotion ? 1 : 0.18;
+      const shoulder = 0.85;
+      // Pivot at upper chest / head
+      const pivX = lp.x;
+      const pivY = py + 1.25;
+      const pivZ = lp.z;
+      // Desired camera = pivot - aimDir * dist + right * shoulder
+      // (behind the character relative to where they're aiming)
+      let useDist = Math.max(3.5, dist);
+      let desiredX = pivX - aimFx * useDist + rightX * shoulder;
+      let desiredY = pivY - aimFy * useDist * 0.95 + 0.15;
+      let desiredZ = pivZ - aimFz * useDist + rightZ * shoulder;
+
+      // Map edge: pull camera toward player instead of going outside
+      if (this.state !== 'ship') {
+        const halfMap = (this.mapSize || 240) / 2;
+        const pad = halfMap - 1.2;
+        // If desired is outside, reduce distance along the pivot→desired ray
+        const ox = desiredX - pivX, oy = desiredY - pivY, oz = desiredZ - pivZ;
+        let scale = 1;
+        if (Math.abs(desiredX) > pad) scale = Math.min(scale, (pad - Math.abs(pivX)) / Math.abs(ox || 1e-6));
+        if (Math.abs(desiredZ) > pad) scale = Math.min(scale, (pad - Math.abs(pivZ)) / Math.abs(oz || 1e-6));
+        scale = Math.max(0.15, Math.min(1, scale));
+        desiredX = pivX + ox * scale;
+        desiredY = pivY + oy * scale;
+        desiredZ = pivZ + oz * scale;
+      }
+
+      // Collision: step from pivot to desired; stop before rocks / ship walls / ground
+      const hit = this._cameraCollision(pivX, pivY, pivZ, desiredX, desiredY, desiredZ);
+      let cx = hit.x, cy = hit.y, cz = hit.z;
+
+      // Stay above terrain
+      if (this.state !== 'ship') {
+        const gY = (typeof this.getHeight === 'function' ? this.getHeight(cx, cz) : 0) + 0.75;
+        if (cy < gY) cy = gY;
+      } else {
+        // Destroyer interior clamp
+        cx = Math.max(-14.5, Math.min(14.5, cx));
+        cz = Math.max(-8.5, Math.min(8.5, cz));
+        cy = Math.max(0.6, Math.min(4.5, cy));
+      }
+
+      const lerp = this.reduceMotion ? 1 : 0.22;
       this.camera.position.x += (cx - this.camera.position.x) * lerp;
       this.camera.position.y += (cy - this.camera.position.y) * lerp;
       this.camera.position.z += (cz - this.camera.position.z) * lerp;
-      // Look point = gun muzzle path through screen center (~same as bullet direction)
-      const muzzleY = py + 1.05;
-      const lookDist = 18;
-      const lookX = lp.x + Math.sin(yaw) * 0.45 + aimFx * lookDist;
-      const lookY = muzzleY + aimFy * lookDist;
-      const lookZ = lp.z + Math.cos(yaw) * 0.45 + aimFz * lookDist;
+
+      // Look along aim through a point ahead of the diver (matches reticle / gun)
+      const lookDist = 20;
+      const lookX = pivX + aimFx * lookDist;
+      const lookY = pivY + aimFy * lookDist;
+      const lookZ = pivZ + aimFz * lookDist;
       this.camera.lookAt(lookX, lookY, lookZ);
     }
 
@@ -3422,7 +4401,7 @@ const Game = {
       // no bugs on the destroyer
     } else {
     // Patrols spawn bugs occasionally
-    const diff = DIFFICULTIES[this.selectedDiff] || DIFFICULTIES[1];
+    const diff = this._currentDiff();
     for (const pat of (this.patrols || [])) {
       pat.cd -= dt;
       pat.angle += dt * 0.3;
@@ -3446,7 +4425,7 @@ const Game = {
         const a = Math.random() * Math.PI * 2;
         const bx = lp3.x + Math.cos(a) * 10, bz = lp3.z + Math.sin(a) * 10;
         AudioSys.breach();
-        for (let i = 0; i < 3 + this.selectedDiff; i++) this._spawnEnemyAt(bx + Math.random()*2, bz + Math.random()*2);
+        for (let i = 0; i < 3 + (this._currentDiff().id || 1); i++) this._spawnEnemyAt(bx + Math.random()*2, bz + Math.random()*2);
         // breach visual
         this._explosion(bx, bz, 2, 0);
       }
@@ -3459,15 +4438,29 @@ const Game = {
         continue;
       }
       h.spawnCd -= dt;
-      if (h.spawnCd <= 0) {
+      if (this.state !== 'ship' && h.spawnCd <= 0) {
         const aliveBugs = this.enemies.filter(e => e.alive).length;
         if (aliveBugs < 18) this._spawnEnemyFromHole(h);
         h.spawnCd = 3.5 + Math.random() * 2.5;
       }
     }
 
+    // No bugs / holes on the destroyer
+    if (this.state === 'ship') {
+      if (this.enemies && this.enemies.length) {
+        for (const e of this.enemies) {
+          const m = this.meshes.enemies.get(e.id);
+          if (m) this.scene.remove(m);
+        }
+        this.enemies = [];
+        this.meshes.enemies.clear();
+      }
+    }
+
     // Enemies — slower + acceleration rules
-    for (const e of this.enemies) {
+    if (this.state === 'ship') {
+      // skip
+    } else for (const e of this.enemies) {
       if (!e.alive) continue;
       let nearest = null, best = Infinity;
       for (const p of this.players.values()) {
@@ -3541,7 +4534,7 @@ const Game = {
         const ey = this.getHeight(e.x, e.z);
         const leapY = (e.leapT > 0) ? Math.sin((0.35 - e.leapT) / 0.35 * Math.PI) * 1.2 : 0;
         mesh.position.x = e.x;
-        mesh.position.y = ey + (e.type === 'charger' ? 0.48 : 0.4) + leapY;
+        mesh.position.y = ey + (e.type === 'titan' ? 0 : e.type === 'charger' ? 0.48 : 0.4) + leapY;
         mesh.position.z = e.z;
         mesh.rotation.y = e.facing || 0;
       }
@@ -3602,6 +4595,18 @@ const Game = {
           if (e.hp <= 0) { e.alive = false; this.kills++; this.killStreak = (this.killStreak||0)+1; const o = this.players.get(pr.owner); if (o) o.kills++; AudioSys.enemyDie(); this._emitVoice('kill', { streak: this.killStreak }); }
           else AudioSys.enemyHit();
           hit = true; break;
+        }
+      }
+      // Friendly fire on other players / from turrets
+      if (!hit && this.friendlyFire !== false && pr.owner) {
+        for (const p of this.players.values()) {
+          if (!p.alive) continue;
+          if (p.id === pr.owner) continue; // own bullets
+          // Turret / support owner tags still hurt players when FF on
+          if (Math.hypot(p.x - pr.x, p.z - pr.z) < 0.55) {
+            this._damagePlayer(p, pr.damage * 0.7, true);
+            hit = true; break;
+          }
         }
       }
       // Bile pods
@@ -3666,20 +4671,41 @@ const Game = {
       }
     }
 
-    // Grenades
+    // Grenades — ballistic arc; explode on enemy impact or fuse
     for (let i = this.grenades.length - 1; i >= 0; i--) {
       const g = this.grenades[i];
-      g.x += (g.tx - g.x) * 0.1; g.z += (g.tz - g.z) * 0.1;
       g.fuse -= dt;
-      const mesh = this.meshes.grenades[i];
-      if (mesh) {
+      if (!g.grounded) {
+        g.vy -= 18 * dt; // gravity
+        g.x += (g.vx || 0) * dt;
+        g.y += (g.vy || 0) * dt;
+        g.z += (g.vz || 0) * dt;
         const gy = this.getHeight(g.x, g.z);
-        const flight = Math.max(0, Math.min(1, 1 - g.fuse / 1.3));
-        const arcH = (g.arc || 2) * Math.sin(flight * Math.PI);
-        mesh.position.set(g.x, gy + 0.2 + arcH, g.z);
+        if (g.y <= gy + 0.2) {
+          g.y = gy + 0.2;
+          g.grounded = true;
+          g.vx *= 0.3; g.vz *= 0.3; g.vy = 0;
+        }
+      } else {
+        g.x += (g.vx || 0) * dt;
+        g.z += (g.vz || 0) * dt;
+        g.vx *= 0.9; g.vz *= 0.9;
+        g.y = this.getHeight(g.x, g.z) + 0.2;
       }
-      if (g.fuse <= 0) {
-        this._explosion(g.x, g.z, 4.5, 75);
+      // Hit enemies (including large titans)
+      let hitBug = false;
+      for (const e of this.enemies) {
+        if (!e.alive) continue;
+        const rad = (e.radius || 0.4) + 0.35;
+        const dist = Math.hypot(g.x - e.x, g.z - e.z);
+        // Vertical reach for tall titans
+        const eH = e.type === 'titan' ? 3.2 : e.type === 'charger' ? 1.2 : 0.8;
+        if (dist < rad && (g.y || 0) < eH + 0.5) { hitBug = true; break; }
+      }
+      const mesh = this.meshes.grenades[i];
+      if (mesh) mesh.position.set(g.x, g.y, g.z);
+      if (g.fuse <= 0 || hitBug) {
+        this._explosion(g.x, g.z, hitBug ? 5.2 : 4.5, hitBug ? 95 : 75);
         if (mesh) this.scene.remove(mesh);
         this.meshes.grenades.splice(i, 1);
         this.grenades.splice(i, 1);
@@ -3695,12 +4721,24 @@ const Game = {
       if (ef.life <= 0) { if (ef.mesh) this.scene.remove(ef.mesh); this.meshes.effects.splice(i, 1); this.effects.splice(i, 1); }
     }
 
-    // Dead enemy cleanup
+    // Dead enemy cleanup (supports Mesh and Group e.g. bile titan)
     for (const e of this.enemies) {
       if (!e.alive) {
         const mesh = this.meshes.enemies.get(e.id);
-        if (mesh) { mesh.position.y -= dt * 2; mesh.material.transparent = true; mesh.material.opacity = (mesh.material.opacity ?? 1) - dt * 2;
-          if (mesh.position.y < -1) { this.scene.remove(mesh); this.meshes.enemies.delete(e.id); } }
+        if (mesh) {
+          mesh.position.y -= dt * 2;
+          mesh.traverse(ch => {
+            if (ch.isMesh && ch.material) {
+              const mats = Array.isArray(ch.material) ? ch.material : [ch.material];
+              for (const mat of mats) {
+                if (!mat) continue;
+                mat.transparent = true;
+                mat.opacity = Math.max(0, (mat.opacity ?? 1) - dt * 2);
+              }
+            }
+          });
+          if (mesh.position.y < -1) { this.scene.remove(mesh); this.meshes.enemies.delete(e.id); }
+        }
       }
     }
 
@@ -3716,7 +4754,7 @@ const Game = {
       this.terminalMesh.position.y = this.getHeight(this.terminal.x, this.terminal.z);
     }
 
-    if (this.extractCalled) {
+    if (this.extractCalled && this.state !== 'ship' && this.state !== 'paused') {
       const living = [...this.players.values()].filter(p => p.alive);
       const pending = [...this.players.values()].some(p => (!p.alive && p.respawnT > 0) || p.reinforcing);
       if (living.length === 0 && !pending) { this._end(false); return; }
@@ -3762,8 +4800,9 @@ const Game = {
       Storage.save(d);
     } catch (e) {}
     // Credits: base + kills + samples + success bonus
+    const diffId = this.selectedDiffId || ((DIFFICULTIES[this.selectedDiff] || {}).id) || 1;
     let earned = Math.floor(this.kills * 2 + (this.sampleCommon || 0) * 5 + (this.sampleRare || 0) * 15);
-    if (success) earned += 50 + (this.selectedDiff || 0) * 15;
+    if (success) earned += 50 + diffId * 12;
     else earned = Math.floor(earned * 0.35);
     this.credits = (this.credits || 0) + earned;
     this.scoreBreakdown.credits = earned;
@@ -3771,7 +4810,15 @@ const Game = {
     try {
       const d = Storage.load();
       d.credits = this.credits;
+      // Beat Super Helldive (10+) → unlock uncapped difficulty
+      if (success && diffId >= 10) {
+        const prev = d.maxDifficultyUnlocked || 10;
+        d.maxDifficultyUnlocked = Math.max(prev, diffId + 1); // at least open next level
+        // After first clear of 10, allow very high (soft cap 99 for UI)
+        if (diffId >= 10) d.maxDifficultyUnlocked = Math.max(d.maxDifficultyUnlocked, 99);
+      }
       Storage.save(d);
+      this._maxDiffUnlocked = d.maxDifficultyUnlocked || 10;
     } catch (e) {}
     this._emitVoice(success ? 'extract_success' : 'mission_fail', this.scoreBreakdown);
     if (this.onMissionEnd) this.onMissionEnd({
@@ -3783,16 +4830,29 @@ const Game = {
 
   draw() { if (this.renderer && this.scene && this.camera) this.renderer.render(this.scene, this.camera); },
 
+  _startLoop() {
+    this._looping = false; // stop any prior chains
+    this._loopGen = (this._loopGen || 0) + 1;
+    const gen = this._loopGen;
+    this.lastFrame = 0;
+    this._looping = true;
+    const tick = (ts) => {
+      if (!this._looping || gen !== this._loopGen) return;
+      if (!this.lastFrame) this.lastFrame = ts;
+      let dt = (ts - this.lastFrame) / 1000;
+      if (dt > 0.1) dt = 0.05;
+      this.lastFrame = ts;
+      this.fps = dt > 0 ? Math.round(1 / dt) : 60;
+      if (this.state === 'playing' || this.state === 'extract' || this.state === 'ship' || this.state === 'hellpod') this.update(dt);
+      this.draw();
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  },
+
   loop(ts) {
-    if (!this._looping) return;
-    if (!this.lastFrame) this.lastFrame = ts;
-    let dt = (ts - this.lastFrame) / 1000;
-    if (dt > 0.1) dt = 0.05;
-    this.lastFrame = ts;
-    this.fps = dt > 0 ? Math.round(1 / dt) : 60;
-    if (this.state === 'playing' || this.state === 'extract' || this.state === 'ship' || this.state === 'hellpod') this.update(dt);
-    this.draw();
-    requestAnimationFrame(t => this.loop(t));
+    // Backward-compatible entry — prefer _startLoop for a single RAF chain
+    this._startLoop();
   }
 };
 
@@ -3811,19 +4871,36 @@ const Game = {
   function closeSubs() { $$('.subpanel').forEach(p => p.classList.remove('open')); }
   function getName() { return (($('#username') && $('#username').value.trim()) || 'Diver').slice(0, 16); }
 
+  const dismissFsWarn = () => {
+    const w = document.getElementById('fs-warn');
+    if (w) w.classList.remove('show');
+    // Do not clear drop-pod / loadout state — only the warning overlay
+    if (Game && !Game.dropMenuOpen) Game.shipMenuOpen = false;
+  };
+  const goFullscreen = async () => {
+    try {
+      const r = document.documentElement;
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (r.requestFullscreen) await r.requestFullscreen();
+        else if (r.webkitRequestFullscreen) await r.webkitRequestFullscreen();
+      }
+    } catch (err) { console.warn('Fullscreen failed', err); }
+    dismissFsWarn();
+  };
   const fsBtn = $('#btn-fullscreen');
   if (fsBtn) {
     fsBtn.onclick = async (e) => {
       e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation();
       try {
         const r = document.documentElement;
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-          if (r.requestFullscreen) await r.requestFullscreen();
-          else if (r.webkitRequestFullscreen) await r.webkitRequestFullscreen();
+          await goFullscreen();
         } else {
           if (document.exitFullscreen) await document.exitFullscreen();
           else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+          dismissFsWarn();
         }
       } catch (err) { console.warn('Fullscreen failed', err); }
     };
@@ -3841,6 +4918,7 @@ const Game = {
   if ($('#atmosphere-fx')) $('#atmosphere-fx').checked = data.atmosphereFX !== false;
   AudioSys.init(); AudioSys.setVolume(data.volume ?? 0.7);
   Game.showFps = !!data.showFps; Game.reduceMotion = !!data.reduceMotion; Game.autoClimb = !!data.autoClimb;
+  Game.friendlyFire = data.friendlyFire !== false;
   Game.atmosphereFX = data.atmosphereFX !== false;
   Game.onMissionEnd = (stats) => {
     const end = $('#mission-end');
@@ -3869,7 +4947,8 @@ const Game = {
     showScreen('#stats');
   };
   $('#btn-stats-back').onclick = () => showScreen('#menu');
-  $('#btn-join').onclick = () => { openSub('#join-panel'); setStatus('Paste host Peer ID'); };
+  // btn-join handled above (join choice panel)
+
   $('#volume').oninput = e => { const v = parseFloat(e.target.value); $('#vol-val').textContent = v.toFixed(2); AudioSys.setVolume(v); Storage.update({ volume: v }); };
   $('#show-fps').onchange = e => { Game.showFps = e.target.checked; Storage.update({ showFps: e.target.checked }); };
   // Options sub-tabs
@@ -3908,13 +4987,7 @@ const Game = {
   }
   if ($('#ship-menu-close')) $('#ship-menu-close').onclick = () => Game._closeShipMenu();
   if ($('#fs-warn-go')) $('#fs-warn-go').onclick = async () => {
-    try {
-      const el = document.documentElement;
-      if (el.requestFullscreen) await el.requestFullscreen();
-      else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
-    } catch (err) { console.warn(err); }
-    const w = $('#fs-warn'); if (w) w.classList.remove('show');
-    Game.shipMenuOpen = false;
+    await goFullscreen();
     const name = Game._pendingDropName || getName();
     Game._startHellpodDrop(name);
   };
@@ -3927,12 +5000,150 @@ const Game = {
   if ($('#strat-loadout-confirm')) $('#strat-loadout-confirm').onclick = () => {
     Game._confirmHellpodDrop(Game._pendingDropName || getName());
   };
+  if ($('#strat-loadout-ready')) $('#strat-loadout-ready').onclick = () => Game._toggleDropReady();
   if ($('#strat-loadout-back')) $('#strat-loadout-back').onclick = () => {
     Game._closeStratLoadoutMenu();
     if (Game.state === 'ship') Game._requestLock();
   };
+  const openJoinChoice = () => {
+    const p = document.getElementById('join-choice-panel');
+    if (p) p.style.display = 'block';
+    openSub && openSub('#join-choice-panel');
+  };
+  if ($('#btn-join')) $('#btn-join').onclick = () => {
+    AudioSys.ui();
+    const choice = document.getElementById('join-choice-panel');
+    const jp = document.getElementById('join-panel');
+    if (choice) choice.style.display = 'block';
+    if (jp) jp.classList.remove('open');
+  };
+  if ($('#btn-join-code')) $('#btn-join-code').onclick = () => {
+    const choice = document.getElementById('join-choice-panel');
+    if (choice) choice.style.display = 'none';
+    openSub('#join-panel');
+    setStatus('Paste host Peer ID / room code');
+  };
+  if ($('#btn-join-lan')) $('#btn-join-lan').onclick = () => {
+    const choice = document.getElementById('join-choice-panel');
+    if (choice) choice.style.display = 'none';
+    if ($('#btn-lan')) $('#btn-lan').click();
+    else setStatus('Scanning LAN…');
+  };
+  if ($('#btn-join-choice-back')) $('#btn-join-choice-back').onclick = () => {
+    const choice = document.getElementById('join-choice-panel');
+    if (choice) choice.style.display = 'none';
+  };
+  // Drop-pod host/join
+  if ($('#btn-drop-host')) $('#btn-drop-host').onclick = () => {
+    if ($('#btn-host')) $('#btn-host').click();
+  };
+  if ($('#btn-drop-join')) $('#btn-drop-join').onclick = () => {
+    Game._closeStratLoadoutMenu();
+    showScreen('#menu');
+    const choice = document.getElementById('join-choice-panel');
+    if (choice) choice.style.display = 'block';
+  };
+  // Pause host/join (show when on ship / not mid-mission extract)
+  const syncPauseMp = () => {
+    const el = document.getElementById('pause-mp-actions');
+    if (!el) return;
+    const show = Game.state === 'ship' || Game.state === 'paused';
+    el.style.display = show ? 'block' : 'none';
+  };
+  if ($('#btn-pause-host')) $('#btn-pause-host').onclick = () => {
+    if ($('#btn-host')) $('#btn-host').click();
+  };
+  if ($('#btn-pause-join')) $('#btn-pause-join').onclick = () => {
+    showScreen('#menu');
+    const choice = document.getElementById('join-choice-panel');
+    if (choice) choice.style.display = 'block';
+  };
+  // Hook pause show to sync MP buttons
+  const _origHandle = Game._handleMenuToggle && Game._handleMenuToggle.bind(Game);
+  if (_origHandle) {
+    Game._handleMenuToggle = function() {
+      _origHandle();
+      syncPauseMp();
+    };
+  }
   $('#reduce-motion').onchange = e => { Game.reduceMotion = e.target.checked; Storage.update({ reduceMotion: e.target.checked }); };
+  if ($('#friendly-fire')) {
+    const d = Storage.load();
+    $('#friendly-fire').checked = d.friendlyFire !== false;
+    Game.friendlyFire = d.friendlyFire !== false;
+    $('#friendly-fire').onchange = e => {
+      Game.friendlyFire = e.target.checked;
+      Storage.update({ friendlyFire: e.target.checked });
+    };
+  }
   if ($('#auto-climb')) $('#auto-climb').onchange = e => { Game.autoClimb = e.target.checked; Storage.update({ autoClimb: e.target.checked }); };
+
+  // --- Keybind UI ---
+  function refreshKeybindUI() {
+    const list = document.getElementById('keybind-list');
+    if (!list) return;
+    const kb = getKeybinds();
+    const labels = {
+      forward: 'Forward', back: 'Back', left: 'Left', right: 'Right',
+      sprint: 'Sprint', climb: 'Climb', interact: 'Interact', grenade: 'Grenade',
+      stim: 'Stim', salute: 'Salute', ping: 'Ping', effects: 'Effects panel', melee: 'Melee'
+    };
+    list.innerHTML = '';
+    for (const [action, label] of Object.entries(labels)) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px';
+      const lab = document.createElement('span');
+      lab.textContent = label;
+      lab.style.color = 'var(--muted)';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn small';
+      btn.textContent = (kb[action] || '').replace('Key', '').replace('Left', '').replace('Right', 'R');
+      btn.dataset.action = action;
+      btn.onclick = () => {
+        btn.textContent = '…';
+        const once = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          window.removeEventListener('keydown', once, true);
+          if (e.code === 'Escape') { refreshKeybindUI(); return; }
+          const next = Object.assign({}, getKeybinds(), { [action]: e.code });
+          Storage.update({ keybinds: next });
+          Game._keybinds = next;
+          refreshKeybindUI();
+        };
+        window.addEventListener('keydown', once, true);
+      };
+      row.appendChild(lab);
+      row.appendChild(btn);
+      list.appendChild(row);
+    }
+    const ms = document.getElementById('move-scheme');
+    if (ms) ms.value = getMoveScheme();
+  }
+  if ($('#move-scheme')) {
+    $('#move-scheme').value = getMoveScheme();
+    $('#move-scheme').onchange = e => {
+      Storage.update({ moveScheme: e.target.value });
+      Game._moveScheme = e.target.value;
+    };
+  }
+  if ($('#btn-reset-binds')) {
+    $('#btn-reset-binds').onclick = () => {
+      Storage.update({ keybinds: Object.assign({}, DEFAULT_KEYBINDS), moveScheme: 'both' });
+      Game._keybinds = getKeybinds();
+      Game._moveScheme = 'both';
+      refreshKeybindUI();
+      AudioSys.ui();
+    };
+  }
+  const _optClick = $('#btn-options') && $('#btn-options').onclick;
+  $('#btn-options').onclick = () => {
+    AudioSys.ui();
+    showScreen('#options');
+    refreshKeybindUI();
+  };
+
   if ($('#atmosphere-fx')) $('#atmosphere-fx').onchange = e => { Game.atmosphereFX = e.target.checked; Storage.update({ atmosphereFX: e.target.checked }); };
   if ($('#btn-export-profile')) $('#btn-export-profile').onclick = () => {
     const data = Storage.load();
@@ -4008,7 +5219,8 @@ const Game = {
       const wrap = $('#game-canvas-wrap');
       if (!Game.renderer) { if (!Game.init(wrap)) { setStatus('Three.js failed'); showScreen('#menu'); return; } }
       fn();
-      if (!Game._looping) { Game._looping = true; requestAnimationFrame(t => Game.loop(t)); }
+      // Always (re)start a single RAF chain so leave/deploy never stacks loops
+      Game._startLoop();
       startHUD();
     });
   }
@@ -4064,15 +5276,37 @@ const Game = {
   function leave() {
     try { Network.destroy(); } catch (e) {}
     Game._exitLock();
-    $('#pause-menu').classList.remove('show'); $('#mission-end').classList.remove('show');
+    Game.extractCalled = false;
+    Game.extractTimer = 0;
+    Game._pauseReturnState = null;
+    Game.shipMenuOpen = false;
+    Game.dropMenuOpen = false;
+    Game.diffMenuOpen = false;
+    $('#pause-menu').classList.remove('show');
+    $('#mission-end').classList.remove('show');
+    const et = document.getElementById('extract-timer');
+    if (et) et.classList.remove('show');
+    const obj = document.getElementById('objective');
+    if (obj) obj.textContent = '';
     const name = getName();
-    // Return to destroyer (isolated space map) — not planet debris
     showScreen('#game');
-    Game._looping = true;
     Game.startShip(name);
-    Game.loop(performance.now());
+    Game._startLoop();
   }
   $('#btn-leave').onclick = leave; $('#btn-return').onclick = leave;
+  Network.onMissionJoin = (data) => {
+    // Joining an in-progress game: enter drop-pod loadout, then drop on ready
+    beginGame(() => {
+      Game.selectedPlanet = data.planet || 0;
+      Game.selectedMission = data.mission || 0;
+      if (data.diff != null) Game.selectedDiffId = data.diff;
+      Game._pendingDropName = getName();
+      Game._inDropPod = true;
+      Game._joinInProgress = true;
+      Game._openStratLoadoutMenu();
+    });
+  };
+
 
   function startHUD() {
     function tick() {
@@ -4166,12 +5400,36 @@ const Game = {
         if (mm && mm.getContext) {
           const ctx = mm.getContext('2d');
           const W = mm.width, H = mm.height;
+          if (Game.state === 'ship') {
+            // Galaxy map placeholder with planets
+            ctx.fillStyle = '#02040a'; ctx.fillRect(0,0,W,H);
+            for (let i = 0; i < 40; i++) {
+              ctx.fillStyle = 'rgba(255,255,255,' + (0.2 + Math.random() * 0.5) + ')';
+              ctx.fillRect((Math.random()*W)|0, (Math.random()*H)|0, 1, 1);
+            }
+            const planets = typeof PLANETS !== 'undefined' ? PLANETS : [];
+            planets.forEach((pl, i) => {
+              const px = 20 + (i % 3) * 40;
+              const py = 28 + Math.floor(i / 3) * 36;
+              const sel = i === (Game.selectedPlanet || 0);
+              ctx.beginPath();
+              ctx.fillStyle = sel ? '#ffe800' : '#4a8';
+              ctx.arc(px, py, sel ? 7 : 5, 0, 7); ctx.fill();
+              ctx.fillStyle = '#ccc'; ctx.font = '8px monospace';
+              ctx.fillText((pl.name || '').slice(0, 8), px + 9, py + 3);
+            });
+            ctx.fillStyle = '#ffe800'; ctx.font = '9px monospace';
+            ctx.fillText('GALAXY', 8, 12);
+          } else {
           ctx.fillStyle = '#0a100e'; ctx.fillRect(0,0,W,H);
           const zoom = Game.minimapZoom || 1;
           const scale = (W / Game.mapSize) * zoom;
           const ox = W/2 - lp.x * scale, oz = H/2 - lp.z * scale;
           const wx = (x) => x * scale + ox, wz = (z) => z * scale + oz;
           ctx.fillStyle = '#1a2a1c'; ctx.fillRect(ox - Game.mapSize/2*scale, oz - Game.mapSize/2*scale, Game.mapSize*scale, Game.mapSize*scale);
+          // North is −Z (toward top of minimap)
+          ctx.fillStyle = '#ffe800'; ctx.font = '9px monospace';
+          ctx.fillText('N', W/2 - 3, 12);
           // holes
           for (const h of Game.holes || []) {
             if (!h.alive) continue;
@@ -4179,7 +5437,20 @@ const Game = {
           }
           for (const e of Game.enemies || []) {
             if (!e.alive) continue;
-            ctx.fillStyle = '#6a3'; ctx.fillRect(wx(e.x)-1.5, wz(e.z)-1.5, 3, 3);
+            const big = e.type === 'titan' || e.type === 'charger';
+            const r = big ? 4 : 2.2;
+            ctx.fillStyle = '#e33';
+            ctx.beginPath(); ctx.arc(wx(e.x), wz(e.z), r, 0, 7); ctx.fill();
+          }
+          // NPC allies (guard dog, turrets) — medium green
+          if (Game.guardDog && Game.guardDog.mesh) {
+            ctx.fillStyle = '#3d5';
+            ctx.beginPath(); ctx.arc(wx(Game.guardDog.x || lp.x), wz(Game.guardDog.z || lp.z), 3, 0, 7); ctx.fill();
+          }
+          for (const tu of Game.turrets || []) {
+            if (!tu.alive) continue;
+            ctx.fillStyle = '#3d5';
+            ctx.beginPath(); ctx.arc(wx(tu.x), wz(tu.z), 3, 0, 7); ctx.fill();
           }
           for (const s of Game.samplesFound || []) {
             if (s.taken) continue;
@@ -4188,14 +5459,64 @@ const Game = {
           for (const ping of Game.pings || []) {
             ctx.strokeStyle = '#fe8'; ctx.beginPath(); ctx.arc(wx(ping.x), wz(ping.z), 4, 0, 7); ctx.stroke();
           }
-          // player
-          ctx.fillStyle = '#ffe800'; ctx.beginPath(); ctx.arc(wx(lp.x), wz(lp.z), 3, 0, 7); ctx.fill();
-          ctx.strokeStyle = '#ffe800'; ctx.beginPath();
-          ctx.moveTo(wx(lp.x), wz(lp.z));
-          ctx.lineTo(wx(lp.x + Math.sin(lp.angle)*4), wz(lp.z + Math.cos(lp.angle)*4));
-          ctx.stroke();
-          // extract
-          ctx.strokeStyle = '#3af'; ctx.beginPath(); ctx.arc(wx(Game.extractZone.x), wz(Game.extractZone.z), Game.extractZone.r*scale, 0, 7); ctx.stroke();
+          // Mission objectives: orange active, gray inactive, light-blue side
+          const objsComplete = typeof Game._objectivesComplete === 'function' && Game._objectivesComplete();
+          for (const o of Game.objectives || []) {
+            const oxp = o.x != null ? o.x : (Game.extractZone && Game.extractZone.x) || 0;
+            const ozp = o.z != null ? o.z : (Game.extractZone && Game.extractZone.z) || 0;
+            const done = (o.have || 0) >= (o.need || 1);
+            const side = !!o.side;
+            if (side) ctx.fillStyle = '#88ddff';
+            else if (done) ctx.fillStyle = '#666666';
+            else ctx.fillStyle = '#ff8800';
+            ctx.beginPath(); ctx.arc(wx(oxp), wz(ozp), 4, 0, 7); ctx.fill();
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.stroke();
+          }
+          // Extract terminal: orange only when objectives complete, else gray
+          if (Game.terminal) {
+            const canExtract = objsComplete;
+            ctx.fillStyle = canExtract ? '#ff8800' : '#666666';
+            ctx.beginPath(); ctx.arc(wx(Game.terminal.x), wz(Game.terminal.z), 4.5, 0, 7); ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(wx(Game.terminal.x), wz(Game.terminal.z), 4.5, 0, 7); ctx.stroke();
+          }
+          // Players — medium dots in player colors
+          for (const pl of Game.players.values()) {
+            if (!pl.alive && Game.state !== 'ship') continue;
+            if (pl._hiddenInPod) continue;
+            const col = '#' + (pl.color != null ? pl.color : 0xffe800).toString(16).padStart(6, '0');
+            ctx.fillStyle = col;
+            ctx.beginPath(); ctx.arc(wx(pl.x), wz(pl.z), 3.5, 0, 7); ctx.fill();
+            if (pl.id === Game.localId) {
+              // Look cone in player color — fixed screen size (ignores minimap zoom)
+              const ang = Game.camYaw != null ? Game.camYaw : (pl.angle || 0);
+              const x0 = wx(pl.x), z0 = wz(pl.z);
+              const lenPx = 28; // screen pixels, not world units
+              const spread = 0.42;
+              const x1 = x0 + Math.sin(ang - spread) * lenPx;
+              const z1 = z0 + Math.cos(ang - spread) * lenPx;
+              const x2 = x0 + Math.sin(ang + spread) * lenPx;
+              const z2 = z0 + Math.cos(ang + spread) * lenPx;
+              ctx.fillStyle = col;
+              ctx.globalAlpha = 0.28;
+              ctx.beginPath();
+              ctx.moveTo(x0, z0);
+              ctx.lineTo(x1, z1);
+              ctx.lineTo(x2, z2);
+              ctx.closePath();
+              ctx.fill();
+              ctx.globalAlpha = 1;
+              ctx.strokeStyle = col;
+              ctx.beginPath();
+              ctx.moveTo(x0, z0);
+              ctx.lineTo(x0 + Math.sin(ang) * 12, z0 + Math.cos(ang) * 12);
+              ctx.stroke();
+            }
+          }
+          // extract zone ring
+          if (Game.extractZone) {
+            ctx.strokeStyle = '#3af'; ctx.beginPath(); ctx.arc(wx(Game.extractZone.x), wz(Game.extractZone.z), Game.extractZone.r*scale, 0, 7); ctx.stroke();
+          }
+          } // end mission minimap (else)
         }
         // ping decay
         if (Game.pings) Game.pings = Game.pings.filter(p => (p.life -= 0.016) > 0);
@@ -4222,16 +5543,23 @@ const Game = {
       const holesLeft = Game.holes.filter(h => h.alive).length;
       if ($('#wave-info')) $('#wave-info').textContent = `HOLES ${holesLeft} · KILLS ${Game.kills}`;
       if ($('#objective')) {
-        if (Game.extractShipPhase === 'descending') $('#objective').textContent = 'PELICAN INBOUND';
-        else if (Game.extractShipPhase === 'landed') $('#objective').textContent = 'BOARD THE PELICAN — Press E';
-        else if (Game.extractShipPhase === 'departing') $('#objective').textContent = 'EXTRACTING...';
-        else if (Game.extractCalled) $('#objective').textContent = 'EXTRACT CALLED — Hold the zone!';
-        else $('#objective').textContent = holesLeft ? 'Destroy bug holes · Press E at terminal to extract' : 'Holes clear — Press E at terminal!';
+        if (Game.state === 'ship' || Game.state === 'paused' && Game._pauseReturnState === 'ship') {
+          // Never show mission extract prompts on the destroyer
+          if (!$('#objective').dataset.shipOk) $('#objective').textContent = '';
+        } else if (Game.state === 'playing' || Game.state === 'extract' || Game.state === 'hellpod') {
+          if (Game.extractShipPhase === 'descending') $('#objective').textContent = 'PELICAN INBOUND';
+          else if (Game.extractShipPhase === 'landed') $('#objective').textContent = 'BOARD THE PELICAN — Press E';
+          else if (Game.extractShipPhase === 'departing') $('#objective').textContent = 'EXTRACTING...';
+          else if (Game.extractCalled) $('#objective').textContent = 'EXTRACT CALLED — Hold the zone!';
+          else $('#objective').textContent = holesLeft ? 'Destroy bug holes · Press E at terminal to extract' : 'Holes clear — Press E at terminal!';
+        }
       }
 
       const et = $('#extract-timer');
       if (et) {
-        if (Game.state === 'paused') {
+        if (Game.state === 'ship' || Game.state === 'menu' || (Game.state === 'paused' && Game._pauseReturnState === 'ship')) {
+          et.classList.remove('show');
+        } else if (Game.state === 'paused') {
           et.classList.remove('show');
         } else if (Game.extractShipPhase === 'descending') {
           et.classList.add('show');
@@ -4256,8 +5584,35 @@ const Game = {
       if (su) {
         if (Game.ctrlHeld || Game.stratUITimer > 0) {
           su.classList.add('show');
-          const buf = Game.stratBuffer.map(d => ({ up: '↑', down: '↓', left: '←', right: '→' }[d])).join(' ') || '…';
-          $('#strat-buffer').textContent = buf;
+          const arrow = { up: '↑', down: '↓', left: '←', right: '→' };
+          const buf = Game.stratBuffer.map(d => arrow[d]).join(' ') || '…';
+          if ($('#strat-buffer')) $('#strat-buffer').textContent = buf;
+          // Codes for equipped + always-provided only
+          const codesEl = document.getElementById('strat-ui-codes');
+          if (codesEl) {
+            const provided = ['Resupply', 'Reinforce'];
+            const loadout = Game.stratagemLoadout || [];
+            const names = [...new Set([...provided, ...loadout])];
+            const list = (typeof Stratagems !== 'undefined' && Stratagems.list) ? Stratagems.list : [];
+            const lines = [];
+            for (const s of list) {
+              if (!names.includes(s.name)) continue;
+              const code = (s.code || []).map(d => arrow[d] || d).join('');
+              lines.push(code + ' ' + s.name);
+            }
+            codesEl.textContent = lines.join(' · ') || 'Resupply · Reinforce';
+          }
+          // Sit under stratagem list
+          const cds = document.getElementById('strat-cds');
+          let top = 48;
+          if (cds) {
+            const r = cds.getBoundingClientRect();
+            const parent = su.offsetParent || document.getElementById('hud') || document.body;
+            const pr = parent.getBoundingClientRect ? parent.getBoundingClientRect() : { top: 0 };
+            top = Math.max(48, (r.bottom - pr.top) + 8);
+          }
+          su.style.top = top + 'px';
+          su.style.left = '14px';
         } else su.classList.remove('show');
       }
 
@@ -4306,9 +5661,6 @@ const Game = {
           html = '<div class="cd-row ready">PRIMED: ' + Game.primedStratagem.name + ' — LMB/G throw</div>' + html;
         }
         cds.innerHTML = html;
-        // Offset strat entry UI below the list when open
-        const su = $('#strat-ui');
-        if (su) su.style.top = (Game.ctrlHeld || Game.stratUITimer > 0) ? '200px' : '48px';
       }
 
       const fps = $('#fps');
@@ -4355,7 +5707,7 @@ const Game = {
   }
 
   showScreen('#menu');
-  setStatus('Ready — Solo Deploy works immediately');
+  setStatus('Ready — Enter Destroyer to open the ship');
   console.log('HellBrowsers ready. THREE=', typeof THREE);
 })();
 </script>
