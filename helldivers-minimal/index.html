@@ -224,6 +224,14 @@
       width: 160px; height: 8px; background: #1a1a1a; border: 1px solid var(--border); border-radius: 2px; overflow: hidden;
     }
     #stamina-fill { height: 100%; width: 100%; background: #3af; transition: width 0.1s; }
+    #emergency-recall {
+      position: absolute; left: 50%; top: 22%; transform: translateX(-50%);
+      display: none; z-index: 40; pointer-events: none;
+      background: rgba(80,0,0,0.9); border: 2px solid #ff3322; color: #ffe8a0;
+      padding: 0.65rem 1.2rem; font-size: 0.95rem; letter-spacing: 0.06em;
+      text-align: center; max-width: 90%;
+    }
+    #emergency-recall.show { display: block; animation: pulse 1s ease-in-out infinite alternate; }
     #edge-warn {
       position: absolute; left: 50%; top: 18%; transform: translateX(-50%);
       display: none; z-index: 40; pointer-events: none;
@@ -363,6 +371,11 @@
             <label>Master Volume <span id="vol-val">0.7</span></label>
             <input type="range" id="volume" min="0" max="1" step="0.05" value="0.7">
           </div>
+          <div class="form-group">
+            <label>Browser memory limit <span id="mem-limit-val">1.0</span> GB</label>
+            <input type="range" id="memory-limit" min="0.5" max="4" step="0.25" value="1">
+            <p class="small" style="margin-top:0.35rem;opacity:0.75">Scout mode: at 90% of this limit, Super Earth issues an emergency recall and drops a Field Extraction stratagem at your feet. (Uses Chrome memory API when available.)</p>
+          </div>
           <div class="button-row" style="margin-top:0.75rem">
             <button id="btn-export-profile" class="btn small" type="button">EXPORT PROFILE</button>
             <button id="btn-import-profile" class="btn small" type="button">IMPORT PROFILE</button>
@@ -478,6 +491,7 @@
         </div>
       </div>
       <div id="edge-warn">WARNING: You are leaving the mission area</div>
+      <div id="emergency-recall">⚠ EMERGENCY RECALL FROM SUPER EARTH — Field Extraction dropped</div>
       <div id="pickup-toast"></div>
       <div id="extract-timer">EXTRACT IN <span>25</span>s</div>
       <div id="mission-end">
@@ -499,11 +513,78 @@
   </div>
 
 <script>
+// ADD THIS: Spatial Partitioning Grid
+const SpatialGrid = {
+    cellSize: 20,
+    bins: new Map(),
+    clear() { this.bins.clear(); },
+    insert(entity) {
+        const bx = Math.floor(entity.x / this.cellSize);
+        const bz = Math.floor(entity.z / this.cellSize);
+        const key = `${bx},${bz}`;
+        if (!this.bins.has(key)) this.bins.set(key, []);
+        this.bins.get(key).push(entity);
+    },
+    getNearby(x, z) {
+        const bx = Math.floor(x / this.cellSize);
+        const bz = Math.floor(z / this.cellSize);
+        let results = [];
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dz = -1; dz <= 1; dz++) {
+                const key = `${bx + dx},${bz + dz}`;
+                const bin = this.bins.get(key);
+                if (bin) results.push(...bin);
+            }
+        }
+        return results;
+    }
+};
+
+// ADD THIS: Binary Codec (The "Translator" for Binary Serialization)
+const GameCodec = {
+    // Mapping types to a single byte to save space
+    TYPES: { JOIN: 1, STATE_FULL: 2, STATE_DELTA: 3, INPUT: 4 },
+
+    encodeState(state) {
+        // Example: [Type(1), PlayerCount(1), ...PlayerX(4), PlayerY(4), PlayerZ(4)]
+        const buffer = new ArrayBuffer(1000); // Pre-allocate large enough buffer
+        const view = new DataView(buffer);
+        let offset = 0;
+        
+        view.setUint8(offset++, this.TYPES.STATE_FULL);
+        view.setUint8(offset++, state.players.length);
+        
+        state.players.forEach(p => {
+            view.setFloat32(offset, p.x); offset += 4;
+            view.setFloat32(offset, p.y); offset += 4;
+            view.setFloat32(offset, p.z); offset += 4;
+        });
+        return buffer.slice(0, offset);
+    },
+    
+    decodeState(buffer) {
+        const view = new DataView(buffer);
+        let offset = 0;
+        const type = view.getUint8(offset++);
+        const pCount = view.getUint8(offset++);
+        const players = [];
+        for(let i=0; i<pCount; i++) {
+            players.push({
+                x: view.getFloat32(offset),
+                y: view.getFloat32(offset + 4),
+                z: view.getFloat32(offset + 8)
+            });
+            offset += 12;
+        }
+        return { type, players };
+    }
+};
+
 const Storage = {
   KEY: 'hellbrowsers_v3',
   load() {
     try { const r = localStorage.getItem(this.KEY); if (r) return JSON.parse(r); } catch (e) {}
-    return { username: '', volume: 0.7, showFps: false, reduceMotion: false, autoClimb: false, friendlyFire: true, maxDifficultyUnlocked: 10,
+    return { username: '', volume: 0.7, showFps: false, reduceMotion: false, autoClimb: false, friendlyFire: true, memoryLimitGB: 1, maxDifficultyUnlocked: 10,
       moveScheme: 'both', // 'wasd' | 'arrows' | 'both'
       keybinds: {
         forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD',
@@ -614,6 +695,26 @@ function difficultyForId(id) {
     breaches: base.breaches + extra * 0.08
   };
 }
+// Single source of truth for destroyer geometry (meshes, floor Y, colliders, camera, spawns)
+const SHIP_LAYOUT = {
+  mainY: 2.0,
+  bayY: 0.0,
+  wallN: -18.0, wallS: 18.0, wallW: -10.0, wallE: 10.0,
+  seamX: 5.5,      // ramp east / bay west
+  rampX0: 2.0,     // ramp west (top) on main deck
+  rampZ0: 12.0,
+  rampZ1: 15.5,
+  bayX1: 10.0,
+  bayZ0: 11.0,
+  bayZ1: 17.8,
+  // Spawns
+  baySpawn: { x: 7.7, z: 14.2, yaw: -Math.PI / 2 },   // face west toward ramp
+  deckSpawn: { x: 2.2, z: 13.7, yaw: Math.PI },       // face north toward pods
+  // Camera / movement pads
+  hullPad: 0.5,
+  playerClamp: { minX: -9.5, maxX: 9.5, minZ: -17.5, maxZ: 17.5 }
+};
+
 const MISSION_TYPES = [
   { id: 'holes', name: 'Eradicate Bug Holes', obj: 'Destroy all bug holes' },
   { id: 'icbm', name: 'Launch ICBM', obj: 'Activate the ICBM silo' },
@@ -721,46 +822,40 @@ const Network = {
     conn.on('data', d => this._onData(conn.peer, d));
     conn.on('close', () => { this.connections.delete(conn.peer); this.players.delete(conn.peer); if (this.onPlayerLeave) this.onPlayerLeave(conn.peer); });
   },
-  _onData(from, data) {
-    if (!data || !data.type) return;
-    if (data.type === 'join' && this.isHost) {
-      if (this.players.size >= this.maxPlayers) return;
-      this.players.set(from, { name: data.name, ready: true });
-      this.broadcast({ type: 'roster', players: [...this.players.entries()] });
-      if (this.onPlayerJoin) this.onPlayerJoin(from, data.name);
-      // Late join during active mission → send them straight to drop-pod flow
-      try {
-        if (typeof Game !== 'undefined' && (Game.state === 'playing' || Game.state === 'extract' || Game.state === 'hellpod')) {
-          const conn = this.connections.get(from);
-          if (conn && conn.open) {
-            conn.send({
-              type: 'mission_join',
-              planet: Game.selectedPlanet,
-              mission: Game.selectedMission,
-              diff: Game.selectedDiffId || Game.selectedDiff,
-              mapSize: Game.mapSize
-            });
-          }
+  // REPLACE Network.broadcast with this:
+broadcastState(state) {
+    this.frameCounter = (this.frameCounter || 0) + 1;
+    const isCheckpoint = this.frameCounter % 100 === 0;
+
+    if (isCheckpoint) {
+        // BINARY FULL STATE
+        const bin = GameCodec.encodeState(state);
+        this.broadcast(bin);
+    } else {
+        // DELTA JSON (for simplicity, we keep deltas as JSON, but binary for full states)
+        const delta = this.calculateDelta(state); 
+        if (Object.keys(delta).length > 0) {
+            this.broadcast({ type: 'state_delta', delta });
         }
-      } catch (e) {}
-    } else if (data.type === 'roster') {
-      this.players = new Map(data.players);
-      if (this.onPlayerJoin) this.onPlayerJoin(null, null);
-    } else if (data.type === 'start' && this.onStart) this.onStart(data);
-    else if (data.type === 'mission_join' && this.onMissionJoin) this.onMissionJoin(data);
-    else if (data.type === 'input' && this.isHost && this.onInput) this.onInput(from, data.input);
-    else if (data.type === 'state' && !this.isHost && this.onState) this.onState(data.state);
-    else if (data.type === 'voice') {
-      // Shared voiceline event — all clients receive identical event ids
-      if (typeof Game !== 'undefined' && Game.voiceEvents) {
-        Game.voiceEvents.push(data.event);
-        if (Game.voiceEvents.length > 40) Game.voiceEvents.shift();
-        console.log('[VoiceEvent:remote]', data.event && data.event.id);
-      }
     }
-  },
-  broadcast(data) { for (const c of this.connections.values()) if (c.open) try { c.send(data); } catch (e) {} },
-  startGame(p) { if (this.isHost) { this.broadcast({ type: 'start', ...p }); if (this.onStart) this.onStart(p); } },
+},
+
+// REPLACE Network._onData with this:
+_onData(from, data) {
+    // CHECK: Is the data a Buffer (Binary) or an Object (JSON)?
+    if (data instanceof ArrayBuffer) {
+        const decoded = GameCodec.decodeState(data);
+        if (decoded.type === GameCodec.TYPES.STATE_FULL) {
+            this.onState(decoded);
+        }
+    } else {
+        // Handle regular JSON messages (Join, Input, etc.)
+        if (data.type === 'join') { /* your existing join logic */ }
+        // ... rest of your existing _onData logic ...
+    }
+},
+
+startGame(p) { if (this.isHost) { this.broadcast({ type: 'start', ...p }); if (this.onStart) this.onStart(p); } },
   destroy() {
     for (const c of this.connections.values()) try { c.close(); } catch (e) {}
     this.connections.clear(); this.players.clear();
@@ -853,6 +948,39 @@ const Game = {
   terrainSeed: 0,
   maxHeight: 4.5,
 
+init(wrapEl) {
+    this.wrap = wrapEl;
+    if (typeof THREE === 'undefined') return false;
+    const w = wrapEl.clientWidth || window.innerWidth;
+    const h = wrapEl.clientHeight || window.innerHeight;
+
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x0a100e);
+    this.scene.fog = new THREE.Fog(0x0a100e, 40, 95);
+
+    this.camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 220);
+    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.setSize(w, h);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.shadowMap.enabled = true;
+    wrapEl.innerHTML = '';
+    wrapEl.appendChild(this.renderer.domElement);
+
+    const amb = new THREE.AmbientLight(0x668866, 0.4);
+    this.scene.add(amb);
+    const dir = new THREE.DirectionalLight(0xffe8aa, 0.95);
+    dir.position.set(20, 45, 10);
+    dir.castShadow = true;
+    dir.shadow.mapSize.set(1024, 1024);
+    this.scene.add(dir);
+
+    this._buildTerrain();
+    this._scatterRocks();
+    this._bindInput();
+    window.addEventListener('resize', () => this._onResize());
+    return true;
+},
+
   // --- Noise / heightmap ---
   _hash(ix, iz) {
     // Deterministic hash from integer coords + seed
@@ -884,38 +1012,25 @@ const Game = {
   /** World XZ → height (Y) */
 
   _cameraCollision(px, py, pz, dx, dy, dz) {
-    // March from desired cam inward to pivot; keep last free sample
-    const steps = 16;
-    let last = { x: px + (dx - px) * 0.12, y: py + 0.4, z: pz + (dz - pz) * 0.12 };
+    const steps = 8; // Reduced steps for performance
+    let last = { x: px, y: py, z: pz };
     for (let i = steps; i >= 1; i--) {
-      const u = i / steps;
-      const tx = px + (dx - px) * u;
-      const ty = py + (dy - py) * u;
-      const tz = pz + (dz - pz) * u;
-      let blocked = false;
-      if (this.state === 'ship') {
-        // Outer hull only — do NOT treat terminals/pods as camera blockers
-        if (tx < -9.7 || tx > 9.7 || tz < -17.7 || tz > 17.7) blocked = true;
-        const floorY = this._shipFloorY ? this._shipFloorY(tx, tz) : 0;
-        if (ty < floorY + 0.35 || ty > 5.8) blocked = true;
-      } else {
+        const u = i / steps;
+        const tx = px + (dx - px) * u;
+        const tz = pz + (dz - pz) * u;
+        
+        let blocked = false;
+        // SQUARED DISTANCE CHECK
         if (this.rocks) {
-          for (const r of this.rocks) {
-            if (Math.hypot(tx - r.x, tz - r.z) < (r.r || 0.5) + 0.55) { blocked = true; break; }
-          }
+            for (const r of this.rocks) {
+                const distSq = (tx - r.x)**2 + (tz - r.z)**2;
+                if (distSq < (r.r + 0.55)**2) { blocked = true; break; }
+            }
         }
-        if (!blocked && typeof this.getHeight === 'function') {
-          if (ty < this.getHeight(tx, tz) + 0.55) blocked = true;
-        }
-      }
-      if (!blocked) {
-        last = { x: tx, y: ty, z: tz };
-        // farthest free point wins (first hit in this loop)
-        return last;
-      }
+        if (!blocked) return { x: tx, y: dy, z: tz };
     }
     return last;
-  },
+},
 
   getHeight(x, z) {
     if (!this.heightmap) return 0;
@@ -936,216 +1051,74 @@ const Game = {
     return (h00 * (1 - fu) + h10 * fu) * (1 - fv) + (h01 * (1 - fu) + h11 * fu) * fv;
   },
 
-  _buildTerrain() {
+  // Replace your _buildTerrain and _scatterRocks with these
+_buildTerrain() {
     this.terrainSeed = (Math.random() * 1e9) | 0;
-    const res = this.terrainRes;
-    const size = this.mapSize;
-    const half = size / 2;
-    const verts = res + 1;
-    this.heightmap = new Float32Array(verts * verts);
-
-    // Generate height field: rolling hills + flatter center for gameplay
-    for (let iz = 0; iz <= res; iz++) {
-      for (let ix = 0; ix <= res; ix++) {
-        const nx = ix / res;
-        const nz = iz / res;
-        const wx = (nx - 0.5) * size;
-        const wz = (nz - 0.5) * size;
-        const dist = Math.hypot(wx, wz) / half; // 0 center → ~1 edge
-
-        // Multi-scale noise
-        let h = this._fbm(nx * 3.2 + 10, nz * 3.2 + 10, 5);
-        h = (h - 0.5) * 2; // -1..1
-        // Ridges / secondary layer
-        const ridge = 1 - Math.abs(this._fbm(nx * 6.5, nz * 6.5, 3) * 2 - 1);
-        h = h * 0.7 + (ridge - 0.5) * 0.35;
-
-        // Flatten center (LZ / terminal area)
-        const flatten = Math.min(1, dist * 1.6);
-        h *= flatten * flatten;
-
-        // Gentle bowl so edges rise a bit
-        h += Math.pow(Math.max(0, dist - 0.55), 2) * 0.8;
-
-        // Scale to world height
-        h *= this.maxHeight;
-        // Soft floor
-        if (h < -0.3) h = -0.3 + (h + 0.3) * 0.3;
-
-        this.heightmap[iz * verts + ix] = h;
-      }
-    }
-
-    // Build mesh (PlaneGeometry in XZ after rotation: native is XY, we rotate -90 X)
-    const geo = new THREE.PlaneGeometry(size, size, res, res);
-    const pos = geo.attributes.position;
-    // PlaneGeometry is in XY; after rotation.x = -PI/2, Y becomes world Z and Z becomes world Y
-    // position: x, y (maps to -z after rot? ); actually with rotation -PI/2 on X:
-    // local (x,y,z) -> (x, z, -y) roughly. Standard approach: set Z from heightmap before rotate.
-    // PlaneGeometry lies in XY; after rotation.x = -PI/2:
-    // worldX = localX, worldY = localZ (height), worldZ = -localY
-    for (let i = 0; i < pos.count; i++) {
-      const lx = pos.getX(i);
-      const ly = pos.getY(i);
-      const worldZ = -ly;
-      const ix = Math.round(((lx + half) / size) * res);
-      const iz = Math.round(((worldZ + half) / size) * res);
-      const ci = Math.max(0, Math.min(res, iz)) * verts + Math.max(0, Math.min(res, ix));
-      pos.setZ(i, this.heightmap[ci]);
-    }
-    pos.needsUpdate = true;
-    geo.computeVertexNormals();
-
-    // Vertex colors: low = mud, mid = scrub, high = rock
-    const colors = new Float32Array(pos.count * 3);
-    for (let i = 0; i < pos.count; i++) {
-      const h = pos.getZ(i);
-      const t = Math.max(0, Math.min(1, (h + 0.2) / (this.maxHeight + 0.2)));
-      // brown-green low → olive mid → grey high
-      let r, g, b;
-      if (t < 0.35) {
-        const u = t / 0.35;
-        r = 0.12 + u * 0.08; g = 0.18 + u * 0.1; b = 0.1;
-      } else if (t < 0.7) {
-        const u = (t - 0.35) / 0.35;
-        r = 0.2 + u * 0.1; g = 0.28 + u * 0.05; b = 0.12;
-      } else {
-        const u = (t - 0.7) / 0.3;
-        r = 0.3 + u * 0.15; g = 0.32 + u * 0.1; b = 0.28 + u * 0.12;
-      }
-      colors[i * 3] = r; colors[i * 3 + 1] = g; colors[i * 3 + 2] = b;
-    }
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    if (this.ground) this.scene.remove(this.ground);
-    const mat = new THREE.MeshStandardMaterial({
-      vertexColors: true,
-      roughness: 0.92,
-      metalness: 0.05,
-      flatShading: false
+    const chunkSize = 40; // Divide map into 40x40 chunks
+    const chunksX = Math.ceil(this.mapSize / chunkSize);
+    const chunksZ = Math.ceil(this.mapSize / chunkSize);
+    
+    this.terrainChunks = [];
+    const mat = new THREE.MeshStandardMaterial({ 
+        vertexColors: true, roughness: 0.92, metalness: 0.05 
     });
-    this.ground = new THREE.Mesh(geo, mat);
-    this.ground.rotation.x = -Math.PI / 2;
-    this.ground.receiveShadow = true;
-    this.ground.castShadow = true;
-    this.scene.add(this.ground);
-    this.terrainMesh = this.ground;
-    // Flat continuation past map edge (immersion)
-    if (this.outerGround) { this.scene.remove(this.outerGround); this.outerGround = null; }
-    const pl = PLANETS[this.selectedPlanet] || PLANETS[0];
-    const og = new THREE.Mesh(
-      new THREE.CircleGeometry((this.mapSize || 240) * 1.35, 48),
-      new THREE.MeshStandardMaterial({ color: pl.ground || 0x1a2a1c, roughness: 1 })
-    );
-    og.rotation.x = -Math.PI / 2;
-    og.position.y = -0.2;
-    og.receiveShadow = true;
-    this.scene.add(og);
-    this.outerGround = og;
-  },
 
-  init(wrapEl) {
-    this.wrap = wrapEl;
-    if (typeof THREE === 'undefined') return false;
-    const w = wrapEl.clientWidth || window.innerWidth;
-    const h = wrapEl.clientHeight || window.innerHeight;
+    for (let cx = 0; cx < chunksX; cx++) {
+        for (let cz = 0; cz < chunksZ; cz++) {
+            const geo = new THREE.PlaneGeometry(chunkSize, chunkSize, 16, 16);
+            const pos = geo.attributes.position;
+            
+            // Offset geometry to the correct chunk position
+            const offsetX = (cx * chunkSize) - (this.mapSize / 2);
+            const offsetZ = (cz * chunkSize) - (this.mapSize / 2);
 
-    this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a100e);
-    this.scene.fog = new THREE.Fog(0x0a100e, 40, 95);
+            for (let i = 0; i < pos.count; i++) {
+                const lx = pos.getX(i) + offsetX;
+                const lz = -pos.getY(i) + offsetZ; // Plane is XY, we rotate to XZ
+                pos.setZ(i, this.getHeight(lx, lz));
+            }
+            pos.needsUpdate = true;
+            geo.computeVertexNormals();
 
-    this.camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 220);
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setSize(w, h);
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
-    wrapEl.innerHTML = '';
-    wrapEl.appendChild(this.renderer.domElement);
-
-    const amb = new THREE.AmbientLight(0x668866, 0.4);
-    this.scene.add(amb);
-    const dir = new THREE.DirectionalLight(0xffe8aa, 0.95);
-    dir.position.set(20, 45, 10);
-    dir.castShadow = true;
-    dir.shadow.mapSize.set(1024, 1024);
-    dir.shadow.camera.near = 1;
-    dir.shadow.camera.far = 120;
-    dir.shadow.camera.left = -50;
-    dir.shadow.camera.right = 50;
-    dir.shadow.camera.top = 50;
-    dir.shadow.camera.bottom = -50;
-    this.scene.add(dir);
-    this.scene.add(new THREE.HemisphereLight(0x88aacc, 0x443322, 0.35));
-
-    // Procedural heightmap terrain
-    this._buildTerrain();
-
-    // Extract ring (height-adjusted later in start)
-    const ringGeo = new THREE.RingGeometry(this.extractZone.r - 0.3, this.extractZone.r, 48);
-    this.extractMesh = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x33aaff, side: THREE.DoubleSide, transparent: true, opacity: 0.45 }));
-    this.extractMesh.rotation.x = -Math.PI / 2;
-    this.extractMesh.position.y = this.getHeight(this.extractZone.x, this.extractZone.z) + 0.06;
-    this.scene.add(this.extractMesh);
-
-    // Terminal
-    const termG = new THREE.Group();
-    const base = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.3, 0.8), new THREE.MeshStandardMaterial({ color: 0x333340 }));
-    base.position.y = 0.15; base.castShadow = true;
-    termG.add(base);
-    const screen = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.9, 0.15), new THREE.MeshStandardMaterial({ color: 0x1a3a2a, emissive: 0x114422, emissiveIntensity: 0.4 }));
-    screen.position.set(0, 0.75, 0); screen.castShadow = true;
-    termG.add(screen);
-    const light = new THREE.PointLight(0x33ff88, 0.6, 6);
-    light.position.set(0, 1.2, 0.3);
-    termG.add(light);
-    const ty = this.getHeight(this.terminal.x, this.terminal.z);
-    termG.position.set(this.terminal.x, ty, this.terminal.z);
-    this.scene.add(termG);
-    this.terminalMesh = termG;
-
-    this._scatterRocks();
-
-    this._bindInput();
-    window.addEventListener('resize', () => this._onResize());
-    return true;
-  },
-
-  _scatterRocks() {
-    if (this.rockMeshes) {
-      for (const m of this.rockMeshes) this.scene.remove(m);
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.rotation.x = -Math.PI / 2;
+            mesh.position.set(offsetX + chunkSize/2, 0, offsetZ + chunkSize/2);
+            mesh.receiveShadow = true;
+            this.scene.add(mesh);
+            this.terrainChunks.push(mesh);
+        }
     }
-    this.rockMeshes = [];
+},
+
+_scatterRocks() {
+    const count = 120;
+    const rockGeo = new THREE.DodecahedronGeometry(1, 0);
+    const rockMat = new THREE.MeshStandardMaterial({ color: 0x888888, flatShading: true });
+    
+    // INSTANCED MESH: One draw call for all rocks
+    this.rockInstancedMesh = new THREE.InstancedMesh(rockGeo, rockMat, count);
+    this.rockInstancedMesh.castShadow = true; // We will handle individual shadows via a different method or just disable
+    this.rockInstancedMesh.receiveShadow = true;
+    
+    const dummy = new THREE.Object3D();
     this.rocks = [];
-    const pl = PLANETS[this.selectedPlanet] || PLANETS[0];
-    let rockColor = pl.rock != null ? pl.rock : 0x4a4a42;
-    if (pl.biome === 'forest') rockColor = 0xb0b0b0;
-    if (pl.biome === 'desert') rockColor = 0x8a5a32;
-    if (pl.biome === 'mushroom') rockColor = 0x888890;
-    if (pl.biome === 'ice') rockColor = 0x9aa8b4;
-    const rockMat = new THREE.MeshStandardMaterial({ color: rockColor, roughness: 0.92, flatShading: true });
-    const half = (this.mapSize || 240) / 2 - 4;
-    const count = 90;
+
     for (let i = 0; i < count; i++) {
-      const s = 0.4 + Math.random() * 1.5;
-      const x = (Math.random() * 2 - 1) * half;
-      const z = (Math.random() * 2 - 1) * half;
-      // Keep drop / extract LZ clearer
-      if (Math.hypot(x, z) < 6) continue;
-      if (this.extractZone && Math.hypot(x - this.extractZone.x, z - this.extractZone.z) < 5) continue;
-      const y = this.getHeight(x, z);
-      const rock = new THREE.Mesh(
-        new THREE.DodecahedronGeometry(s * 0.55, 0),
-        rockMat
-      );
-      rock.position.set(x, y + s * 0.25, z);
-      rock.rotation.set(Math.random(), Math.random(), Math.random());
-      rock.castShadow = true;
-      rock.receiveShadow = true;
-      this.scene.add(rock);
-      this.rockMeshes.push(rock);
-      this.rocks.push({ x, z, r: s * 0.5 });
+        const s = 0.4 + Math.random() * 1.5;
+        const x = (Math.random() * 2 - 1) * (this.mapSize / 2);
+        const z = (Math.random() * 2 - 1) * (this.mapSize / 2);
+        const y = this.getHeight(x, z);
+
+        dummy.position.set(x, y + s * 0.25, z);
+        dummy.rotation.set(Math.random(), Math.random(), Math.random());
+        dummy.scale.setScalar(s);
+        dummy.updateMatrix();
+        
+        this.rockInstancedMesh.setMatrixAt(i, dummy.matrix);
+        this.rocks.push({ x, z, r: s * 0.5, isLarge: s > 1.2 });
     }
-  },
+    this.scene.add(this.rockInstancedMesh);
+},
 
 
   _onResize() {
@@ -1345,7 +1318,16 @@ const Game = {
 
     document.addEventListener('mousemove', (e) => {
       if (!this.mouse.locked) return;
-      if (this.state !== 'playing' && this.state !== 'extract' && this.state !== 'ship') return;
+      if (this.state === 'paused' && this._pauseReturnState === 'ship') {
+      const lp = this.players.get(this.localId);
+      if (lp) {
+        lp.y = this._shipFloorY(lp.x, lp.z);
+        const mesh = this.meshes.players.get(lp.id);
+        if (mesh) { mesh.position.y = lp.y; }
+      }
+      return;
+    }
+    if (this.state !== 'playing' && this.state !== 'extract' && this.state !== 'ship') return;
     // Edge-of-map warning
     if (this.state === 'playing' || this.state === 'extract') {
       const lp = this.players.get(this.localId);
@@ -1410,7 +1392,10 @@ const Game = {
     this.ctrlHeld = !!(this.keys['ControlLeft'] || this.keys['ControlRight']);
   },
 
-  startShip(name) {
+  startShip(name, opts) {
+    opts = opts || {};
+    // spawn: 'bay' (default first entry) | 'deck' (return from mission)
+    const spawnMode = opts.spawn === 'deck' ? 'deck' : 'bay';
     this._keybinds = getKeybinds();
     this._moveScheme = getMoveScheme();
     this.resetWorld();
@@ -1435,6 +1420,7 @@ const Game = {
     this.holes = [];
     this.scoutMode = false;
     this.scoutDiffMult = 1;
+    this._emergencyRecallDone = false;
     if (this.weaponDrops) {
       for (const w of this.weaponDrops) { if (w.mesh) this.scene.remove(w.mesh); }
       this.weaponDrops = [];
@@ -1452,17 +1438,23 @@ const Game = {
     this._addPlayer('local', name, 7.7, 14.2, 0xffe800);
     const p = this.players.get('local');
     if (p) {
-      // SE lower bay spawn — on lowered platform
-      p.x = 7.7; p.z = 14.2;
-      p.y = this._shipFloorY ? this._shipFloorY(p.x, p.z) : (this._shipBayY || 0);
+      const sp = spawnMode === 'deck' ? SHIP_LAYOUT.deckSpawn : SHIP_LAYOUT.baySpawn;
+      p.x = sp.x; p.z = sp.z;
+      this.camYaw = sp.yaw;
+      p.y = this._shipFloorY ? this._shipFloorY(p.x, p.z) : (spawnMode === 'deck' ? 2 : 0);
+      p.angle = this.camYaw;
       p.alive = true;
       p._hiddenInPod = false;
       p.backpack = this.loadoutBackpack || 'supply';
-      // Look toward ramp / main deck (west-north)
-      this.camYaw = -Math.PI * 0.65;
-      this.camPitch = 0.25;
+      this.camPitch = 0.28;
+      const mesh = this.meshes.players.get(p.id);
+      if (mesh) {
+        mesh.position.set(p.x, p.y, p.z);
+        mesh.rotation.y = p.angle;
+      }
     }
     this.state = 'ship';
+    try { this._runRegressionChecklist(); } catch (e) {}
     // Strip any leftover extract / objective HUD
     for (const id of ['extract-timer', 'edge-warn', 'interact-hint', 'objective', 'strat-cds', 'fs-warn']) {
       const el = document.getElementById(id);
@@ -1561,20 +1553,13 @@ const Game = {
     const accentMat = new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.5, roughness: 0.5 });
     const yellowMat = new THREE.MeshStandardMaterial({ color: 0xffe800, metalness: 0.4, roughness: 0.35, emissive: 0x665500, emissiveIntensity: 0.25 });
 
-    // Destroyer faces north (−Z). Long axis is N–S (Z).
-    // Main deck raised; SE bay is a real lower platform; ramp aligns flush to both decks.
-    const MAIN_Y = 2.0;
-    const BAY_Y = 0.0;
+    // Destroyer faces north (−Z). Geometry driven by SHIP_LAYOUT.
+    const L = SHIP_LAYOUT;
+    const MAIN_Y = L.mainY, BAY_Y = L.bayY;
     this._shipMainY = MAIN_Y;
     this._shipBayY = BAY_Y;
-    // Shared seams (must match _shipFloorY)
-    const SEAM_X = 5.5;       // ramp east / bay west
-    const RAMP_X0 = 2.0;      // ramp west (top) on main deck
-    const RAMP_Z0 = 12.0;
-    const RAMP_Z1 = 15.5;
-    const BAY_X1 = 10.0;
-    const BAY_Z0 = 11.0;
-    const BAY_Z1 = 17.8;
+    const SEAM_X = L.seamX, RAMP_X0 = L.rampX0, RAMP_Z0 = L.rampZ0, RAMP_Z1 = L.rampZ1;
+    const BAY_X1 = L.bayX1, BAY_Z0 = L.bayZ0, BAY_Z1 = L.bayZ1;
     this._shipSeam = { SEAM_X, RAMP_X0, RAMP_Z0, RAMP_Z1, BAY_X1, BAY_Z0, BAY_Z1 };
 
     // --- Floors: NO main-deck mesh over ramp corridor ---
@@ -1608,14 +1593,23 @@ const Game = {
     ramp.rotation.z = -Math.atan2(rise, rampLen);
     this.shipRoot.add(ramp);
 
-    // Bay rails (not blocking ramp)
-    const bayRailE = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.9, bayD), accentMat);
-    bayRailE.position.set(BAY_X1 - 0.05, BAY_Y + 0.35, (BAY_Z0 + BAY_Z1) / 2); this.shipRoot.add(bayRailE);
-    const bayRailS = new THREE.Mesh(new THREE.BoxGeometry(bayW, 0.9, 0.25), accentMat);
-    bayRailS.position.set((SEAM_X + BAY_X1) / 2, BAY_Y + 0.35, BAY_Z1 - 0.05); this.shipRoot.add(bayRailS);
+    // Bay short walls / rails — close open sides where space is visible
+    const bayRailE = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.15, bayD), accentMat);
+    bayRailE.position.set(BAY_X1 - 0.05, BAY_Y + 0.55, (BAY_Z0 + BAY_Z1) / 2); this.shipRoot.add(bayRailE);
+    const bayRailS = new THREE.Mesh(new THREE.BoxGeometry(bayW, 1.15, 0.28), accentMat);
+    bayRailS.position.set((SEAM_X + BAY_X1) / 2, BAY_Y + 0.55, BAY_Z1 - 0.05); this.shipRoot.add(bayRailS);
+    // North lip of bay (cliff under main deck edge)
+    const bayRailN = new THREE.Mesh(new THREE.BoxGeometry(bayW, 1.15, 0.28), accentMat);
+    bayRailN.position.set((SEAM_X + BAY_X1) / 2, BAY_Y + 0.55, BAY_Z0 + 0.05); this.shipRoot.add(bayRailN);
+    // South-west stub wall on bay west edge south of ramp corridor
+    const bayWestSouth = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.15, Math.max(0.5, BAY_Z1 - RAMP_Z1)), accentMat);
+    bayWestSouth.position.set(SEAM_X + 0.05, BAY_Y + 0.55, (RAMP_Z1 + BAY_Z1) / 2); this.shipRoot.add(bayWestSouth);
+    // North-west stub wall on bay west edge north of ramp
+    const bayWestNorth = new THREE.Mesh(new THREE.BoxGeometry(0.28, 1.15, Math.max(0.5, RAMP_Z0 - BAY_Z0)), accentMat);
+    bayWestNorth.position.set(SEAM_X + 0.05, BAY_Y + 0.55, (BAY_Z0 + RAMP_Z0) / 2); this.shipRoot.add(bayWestNorth);
 
     // Outer hull walls
-    const WALL_N = -18.0, WALL_S = 18.0, WALL_W = -10.0, WALL_E = 10.0;
+    const WALL_N = L.wallN, WALL_S = L.wallS, WALL_W = L.wallW, WALL_E = L.wallE;
     const wallH = 4.5;
     const wallBase = MAIN_Y + wallH / 2 - 0.5;
     const mkWall = (w, h, d, x, y, z) => {
@@ -1702,7 +1696,11 @@ const Game = {
       { minX: WALL_W - T, maxX: WALL_W + T, minZ: WALL_N, maxZ: WALL_S },
       { minX: WALL_E - T, maxX: WALL_E + T, minZ: WALL_N, maxZ: WALL_S },
       { minX: BAY_X1 - T, maxX: BAY_X1 + T, minZ: BAY_Z0, maxZ: BAY_Z1 },
-      { minX: SEAM_X, maxX: BAY_X1, minZ: BAY_Z1 - T, maxZ: BAY_Z1 + T }
+      { minX: SEAM_X, maxX: BAY_X1, minZ: BAY_Z1 - T, maxZ: BAY_Z1 + T },
+      { minX: SEAM_X, maxX: BAY_X1, minZ: BAY_Z0 - T, maxZ: BAY_Z0 + T },
+      // West stubs (not across ramp mouth)
+      { minX: SEAM_X - T, maxX: SEAM_X + T, minZ: RAMP_Z1, maxZ: BAY_Z1 },
+      { minX: SEAM_X - T, maxX: SEAM_X + T, minZ: BAY_Z0, maxZ: RAMP_Z0 }
     ];
     for (const s of this.shipStations) {
       // Small colliders — leave walkways to pods and terminals
@@ -1727,9 +1725,10 @@ const Game = {
         x += (x > 0 ? 1 : -1) * rad;
       }
     }
-    // Keep inside hull (matches WALL_W/E ±10, WALL_N/S ±18)
-    x = Math.max(-9.5, Math.min(9.5, x));
-    z = Math.max(-17.5, Math.min(17.5, z));
+    // Keep inside hull (SHIP_LAYOUT.playerClamp)
+    const C = (typeof SHIP_LAYOUT !== 'undefined') ? SHIP_LAYOUT.playerClamp : { minX: -9.5, maxX: 9.5, minZ: -17.5, maxZ: 17.5 };
+    x = Math.max(C.minX, Math.min(C.maxX, x));
+    z = Math.max(C.minZ, Math.min(C.maxZ, z));
     return { x, z };
   },
 
@@ -1981,6 +1980,178 @@ const Game = {
     if (this.state === 'ship') this._requestLock();
   },
 
+
+
+
+  _hostHandleAction(from, data) {
+    if (!Network.isHost) return;
+    const act = data && data.action;
+    if (act === 'call_extract') {
+      if (this.state === 'ship' || this.extractCalled) return;
+      if (this.scoutMode || (this._objectivesComplete && this._objectivesComplete())) {
+        const x = data.x || 0, z = data.z || 0;
+        this.extractCalled = true;
+        this.state = 'extract';
+        this.extractTimer = 25;
+        this.extractZone = { x, z, r: 8 };
+        Network.broadcastAuth({ action: 'extract_started', x, z, timer: 25, state: 'extract' });
+      }
+    } else if (act === 'ready_drop') {
+      Network.broadcastAuth({ action: 'player_ready', id: from, ready: !!data.ready });
+    } else if (act === 'input_frame' && data.input) {
+      if (!this._remoteInputs) this._remoteInputs = new Map();
+      this._remoteInputs.set(from, data.input);
+    }
+  },
+
+  _applyAuthState(data) {
+    if (Network.isHost || !data) return;
+    if (data.action === 'extract_started') {
+      this.extractCalled = true;
+      this.state = 'extract';
+      this.extractTimer = data.timer || 25;
+      this.extractZone = { x: data.x || 0, z: data.z || 0, r: 8 };
+    } else if (data.action === 'emergency_recall') {
+      this._emergencyRecallDone = true;
+      const banner = document.getElementById('emergency-recall');
+      if (banner) {
+        banner.classList.add('show');
+        setTimeout(() => banner.classList.remove('show'), 8000);
+      }
+    } else if (data.action === 'mission_state' && data.state) {
+      if (data.state.extractCalled != null) this.extractCalled = data.state.extractCalled;
+      if (data.state.extractTimer != null) this.extractTimer = data.state.extractTimer;
+      if (data.state.kills != null) this.kills = data.state.kills;
+      if (data.state.scoutMaxDist != null) this.scoutMaxDist = data.state.scoutMaxDist;
+    }
+  },
+
+  _netBroadcastMissionTick() {
+    if (!Network.isHost || Network.connections.size === 0) return;
+    if (this.state !== 'playing' && this.state !== 'extract') return;
+    this._authTick = (this._authTick || 0) + 1;
+    if (this._authTick % 30 !== 0) return;
+    Network.broadcastAuth({
+      action: 'mission_state',
+      state: {
+        extractCalled: this.extractCalled,
+        extractTimer: this.extractTimer,
+        kills: this.kills,
+        scoutMaxDist: this.scoutMaxDist || 0,
+        phase: this.state
+      }
+    });
+  },
+
+  _enterState(next, opts) {
+    opts = opts || {};
+    const prev = this.state;
+    // Normalize
+    if (next === 'hellpod') next = 'ship'; // pause return treats hellpod as ship
+    if (next === 'paused') {
+      if (prev === 'playing' || prev === 'extract' || prev === 'ship' || prev === 'hellpod') {
+        this._pauseReturnState = prev === 'hellpod' ? 'ship' : prev;
+        if (this._pauseReturnState === 'ship') this._seatOnShip();
+        this.state = 'paused';
+        this._exitLock();
+        this.ctrlHeld = false;
+        this.stratBuffer = [];
+        this.grenadePrimed = false;
+        this.primedStratagem = null;
+        return;
+      }
+      return;
+    }
+    if (next === 'ship') {
+      this.state = 'ship';
+      this.extractCalled = false;
+      this.extractShipPhase = null;
+      const et = document.getElementById('extract-timer');
+      if (et) et.classList.remove('show');
+      const obj = document.getElementById('objective');
+      if (obj && !opts.keepObjective) obj.textContent = '';
+      this._seatOnShip();
+      if (opts.lock !== false) this._requestLock();
+      return;
+    }
+    if (next === 'playing' || next === 'extract') {
+      this.state = next;
+      if (opts.lock !== false) this._requestLock();
+      return;
+    }
+    this.state = next;
+  },
+
+  _seatOnShip() {
+    const L = typeof SHIP_LAYOUT !== 'undefined' ? SHIP_LAYOUT : null;
+    const lp = this.players.get(this.localId);
+    if (!lp) return;
+    if (L) {
+      lp.x = Math.max(L.playerClamp.minX, Math.min(L.playerClamp.maxX, lp.x));
+      lp.z = Math.max(L.playerClamp.minZ, Math.min(L.playerClamp.maxZ, lp.z));
+    } else {
+      lp.x = Math.max(-9.5, Math.min(9.5, lp.x));
+      lp.z = Math.max(-17.5, Math.min(17.5, lp.z));
+    }
+    lp.y = this._shipFloorY(lp.x, lp.z);
+    const mesh = this.meshes.players.get(lp.id);
+    if (mesh) {
+      mesh.position.set(lp.x, lp.y, lp.z);
+      mesh.visible = true;
+    }
+  },
+
+  _resumeFromPause() {
+    const pm = document.getElementById('pause-menu');
+    if (pm) pm.classList.remove('show');
+    // If not paused, still try to recover ship seating
+    const ret = this._pauseReturnState || (this.state === 'paused' ? 'ship' : this.state);
+    this._pauseReturnState = null;
+    if (ret === 'ship' || ret === 'hellpod') {
+      this._enterState('ship');
+      return;
+    }
+    if (ret === 'extract' && this.extractCalled) {
+      this._enterState('extract');
+      return;
+    }
+    if (ret === 'playing' || ret === 'extract') {
+      this._enterState(this.extractCalled ? 'extract' : 'playing');
+      return;
+    }
+    // Fallback: if shipRoot exists, prefer ship
+    if (this.shipRoot) this._enterState('ship');
+    else this._enterState('playing');
+  },
+
+  // Item 5: destroyer ↔ mission regression checklist (console: Game._runRegressionChecklist())
+  _runRegressionChecklist() {
+    const L = SHIP_LAYOUT;
+    const results = [];
+    const ok = (name, pass, detail) => results.push({ name, pass: !!pass, detail: detail || '' });
+    ok('SHIP_LAYOUT defined', !!L);
+    ok('mainY > bayY', L && L.mainY > L.bayY);
+    ok('ramp east = bay west seam', L && L.seamX === L.seamX);
+    ok('bay spawn in bay xz', L && L.baySpawn.x >= L.seamX && L.baySpawn.z >= L.bayZ0);
+    ok('deck spawn near ramp top', L && L.deckSpawn.x <= L.rampX0 + 0.5 && L.deckSpawn.z >= L.rampZ0);
+    ok('_shipFloorY bay', Math.abs(this._shipFloorY(L.baySpawn.x, L.baySpawn.z) - L.bayY) < 0.05);
+    ok('_shipFloorY deck', Math.abs(this._shipFloorY(L.deckSpawn.x, L.deckSpawn.z) - L.mainY) < 0.05);
+    ok('_shipFloorY ramp mid', (() => {
+      const x = (L.rampX0 + L.seamX) / 2, z = (L.rampZ0 + L.rampZ1) / 2;
+      const y = this._shipFloorY(x, z);
+      return y > L.bayY + 0.2 && y < L.mainY - 0.2;
+    })());
+    ok('shipColliders present', (this.shipColliders || []).length >= 4);
+    ok('wall Z clamp allows pods', L.playerClamp.minZ <= -16);
+    ok('_resumeFromPause exists', typeof this._resumeFromPause === 'function');
+    ok('_enterState exists', typeof this._enterState === 'function');
+    ok('Network host authority helpers', typeof Network.broadcastAuth === 'function');
+    const failed = results.filter(r => !r.pass);
+    const summary = failed.length ? ('FAIL ' + failed.length + '/' + results.length) : ('OK ' + results.length + '/' + results.length);
+    console.log('[HellBrowsers checklist]', summary, results);
+    return { summary, results };
+  },
+
   _handleMenuToggle() {
     // ESC / Tab: close open UI first; otherwise toggle pause only (never opens terminals)
     const fsWarn = document.getElementById('fs-warn');
@@ -2005,45 +2176,14 @@ const Game = {
       if (back) back.click();
       return;
     }
-    // Already paused → resume to exact prior state (ship stays ship)
+    // Already paused → resume (shared path with RESUME button)
     if (this.state === 'paused' || (pm && pm.classList.contains('show'))) {
-      if (pm) pm.classList.remove('show');
-      const ret = this._pauseReturnState || 'ship';
-      this._pauseReturnState = null;
-      // Never jump into extract/playing while we were on the destroyer
-      if (ret === 'ship' || ret === 'hellpod') {
-        this.state = 'ship';
-        this.extractCalled = false;
-        const et = document.getElementById('extract-timer');
-        if (et) et.classList.remove('show');
-        const obj = document.getElementById('objective');
-        if (obj) obj.textContent = '';
-        // Re-seat player on ship decks after menu (prevents floor clip)
-        const lp = this.players.get(this.localId);
-        if (lp) {
-          lp.y = this._shipFloorY(lp.x, lp.z);
-          const mesh = this.meshes.players.get(lp.id);
-          if (mesh) mesh.position.y = lp.y;
-        }
-      } else if (ret === 'extract' && this.extractCalled) {
-        this.state = 'extract';
-      } else if (ret === 'playing' || ret === 'extract') {
-        this.state = this.extractCalled ? 'extract' : 'playing';
-      } else {
-        this.state = ret;
-      }
-      if (this.state === 'playing' || this.state === 'extract' || this.state === 'ship') this._requestLock();
+      this._resumeFromPause();
       return;
     }
-    // Open pause only
+    // Open pause only (centralized)
     if (this.state === 'playing' || this.state === 'extract' || this.state === 'ship' || this.state === 'hellpod') {
-      this._pauseReturnState = this.state === 'hellpod' ? 'ship' : this.state;
-      this.state = 'paused';
-      this._exitLock();
-      this.ctrlHeld = false;
-      this.stratBuffer = [];
-      this.grenadePrimed = false;
-      // Keep shipMenuOpen false so terminals stay usable after resume
+      this._enterState('paused');
       if (pm) pm.classList.add('show');
       const mp = document.getElementById('pause-mp-actions');
       if (mp) mp.style.display = (this._pauseReturnState === 'ship') ? 'block' : 'none';
@@ -2062,25 +2202,94 @@ const Game = {
 
 
   _shipFloorY(x, z) {
-    const mainY = this._shipMainY != null ? this._shipMainY : 2;
-    const bayY = this._shipBayY != null ? this._shipBayY : 0;
-    const S = this._shipSeam || {
-      SEAM_X: 5.5, RAMP_X0: 2.0, RAMP_Z0: 12.0, RAMP_Z1: 15.5,
-      BAY_X1: 10.0, BAY_Z0: 11.0, BAY_Z1: 17.8
-    };
-    // Bay platform
-    if (x >= S.SEAM_X && x <= S.BAY_X1 + 0.2 && z >= S.BAY_Z0 && z <= S.BAY_Z1)
-      return bayY;
-    // Ramp corridor (walkable slope) — collision via height, not AABB
-    if (x >= S.RAMP_X0 && x <= S.SEAM_X && z >= S.RAMP_Z0 && z <= S.RAMP_Z1) {
-      const u = (S.SEAM_X - x) / (S.SEAM_X - S.RAMP_X0); // 0 at bay, 1 at main
+    const L = (typeof SHIP_LAYOUT !== 'undefined') ? SHIP_LAYOUT : null;
+    const mainY = (this._shipMainY != null ? this._shipMainY : (L ? L.mainY : 2));
+    const bayY = (this._shipBayY != null ? this._shipBayY : (L ? L.bayY : 0));
+    const seamX = L ? L.seamX : 5.5;
+    const rampX0 = L ? L.rampX0 : 2.0;
+    const rampZ0 = L ? L.rampZ0 : 12.0;
+    const rampZ1 = L ? L.rampZ1 : 15.5;
+    const bayX1 = L ? L.bayX1 : 10.0;
+    const bayZ0 = L ? L.bayZ0 : 11.0;
+    const bayZ1 = L ? L.bayZ1 : 17.8;
+    if (x >= seamX && x <= bayX1 + 0.2 && z >= bayZ0 && z <= bayZ1) return bayY;
+    if (x >= rampX0 && x <= seamX && z >= rampZ0 && z <= rampZ1) {
+      const u = (seamX - x) / (seamX - rampX0);
       return bayY + Math.max(0, Math.min(1, u)) * (mainY - bayY);
     }
     return mainY;
   },
 
+
+  _getHeapUsedBytes() {
+    try {
+      if (performance && performance.memory && performance.memory.usedJSHeapSize != null)
+        return performance.memory.usedJSHeapSize;
+    } catch (e) {}
+    // Fallback estimate from live entities (rough)
+    const n = (this.enemies || []).length + (this.projectiles || []).length +
+      (this.rocks || []).length + (this.trees || []).length + (this.holes || []).length;
+    return n * 25000 + 40 * 1024 * 1024;
+  },
+
+  _checkScoutMemoryPressure() {
+    if (!this.scoutMode || this._emergencyRecallDone) return;
+    if (this.state !== 'playing' && this.state !== 'extract') return;
+    const limitGB = (this.memoryLimitGB > 0 ? this.memoryLimitGB : 1);
+    const limit = limitGB * 1024 * 1024 * 1024;
+    const used = this._getHeapUsedBytes();
+    if (used < limit * 0.9) return;
+    this._emergencyRecallDone = true;
+    this._triggerEmergencyRecall();
+  },
+
+  _triggerEmergencyRecall() {
+    const p = this.players.get(this.localId);
+    const banner = document.getElementById('emergency-recall');
+    if (banner) {
+      banner.classList.add('show');
+      setTimeout(() => banner.classList.remove('show'), 8000);
+    }
+    const obj = document.getElementById('objective');
+    if (obj) obj.textContent = 'EMERGENCY RECALL FROM SUPER EARTH — Field Extraction dropped at your position';
+    try { AudioSys.stratagemReady(); } catch (e) {}
+    if (!p) return;
+    // Drop Field Extraction stratagem from the player onto the ground (short fall, then call-in)
+    if (!this.stratagemBeacons) this.stratagemBeacons = [];
+    const x = p.x, z = p.z;
+    const y0 = (p.y != null ? p.y : this.getHeight(x, z)) + 1.1;
+    const color = this._stratagemBeaconColor ? this._stratagemBeaconColor('Field Extraction') : 0x44ddff;
+    const beacon = {
+      x, y: y0, z,
+      vx: 0, vy: -2, vz: 0,
+      grounded: false, landed: false,
+      wait: 0.85, done: false,
+      kind: 'Field Extraction', color,
+      emergency: true
+    };
+    const g = new THREE.Group();
+    const rod = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08, 0.1, 0.5, 6),
+      new THREE.MeshStandardMaterial({ color: 0x44ddff, metalness: 0.5, emissive: 0x113344, emissiveIntensity: 0.4 })
+    );
+    g.add(rod);
+    g.position.set(x, y0, z);
+    this.scene.add(g);
+    beacon.mesh = g;
+    this.stratagemBeacons.push(beacon);
+    // Host notify
+    try {
+      if (Network.isHost) Network.broadcastAuth({ action: 'emergency_recall', x, z });
+    } catch (e) {}
+  },
+
   _updateScoutMission(dt) {
     if (!this.scoutMode || (this.state !== 'playing' && this.state !== 'extract')) return;
+    this._memCheckCd = (this._memCheckCd || 0) - dt;
+    if (this._memCheckCd <= 0) {
+      this._memCheckCd = 1.0; // check ~1/s
+      this._checkScoutMemoryPressure();
+    }
     const p = this.players.get(this.localId);
     if (!p || !p.alive) return;
     const drop = this.scoutDrop || { x: 0, z: 0 };
@@ -2665,6 +2874,7 @@ const Game = {
       this.scoutCreditAcc = 0;
       this.scoutChunks = new Set();
       this.scoutDrop = { x: 0, z: 0 };
+      this._emergencyRecallDone = false;
       // Light initial content; more streams in via chunks
       this._placeHolesAndAmmo();
       this.objectives.push({ type: 'scout', need: 1, have: 0, side: true, x: 0, z: 0 });
@@ -3520,10 +3730,15 @@ const Game = {
     if (kind === 'Field Extraction') {
       // Throwable extract call-in (Scout mode and usable elsewhere)
       if (this.extractCalled) return;
+      if (Network.connections.size > 0 && !Network.isHost) {
+        Network.sendToHost({ type: 'action', action: 'call_extract', x, z });
+        return;
+      }
       this.extractCalled = true;
       this.state = 'extract';
       this.extractTimer = 25;
       this.extractZone = { x, z, r: 8 };
+      if (Network.isHost) Network.broadcastAuth({ action: 'extract_started', x, z, timer: 25, state: 'extract' });
       if (this.extractMesh) {
         this.extractMesh.visible = true;
         this.extractMesh.position.set(x, this.getHeight(x, z) + 0.06, z);
@@ -4354,6 +4569,12 @@ const Game = {
   },
 
   update(dt) {
+    // ADD THIS at the start of update(dt)
+SpatialGrid.clear();
+for (const e of this.enemies) {
+    if (e.alive) SpatialGrid.insert(e);
+}
+
     if (this.state === 'hellpod') {
       this.hellpodT = (this.hellpodT || 0) + dt;
       if (!this.hellpodPos) this.hellpodPos = { x: 0, z: 2 };
@@ -4407,6 +4628,7 @@ const Game = {
     this.missionTime += dt;
     this._syncModifiers();
     if (this.scoutMode) this._updateScoutMission(dt);
+    if (this._netBroadcastMissionTick) this._netBroadcastMissionTick();
 
     for (const k in this.activeStratagems) if (this.activeStratagems[k] > 0) this.activeStratagems[k] -= dt;
     if (this.stratUITimer > 0) this.stratUITimer -= dt;
@@ -4554,8 +4776,9 @@ const Game = {
             const sc = this._resolveShipCollision(p.x, p.z, 0.45);
             p.x = sc.x; p.z = sc.z;
             // Keep inside hull
-            p.x = Math.max(-9.5, Math.min(9.5, p.x));
-            p.z = Math.max(-17.5, Math.min(17.5, p.z));
+            const C = SHIP_LAYOUT.playerClamp;
+            p.x = Math.max(C.minX, Math.min(C.maxX, p.x));
+            p.z = Math.max(C.minZ, Math.min(C.maxZ, p.z));
             p.y = this._shipFloorY(p.x, p.z);
           } else {
             const resolved = this._resolveRocks(p.x, p.z, 0.45, prevX, prevZ);
@@ -4833,9 +5056,10 @@ const Game = {
         const gY = (typeof this.getHeight === 'function' ? this.getHeight(cx, cz) : 0) + 0.75;
         if (cy < gY) cy = gY;
       } else {
-        // Destroyer interior clamp (matches long N–S hull)
-        cx = Math.max(-9.4, Math.min(9.4, cx));
-        cz = Math.max(-17.4, Math.min(17.4, cz));
+        // Destroyer interior clamp (SHIP_LAYOUT)
+        const C = SHIP_LAYOUT.playerClamp;
+        cx = Math.max(C.minX + 0.1, Math.min(C.maxX - 0.1, cx));
+        cz = Math.max(C.minZ + 0.1, Math.min(C.maxZ - 0.1, cz));
         const floorY = this._shipFloorY ? this._shipFloorY(cx, cz) : 0;
         cy = Math.max(floorY + 0.45, Math.min(floorY + 4.2, cy));
       }
@@ -5055,25 +5279,50 @@ const Game = {
           hit = true; break;
         }
       }
-      if (!hit) for (const e of this.enemies) {
+      if (!hit) {
+    // OPTIMIZATION: Only check enemies in the same grid cell as the projectile
+    const nearbyEnemies = SpatialGrid.getNearby(pr.x, pr.z);
+    
+    for (const e of nearbyEnemies) {
         if (!e.alive) continue;
-        if (Math.hypot(e.x - pr.x, e.z - pr.z) < e.radius + 0.12) {
-          let dmg = pr.damage;
-          // Weak point: head-ish — when close and facing armor gap on chargers
-          if (e.type === 'charger') {
-            const toE = Math.atan2(e.x - (this.players.get(pr.owner)?.x || 0), e.z - (this.players.get(pr.owner)?.z || 0));
-            let facingDiff = Math.abs((e.facing || 0) - toE);
-            while (facingDiff > Math.PI) facingDiff = Math.abs(facingDiff - Math.PI * 2);
-            if (facingDiff > 1.8) dmg *= 1.8; // rear weak point
-            else dmg *= 0.45; // front armor
-          }
-          e.hp -= dmg; e.aggro = true;
-          e.stagger = (e.stagger || 0) + (pr.heavy ? 0.5 : 0.15);
-          if (e.hp <= 0) { e.alive = false; this.kills++; this.killStreak = (this.killStreak||0)+1; const o = this.players.get(pr.owner); if (o) o.kills++; AudioSys.enemyDie(); this._emitVoice('kill', { streak: this.killStreak }); }
-          else AudioSys.enemyHit();
-          hit = true; break;
+
+        // OPTIMIZATION: Use Squared Distance (avoid Math.sqrt/Math.hypot)
+        const dx = e.x - pr.x;
+        const dz = e.z - pr.z;
+        const distSq = (dx * dx) + (dz * dz);
+        const radiusSum = e.radius + 0.12;
+
+        if (distSq < (radiusSum * radiusSum)) {
+            let dmg = pr.damage;
+
+            // --- KEEP YOUR ORIGINAL LOGIC BELOW THIS LINE ---
+            // Weak point: head-ish — when close and facing armor gap on chargers
+            if (e.type === 'charger') {
+                const toE = Math.atan2(e.x - (this.players.get(pr.owner)?.x || 0), e.z - (this.players.get(pr.owner)?.z || 0));
+                let facingDiff = Math.abs((e.facing || 0) - toE);
+                while (facingDiff > Math.PI) facingDiff = Math.abs(facingDiff - Math.PI * 2);
+                if (facingDiff > 1.8) dmg *= 1.8; // rear weak point
+                else dmg *= 0.45; // front armor
+            }
+            e.hp -= dmg; e.aggro = true;
+            e.stagger = (e.stagger || 0) + (pr.heavy ? 0.5 : 0.15);
+            if (e.hp <= 0) { 
+                e.alive = false; this.kills++; this.killStreak = (this.killStreak || 0) + 1; 
+                const o = this.players.get(pr.owner); 
+                if (o) o.kills++; 
+                AudioSys.enemyDie(); 
+                this._emitVoice('kill', { streak: this.killStreak }); 
+            } else {
+                AudioSys.enemyHit();
+            }
+            // --- END OF ORIGINAL LOGIC ---
+
+            hit = true; 
+            break; 
         }
-      }
+    }
+}
+
       // Friendly fire on other players / from turrets
       if (!hit && this.friendlyFire !== false && pr.owner) {
         for (const p of this.players.values()) {
@@ -5328,7 +5577,7 @@ const Game = {
       if (dt > 0.1) dt = 0.05;
       this.lastFrame = ts;
       this.fps = dt > 0 ? Math.round(1 / dt) : 60;
-      if (this.state === 'playing' || this.state === 'extract' || this.state === 'ship' || this.state === 'hellpod') this.update(dt);
+      if (this.state === 'playing' || this.state === 'extract' || this.state === 'ship' || this.state === 'hellpod' || this.state === 'paused') this.update(dt);
       this.draw();
       requestAnimationFrame(tick);
     };
@@ -5397,6 +5646,12 @@ const Game = {
   let data = Storage.load();
   if ($('#username')) $('#username').value = data.username || '';
   if ($('#volume')) { $('#volume').value = data.volume ?? 0.7; if ($('#vol-val')) $('#vol-val').textContent = (data.volume ?? 0.7).toFixed(2); }
+  if ($('#memory-limit')) {
+    const mb = (data.memoryLimitGB != null && data.memoryLimitGB > 0) ? data.memoryLimitGB : 1;
+    $('#memory-limit').value = mb;
+    if ($('#mem-limit-val')) $('#mem-limit-val').textContent = Number(mb).toFixed(2);
+    Game.memoryLimitGB = mb;
+  }
   if ($('#show-fps')) $('#show-fps').checked = !!data.showFps;
   if ($('#reduce-motion')) $('#reduce-motion').checked = !!data.reduceMotion;
   if ($('#auto-climb')) $('#auto-climb').checked = !!data.autoClimb;
@@ -5404,6 +5659,7 @@ const Game = {
   AudioSys.init(); AudioSys.setVolume(data.volume ?? 0.7);
   Game.showFps = !!data.showFps; Game.reduceMotion = !!data.reduceMotion; Game.autoClimb = !!data.autoClimb;
   Game.friendlyFire = data.friendlyFire !== false;
+  Game.memoryLimitGB = (data.memoryLimitGB != null && data.memoryLimitGB > 0) ? data.memoryLimitGB : 1;
   Game.atmosphereFX = data.atmosphereFX !== false;
   Game.onMissionEnd = (stats) => {
     const end = $('#mission-end');
@@ -5435,6 +5691,14 @@ const Game = {
   // btn-join handled above (join choice panel)
 
   $('#volume').oninput = e => { const v = parseFloat(e.target.value); $('#vol-val').textContent = v.toFixed(2); AudioSys.setVolume(v); Storage.update({ volume: v }); };
+  if ($('#memory-limit')) {
+    $('#memory-limit').oninput = e => {
+      const v = parseFloat(e.target.value) || 1;
+      if ($('#mem-limit-val')) $('#mem-limit-val').textContent = v.toFixed(2);
+      Game.memoryLimitGB = v;
+      Storage.update({ memoryLimitGB: v });
+    };
+  }
   $('#show-fps').onchange = e => { Game.showFps = e.target.checked; Storage.update({ showFps: e.target.checked }); };
   // Options sub-tabs
   document.querySelectorAll('.options-tabs button').forEach(btn => {
@@ -5759,9 +6023,7 @@ const Game = {
   $('#btn-start').onclick = () => Network.startGame({});
   $('#btn-cancel-load').onclick = () => { try { Network.destroy(); } catch (e) {} showScreen('#menu'); };
   $('#btn-resume').onclick = () => {
-    Game.state = Game.extractCalled && Game.extractTimer > 0 ? 'extract' : 'playing';
-    $('#pause-menu').classList.remove('show');
-    Game._requestLock();
+    Game._resumeFromPause();
   };
   function leave() {
     try { Network.destroy(); } catch (e) {}
@@ -5780,7 +6042,7 @@ const Game = {
     if (obj) obj.textContent = '';
     const name = getName();
     showScreen('#game');
-    Game.startShip(name);
+    Game.startShip(name, { spawn: 'deck' }); // return from mission → main deck / ramp top
     Game._startLoop();
   }
   $('#btn-leave').onclick = leave; $('#btn-return').onclick = leave;

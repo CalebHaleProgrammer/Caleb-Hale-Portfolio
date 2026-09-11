@@ -54,6 +54,12 @@ execute:
   --preferred: #c9821a;
   --preferred-soft: #fbeed9;
 
+  --pref-violation: #ea580c;
+  --pref-violation-soft: #fde3d2;
+
+  --impact: #55708a;
+  --impact-soft: #e7edf2;
+
   --danger: #c13b3b;
   --danger-soft: #fbe6e6;
 
@@ -170,6 +176,8 @@ html, body{
 .db-tab.dragging{ opacity: .4; }
 .db-tab .idx{ font-family: var(--font-mono); font-size:10px; opacity:.7; }
 .db-tab .tab-clone-of{ font-size:10.5px; color: var(--faint); font-weight:400; margin-left:2px; }
+.db-tab .tab-name-stack{ display:flex; flex-direction:column; align-items:flex-start; line-height:1.3; gap:0; }
+.db-tab .tab-clone-of.under{ margin-left:0; }
 .db-tab.active .tab-clone-of{ color: rgba(255,255,255,0.7); }
 .db-tab-menu{
   position: fixed; z-index: 65;
@@ -531,8 +539,8 @@ html, body{
   color: var(--danger); font-weight:700; margin-bottom:3px; display:block;
 }
 .db-violation-card .txt{ font-size:12px; }
-.db-violation-card.preferred{ border-color: var(--preferred); background: var(--preferred-soft); }
-.db-violation-card.preferred .tag{ color: var(--preferred); }
+.db-violation-card.preferred{ border-color: var(--pref-violation); background: var(--pref-violation-soft); }
+.db-violation-card.preferred .tag{ color: var(--pref-violation); }
 
 .db-decision-card{
   border: 1px solid var(--border);
@@ -543,8 +551,8 @@ html, body{
   transition: border-color .12s ease;
 }
 .db-decision-card:hover{ border-color: var(--accent); }
-.db-decision-card.hotspot{ border-color: var(--preferred); background: var(--preferred-soft); }
-.db-decision-card.hotspot:hover{ border-color: var(--preferred); }
+.db-decision-card.hotspot{ border-color: var(--impact); background: var(--impact-soft); }
+.db-decision-card.hotspot:hover{ border-color: var(--impact); }
 .db-decision-card .top-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:3px;}
 .db-decision-card .count-badge{
   font-family: var(--font-mono); font-size:11px; font-weight:700;
@@ -875,6 +883,7 @@ html, body{
         <div class="db-modal-tab" data-tab="tags">Tags</div>
         <div class="db-modal-tab" data-tab="rules">Rules</div>
         <div class="db-modal-tab" data-tab="time">Time range</div>
+        <div class="db-modal-tab" data-tab="schedules">Schedules</div>
       </div>
       <div class="db-modal-body" id="modal-body"></div>
     </div>
@@ -904,7 +913,14 @@ function escapeHtml(str){
 
 /* ---------------- Default demo state ---------------- */
 var state = {
-  settings: { startMinutes: 10*60+30, endMinutes: 16*60+30 },
+  settings: {
+    startMinutes: 10*60+30, endMinutes: 16*60+30,
+    cloneOriginDisplay: 'right', // 'right' | 'under' | 'hidden' — where the "(clone of X)" text appears
+    autoDeleteEnabled: false, maxSchedules: 10,
+    autoNameMode: 'today', // 'today' | 'nextWeekday' | 'cloneName'
+    autoNameWeekday: 1, // 0=Sunday .. 6=Saturday, used when autoNameMode==='nextWeekday'
+    autoNameIgnoreToday: true,
+  },
   people: [
     { id:'p_alice', name:'Alice', tags:['tag_female','tag_bilingual'] },
     { id:'p_bob',   name:'Bob',   tags:['tag_male'] },
@@ -1056,13 +1072,45 @@ function formatCloneDate(d){
   d = d || new Date();
   return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()%100}`;
 }
-function generateCloneName(){
-  const base = formatCloneDate();
+function generateUniqueName(base){
   const existing = state.schedules.map(s=>s.name);
   if(!existing.includes(base)) return base;
   let n = 2;
   while(existing.includes(`${base} (${n})`)) n++;
   return `${base} (${n})`;
+}
+/* The date of the next occurrence of targetDow (0=Sunday..6=Saturday) on or after fromDate.
+   If today already IS that weekday, ignoreToday decides whether to use today (false) or skip
+   ahead a full week (true, the default) — so a "Next Thursday" auto-name created ON a Thursday
+   still lands a week out rather than naming it after today. */
+function nextWeekdayDate(targetDow, ignoreToday, fromDate){
+  fromDate = fromDate || new Date();
+  const currentDow = fromDate.getDay();
+  let diff = (targetDow - currentDow + 7) % 7;
+  if(diff===0) diff = ignoreToday ? 7 : 0;
+  const result = new Date(fromDate);
+  result.setDate(fromDate.getDate() + diff);
+  return result;
+}
+function generateAutoName(sourceSchedule){
+  const mode = state.settings.autoNameMode || 'today';
+  if(mode==='cloneName') return generateUniqueName(sourceSchedule.name);
+  if(mode==='nextWeekday'){
+    const dow = state.settings.autoNameWeekday!==undefined ? state.settings.autoNameWeekday : 1;
+    const ignoreToday = state.settings.autoNameIgnoreToday!==false;
+    return generateUniqueName(formatCloneDate(nextWeekdayDate(dow, ignoreToday)));
+  }
+  return generateUniqueName(formatCloneDate());
+}
+/* When enabled, keeps the schedule count at or under the configured max by deleting the
+   EARLIEST (leftmost / first-created) schedule — never the one just created — each time a
+   new schedule pushes the total over the limit. */
+function enforceMaxSchedules(){
+  if(!state.settings.autoDeleteEnabled) return;
+  const max = Math.max(1, Number(state.settings.maxSchedules)||10);
+  while(state.schedules.length>max && state.schedules.length>1){
+    deleteSchedule(state.schedules[0].id);
+  }
 }
 function cloneActiveSchedule(mode){
   const src = activeSchedule();
@@ -1075,7 +1123,7 @@ function cloneActiveSchedule(mode){
   } else {
     assignments = src.assignments.map(a=>({ ...a, id:genId('asg') }));
   }
-  const cloned = createSchedule(generateCloneName(), {
+  const cloned = createSchedule(generateAutoName(src), {
     clonedFromName: src.name,
     assignments,
     rules: src.rules.map(r=>({ ...JSON.parse(JSON.stringify(r)), id:genId('rule') })),
@@ -1086,6 +1134,7 @@ function cloneActiveSchedule(mode){
     hiddenPeople: new Set(src.hiddenPeople),
   });
   setActiveSchedule(cloned.id);
+  enforceMaxSchedules();
 }
 function deleteSchedule(id){
   if(state.schedules.length<=1){ alert('At least one schedule must remain.'); return; }
@@ -1157,7 +1206,7 @@ function loadPersisted(){
     state.people = payload.people || [];
     state.positions = (payload.positions || []).map(normalizePosition);
     state.tags = payload.tags || [];
-    state.settings = payload.settings || state.settings;
+    state.settings = Object.assign({}, state.settings, payload.settings || {});
     state.schedules = payload.schedules.map(s=>({
       id:s.id, name:s.name, clonedFromName: s.clonedFromName || null, assignments:s.assignments||[], rules:s.rules||[],
       rejectedSuggestions: new Set(s.rejectedSuggestions||[]),
@@ -2268,8 +2317,15 @@ function renderScheduleTabs(){
     tab.dataset.scheduleId = sched.id;
     tab.draggable = true;
     tab.title = sched.id===state.activeScheduleId ? 'Click for clone/delete options' : `Switch to ${sched.name}`;
-    const cloneOfHtml = sched.clonedFromName ? `<span class="tab-clone-of">(clone of ${escapeHtml(sched.clonedFromName)})</span>` : '';
-    tab.innerHTML = `<span class="idx">${idx+1}</span><span class="name">${escapeHtml(sched.name)}</span>${cloneOfHtml}`;
+    const cloneMode = state.settings.cloneOriginDisplay || 'right';
+    const showCloneOf = !!sched.clonedFromName && cloneMode!=='hidden';
+    if(showCloneOf && cloneMode==='under'){
+      tab.innerHTML = `<span class="idx">${idx+1}</span><span class="tab-name-stack"><span class="name">${escapeHtml(sched.name)}</span><span class="tab-clone-of under">(clone of ${escapeHtml(sched.clonedFromName)})</span></span>`;
+    } else if(showCloneOf){
+      tab.innerHTML = `<span class="idx">${idx+1}</span><span class="name">${escapeHtml(sched.name)}</span><span class="tab-clone-of">(clone of ${escapeHtml(sched.clonedFromName)})</span>`;
+    } else {
+      tab.innerHTML = `<span class="idx">${idx+1}</span><span class="name">${escapeHtml(sched.name)}</span>`;
+    }
     tab.addEventListener('click', (e)=>{
       if(sched.id===state.activeScheduleId) openTabMenu(e, sched.id);
       else setActiveSchedule(sched.id);
@@ -2314,7 +2370,7 @@ function renderChart(){
   const scrollEl = document.querySelector('#chart-panel .db-chart-scroll');
   if(scrollEl) scrollEl.classList.toggle('full-view', fullViewMode);
   grid.classList.toggle('full-view', fullViewMode);
-  let colWidth = 46;
+  let colWidth = 38;
   if(fullViewMode && scrollEl){
     const available = scrollEl.clientWidth - rowLabelWidth - 32;
     if(available>0) colWidth = Math.max(3, Math.min(46, Math.floor(available / Math.max(1,slots.length))));
@@ -2442,7 +2498,16 @@ function renderChart(){
     box.className = 'db-suggestion-box';
     box.style.gridColumn = `${startSlot+2} / span ${maxDur}`;
     box.style.gridRow = `${pi+2}`;
-    box.title = `${group.length} suggestion${group.length===1?'':'s'} — click a star to accept or reject`;
+    box.title = `${group.length} suggestion${group.length===1?'':'s'} — click a star to accept or reject, or click elsewhere in the cell to assign as usual`;
+    box.addEventListener('click', (e)=>{
+      // Star clicks call stopPropagation() themselves, so this only fires for clicks
+      // elsewhere in the box — letting the person assign a slot as if it were empty,
+      // exactly like clicking any other unfilled cell would.
+      const rect = box.getBoundingClientRect();
+      const perSlotWidth = rect.width / maxDur;
+      const offsetSlots = Math.max(0, Math.min(maxDur-1, Math.floor((e.clientX-rect.left)/perSlotWidth)));
+      onCellClick(e, personId, startSlot+offsetSlots);
+    });
     const starEls = [];
     group.forEach(sug=>{
       const pos = state.positions.find(p=>p.id===sug.positionId);
@@ -2468,9 +2533,9 @@ function startResizeDrag(e, assignmentId){
   const a = state.assignments.find(x=>x.id===assignmentId);
   if(!a) return;
   const block = document.querySelector(`.db-block[data-assignment-id="${assignmentId}"]`);
-  const rect = block ? block.getBoundingClientRect() : { width: 46*a.slotCount };
-  const perSlotWidth = (rect.width || 46*a.slotCount) / a.slotCount;
-  resizeDrag = { assignmentId, startX: e.clientX, startSlotCount: a.slotCount, perSlotWidth: perSlotWidth||46, lastValidSlotCount: a.slotCount };
+  const rect = block ? block.getBoundingClientRect() : { width: 38*a.slotCount };
+  const perSlotWidth = (rect.width || 38*a.slotCount) / a.slotCount;
+  resizeDrag = { assignmentId, startX: e.clientX, startSlotCount: a.slotCount, perSlotWidth: perSlotWidth||38, lastValidSlotCount: a.slotCount };
   if(block) block.classList.add('resizing');
   document.addEventListener('mousemove', onResizeMouseMove);
   document.addEventListener('mouseup', onResizeMouseUp);
@@ -2600,7 +2665,7 @@ function renderDecisions(){
       const top = document.createElement('div'); top.className = 'top-row';
       const badge = document.createElement('span');
       badge.className = 'count-badge';
-      badge.style.background = 'var(--preferred)';
+      badge.style.background = 'var(--impact)';
       badge.textContent = `impact ${hs.impact}`;
       top.appendChild(badge);
       card.appendChild(top);
@@ -2761,8 +2826,8 @@ function renderRuleRow(rule, violations){
     const w = document.createElement('span');
     w.className = 'db-tag-chip';
     const isPreferredViol = rule.strength==='preferred';
-    w.style.color = isPreferredViol ? 'var(--preferred)' : 'var(--danger)';
-    w.style.background = isPreferredViol ? 'var(--preferred-soft)' : 'var(--danger-soft)';
+    w.style.color = isPreferredViol ? 'var(--pref-violation)' : 'var(--danger)';
+    w.style.background = isPreferredViol ? 'var(--pref-violation-soft)' : 'var(--danger-soft)';
     w.textContent = isPreferredViol ? 'preferred rule violated' : 'required rule violated';
     meta.appendChild(w);
   }
@@ -3402,7 +3467,7 @@ function closeSettings(){
 }
 function switchModalTab(tab){
   document.querySelectorAll('.db-modal-tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
-  const renderers = { people: renderPeopleTab, positions: renderPositionsTab, tags: renderTagsTab, rules: renderRulesTab, time: renderTimeTab };
+  const renderers = { people: renderPeopleTab, positions: renderPositionsTab, tags: renderTagsTab, rules: renderRulesTab, time: renderTimeTab, schedules: renderSchedulesTab };
   renderers[tab]();
 }
 
@@ -3816,6 +3881,104 @@ function renderTimeTab(){
     });
     state.assignments = activeSchedule().assignments;
     renderTimeTab(); renderAll();
+  });
+}
+
+const WEEKDAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function renderSchedulesTab(){
+  const body = document.getElementById('modal-body');
+  const s = state.settings;
+  body.innerHTML = `
+    <div class="db-help-text">These control how new schedule tabs are named and managed — cloning, loading a file, or hitting a schedule-count limit.</div>
+
+    <div class="db-rule-builder">
+      <h3>Clone origin</h3>
+      <div class="db-field-row">
+        <div class="db-field"><label>Show "(clone of …)" as</label>
+          <select id="sched-clone-origin">
+            <option value="right">Right of name</option>
+            <option value="under">Under name</option>
+            <option value="hidden">Hidden</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="db-rule-builder">
+      <h3>Auto-delete</h3>
+      <div class="db-field-row">
+        <div class="db-field checkbox"><input type="checkbox" id="sched-auto-delete" ${s.autoDeleteEnabled?'checked':''}/><label>Delete the earliest schedule when a new one is made and the limit is exceeded</label></div>
+      </div>
+      <div class="db-field-row">
+        <div class="db-field"><label>Max number of schedules</label><input type="number" id="sched-max-count" min="1" step="1" value="${s.maxSchedules}"/></div>
+      </div>
+    </div>
+
+    <div class="db-rule-builder">
+      <h3>Auto-name new clones</h3>
+      <div class="db-field-row">
+        <div class="db-field"><label>Name new clones with</label>
+          <select id="sched-auto-name-mode">
+            <option value="today">Today's date</option>
+            <option value="nextWeekday">Next day of week</option>
+            <option value="cloneName">Same name as clone source</option>
+          </select>
+        </div>
+        <div class="db-field" id="sched-weekday-wrap" style="display:none;"><label>Day of week</label>
+          <select id="sched-auto-name-weekday">
+            ${WEEKDAY_NAMES.map((n,i)=>`<option value="${i}">${n}</option>`).join('')}
+          </select>
+        </div>
+        <div class="db-field checkbox" id="sched-ignore-today-wrap" style="display:none;">
+          <input type="checkbox" id="sched-ignore-today" ${s.autoNameIgnoreToday!==false?'checked':''}/>
+          <label>Ignore today (if today is that weekday, use next week instead)</label>
+        </div>
+      </div>
+      <div class="db-help-text" id="sched-auto-name-hint" style="margin-top:0;"></div>
+    </div>`;
+
+  document.getElementById('sched-clone-origin').value = s.cloneOriginDisplay || 'right';
+  document.getElementById('sched-auto-name-mode').value = s.autoNameMode || 'today';
+  document.getElementById('sched-auto-name-weekday').value = s.autoNameWeekday!==undefined ? s.autoNameWeekday : 1;
+
+  function updateAutoNameFieldsVisibility(){
+    const mode = document.getElementById('sched-auto-name-mode').value;
+    document.getElementById('sched-weekday-wrap').style.display = mode==='nextWeekday' ? 'flex' : 'none';
+    document.getElementById('sched-ignore-today-wrap').style.display = mode==='nextWeekday' ? 'flex' : 'none';
+    const hints = {
+      today: 'A new clone is named after today\u2019s date, e.g. "8/15/26".',
+      nextWeekday: 'A new clone is named after the next occurrence of the chosen weekday. With "Ignore today" on, a clone made ON that weekday is named a week out instead of today.',
+      cloneName: 'A new clone keeps the same name as the schedule it was cloned from, with "(2)", "(3)", etc. added if that name is already taken.',
+    };
+    document.getElementById('sched-auto-name-hint').textContent = hints[mode] || '';
+  }
+  updateAutoNameFieldsVisibility();
+
+  document.getElementById('sched-clone-origin').addEventListener('change', (e)=>{
+    state.settings.cloneOriginDisplay = e.target.value;
+    renderAll();
+  });
+  document.getElementById('sched-auto-delete').addEventListener('change', (e)=>{
+    state.settings.autoDeleteEnabled = e.target.checked;
+    persist();
+  });
+  document.getElementById('sched-max-count').addEventListener('change', (e)=>{
+    state.settings.maxSchedules = Math.max(1, Number(e.target.value)||10);
+    e.target.value = state.settings.maxSchedules;
+    persist();
+  });
+  document.getElementById('sched-auto-name-mode').addEventListener('change', (e)=>{
+    state.settings.autoNameMode = e.target.value;
+    updateAutoNameFieldsVisibility();
+    persist();
+  });
+  document.getElementById('sched-auto-name-weekday').addEventListener('change', (e)=>{
+    state.settings.autoNameWeekday = Number(e.target.value);
+    persist();
+  });
+  document.getElementById('sched-ignore-today').addEventListener('change', (e)=>{
+    state.settings.autoNameIgnoreToday = e.target.checked;
+    persist();
   });
 }
 
@@ -4309,7 +4472,7 @@ async function importSettingsJson(file){
   if(payload.people) state.people = payload.people.map(p=>({ id:p.id, name:p.name, tags:p.tags||[] }));
   if(payload.positions) state.positions = payload.positions.map(normalizePosition);
   if(payload.tags) state.tags = payload.tags;
-  if(payload.settings) state.settings = payload.settings;
+  if(payload.settings) state.settings = Object.assign({}, state.settings, payload.settings);
   renderAll();
   showToast('Settings loaded.');
 }

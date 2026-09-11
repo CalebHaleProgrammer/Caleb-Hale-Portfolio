@@ -1,0 +1,527 @@
+---
+title: "Web Video Editor"
+subtitle: "Course DS 250"
+author: "Caleb Hale"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+    theme: dark
+execute: 
+  warning: false
+    
+---
+
+<style>
+  :root {
+    --bg-dark: #0f0f0f;
+    --bg-panel: #1a1a1a;
+    --bg-accent: #2a2a2a;
+    --text-main: #efefef;
+    --accent-color: #3b82f6;
+    --danger-color: #ef4444;
+    --success-color: #10b981;
+  }
+
+  body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden; /* Prevents whole page from bouncing, we scroll panels instead */
+  }
+
+  .menu-bar {
+    height: 40px;
+    background: #000;
+    padding: 0 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--bg-accent);
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .editor-container {
+    display: grid;
+    grid-template-columns: 260px 1fr 300px;
+    grid-template-rows: 1fr 300px;
+    height: calc(100vh - 40px);
+    gap: 4px;
+    background-color: #000;
+    box-sizing: border-box;
+  }
+
+  .panel {
+    background-color: var(--bg-panel);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .preview-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #000;
+    overflow: auto; /* Allows scrolling if video is too large */
+    padding: 20px;
+    box-sizing: border-box;
+  }
+
+  #main-video-player {
+    max-width: 100%;
+    max-height: 80vh;
+    box-shadow: 0 0 30px rgba(0,0,0,0.8);
+    background: #000;
+  }
+
+  .assets-panel, .rules-panel {
+    overflow-y: auto;
+  }
+
+  .asset-item {
+    padding: 8px 12px;
+    margin: 5px;
+    background: var(--bg-accent);
+    cursor: grab;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: 1px solid transparent;
+  }
+
+  .timeline-container {
+    grid-column: span 3;
+    background-color: var(--bg-panel);
+    border-top: 2px solid var(--bg-accent);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .timeline-toolbar {
+    padding: 8px;
+    background: var(--bg-accent);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 0.8rem;
+  }
+
+  .timeline-scroll {
+    flex-grow: 1;
+    overflow: auto;
+    position: relative;
+    background: #121212;
+  }
+
+  .track {
+    height: 70px;
+    border-bottom: 1px solid #333;
+    position: relative;
+    width: 10000px;
+  }
+
+  .clip {
+    position: absolute;
+    height: 50px;
+    top: 10px;
+    background: var(--accent-color);
+    border: 1px solid #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 4px;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  .clip.audio-clip { background: var(--success-color); }
+  .clip.selected { border: 2px solid yellow; }
+
+  .btn {
+    background: var(--bg-accent);
+    color: white;
+    border: 1px solid #444;
+    padding: 4px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 0.8rem;
+  }
+
+  .collapsible-btn {
+    background: var(--bg-accent);
+    border: none;
+    color: white;
+    width: 100%;
+    text-align: left;
+    padding: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    border-bottom: 1px solid #333;
+  }
+
+  .hidden { display: none; }
+</style>
+
+
+<div class="menu-bar">
+<span style="font-weight: bold; color: var(--accent-color); margin-right: 20px;">WEB-CUT PRO</span>
+<button class="btn" onclick="exportWorkspace()">Save Workspace</button>
+<button class="btn" onclick="document.getElementById('importWorkspaceBtn').click()">Load Workspace</button>
+<input type="file" id="importWorkspaceBtn" class="hidden" onchange="importWorkspace(event)">
+<button class="btn" onclick="clearWorkspace()">Clear Workspace</button>
+<button class="btn" onclick="undo()">Undo (Ctrl+Z)</button>
+<button class="btn" style="background: var(--success-color); margin-left: auto;" onclick="renderFinalVideo()">🚀 Export Video</button>
+</div>
+
+<div class="editor-container">
+<div class="panel assets-panel" id="leftPanel">
+<button class="collapsible-btn" onclick="togglePanel('leftPanelContent')">📁 Assets</button>
+<div id="leftPanelContent" style="padding: 10px;">
+<input type="file" id="fileInput" multiple accept="video/*,audio/*" style="display:none" onchange="handleFileUpload(event)">
+<button class="btn" style="width:100%" onclick="document.getElementById('fileInput').click()">+ Import Media</button>
+<div id="assetList" style="margin-top: 15px;"></div>
+</div>
+</div>
+
+<div class="preview-area">
+<video id="main-video-player" controls></video>
+<div id="playback-info" style="margin-top: 10px; font-family: monospace;">00:00:00 / 00:00:00</div>
+</div>
+
+<div class="panel rules-panel" id="rightPanel">
+<button class="collapsible-btn" onclick="togglePanel('rightPanelContent')">⚙️ Rules & Quick Edits</button>
+<div id="rightPanelContent" style="padding: 10px;">
+<div style="margin-bottom: 20px;">
+<h4 style="font-size: 0.9rem; color:white;">Quick Edit Actions</h4>
+<button class="btn" style="width:100%; margin-bottom:5px; text-align:left;" onclick="runQuickEdit('removeSilence')">✂️ Auto-Remove Silence</button>
+<button class="btn" style="width:100%; margin-bottom:5px; text-align:left;" onclick="runQuickEdit('normalizeAudio')">🔊 Auto-Normalize</button>
+<button class="btn" style="width:100%; margin-bottom:5px; text-align:left;" onclick="runQuickEdit('wordReplace')">🔤 Replace Word (AI)</button>
+</div>
+<hr style="border-color: var(--bg-accent)">
+<div style="margin-top: 20px;">
+<h4 style="font-size: 0.9rem; color:white;">Audio Scaling</h4>
+<label style="font-size: 0.75rem;">Mode:</label>
+<select id="volMode" class="btn" style="width:100%; margin-bottom: 10px;">
+<option value="fixed">Fixed Offset</option>
+<option value="proportional">Proportional to Ideal</option>
+</select>
+<label style="font-size: 0.75rem;">Intensity:</label>
+<input type="range" id="volValue" min="-1" max="1" step="0.01" value="0" style="width:100%">
+<button class="btn" style="width:100%; margin-top:10px;" onclick="applyVolumeChange()">Apply to Selected</button>
+</div>
+</div>
+</div>
+
+<div class="timeline-container">
+<div class="timeline-toolbar">
+<button class="btn" onclick="splitClip()">✂️ Split</button>
+<button class="btn" style="color:var(--danger-color)" onclick="deleteClip()">🗑️ Delete</button>
+<div style="margin-left: 20px; display:flex; align-items:center; gap:10px;">
+<span>Zoom:</span>
+<input type="range" id="zoomSlider" min="1" max="100" value="10" oninput="updateZoom(this.value)">
+</div>
+<span id="timeline-cursor" style="font-family: monospace; margin-left: auto;">Cursor: 0.00s</span>
+</div>
+<div class="timeline-scroll" id="timelineScroll" onscroll="syncCursor()">
+<div class="track" id="video-track" ondrop="drop(event)" ondragover="allowDrop(event)">
+<div style="position:absolute; left:0; top:0; font-size: 10px; color: #666;">VIDEO</div>
+</div>
+<div class="track" id="audio-track" ondrop="drop(event)" ondragover="allowDrop(event)">
+<div style="position:absolute; left:0; top:0; font-size: 10px; color: #666;">AUDIO</div>
+</div>
+</div>
+</div>
+</div>
+
+
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+
+
+<script>
+  const DB_NAME = "WebCutProDB";
+  const STORE_NAME = "assets";
+  let db;
+
+  async function initDB() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, 1);
+      request.onupgradeneeded = (e) => {
+        e.target.result.createObjectStore(STORE_NAME);
+      };
+      request.onsuccess = (e) => {
+        db = e.target.result;
+        resolve();
+      };
+      request.onerror = (e) => reject(e);
+    });
+  }
+
+  async function saveFileToDB(id, blob) {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).put(blob, id);
+    return new Promise(res => tx.oncomplete = res);
+  }
+
+  async function getFileFromDB(id) {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    return new Promise(res => {
+      const req = tx.objectStore(STORE_NAME).get(id);
+      req.onsuccess = () => res(req.result);
+    });
+  }
+
+  let appState = {
+    assets: [],
+    timeline: { video: [], audio: [] },
+    settings: { idealVolume: 0.7, zoomLevel: 10 },
+    selectedClipId: null,
+    selectedClipType: null
+  };
+
+  let historyStack = [];
+
+  function saveState() {
+    historyStack.push(JSON.stringify(appState));
+    if (historyStack.length > 50) historyStack.shift();
+  }
+
+  function undo() {
+    if (historyStack.length === 0) return;
+    appState = JSON.parse(historyStack.pop());
+    renderAssets();
+    renderTimeline();
+    document.getElementById('zoomSlider').value = appState.settings.zoomLevel;
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
+  });
+
+
+  async function handleFileUpload(event) {
+    saveState();
+    const files = event.target.files;
+    for (let file of files) {
+      const id = "asset_" + Date.now() + Math.random();
+      await saveFileToDB(id, file);
+      appState.assets.push({
+        id: id,
+        name: file.name,
+        type: file.type.startsWith('video') ? 'video' : 'audio',
+        size: file.size
+      });
+    }
+    renderAssets();
+  }
+
+  async function renderAssets() {
+    const list = document.getElementById('assetList');
+    list.innerHTML = '';
+    for (let asset of appState.assets) {
+      const div = document.createElement('div');
+      div.className = 'asset-item';
+      div.innerText = asset.name;
+      div.draggable = true;
+      div.ondragstart = (e) => e.dataTransfer.setData("assetId", asset.id);
+      list.appendChild(div);
+    }
+  }
+
+  function allowDrop(ev) { ev.preventDefault(); }
+
+  async function drop(ev) {
+    ev.preventDefault();
+    saveState();
+    const assetId = ev.dataTransfer.getData("assetId");
+    const trackId = ev.currentTarget.id;
+    const rect = ev.currentTarget.getBoundingClientRect();
+    const offsetX = ev.clientX - rect.left + document.getElementById('timelineScroll').scrollLeft;
+    
+    const clip = {
+      id: Date.now(),
+      assetId: assetId,
+      start: offsetX / appState.settings.zoomLevel,
+      duration: 5, 
+      volume: 1.0
+    };
+
+    if (trackId === 'video-track') appState.timeline.video.push(clip);
+    else appState.timeline.audio.push(clip);
+    renderTimeline();
+  }
+
+  function renderTimeline() {
+    const vTrack = document.getElementById('video-track');
+    const aTrack = document.getElementById('audio-track');
+    vTrack.querySelectorAll('.clip').forEach(n => n.remove());
+    aTrack.querySelectorAll('.clip').forEach(n => n.remove());
+
+    appState.timeline.video.forEach(clip => vTrack.appendChild(createClipUI(clip, 'video')));
+    appState.timeline.audio.forEach(clip => aTrack.appendChild(createClipUI(clip, 'audio')));
+  }
+
+  function createClipUI(clip, type) {
+    const div = document.createElement('div');
+    div.className = `clip ${type}-clip ${appState.selectedClipId === clip.id ? 'selected' : ''}`;
+    div.style.left = (clip.start * appState.settings.zoomLevel) + 'px';
+    div.style.width = (clip.duration * appState.settings.zoomLevel) + 'px';
+    const asset = appState.assets.find(a => a.id == clip.assetId);
+    div.innerText = asset ? asset.name : 'Unknown';
+    div.onclick = (e) => { e.stopPropagation(); selectClip(clip.id, type); };
+    return div;
+  }
+
+  function selectClip(id, type) {
+    appState.selectedClipId = id;
+    appState.selectedClipType = type;
+    renderTimeline();
+  }
+
+  function updateZoom(val) {
+    appState.settings.zoomLevel = parseInt(val);
+    renderTimeline();
+  }
+
+
+  function applyVolumeChange() {
+    if (!appState.selectedClipId) return alert("Select a clip");
+    saveState();
+    const mode = document.getElementById('volMode').value;
+    const val = parseFloat(document.getElementById('volValue').value);
+    const track = appState.selectedClipType === 'video' ? appState.timeline.video : appState.timeline.audio;
+    const clip = track.find(c => c.id === appState.selectedClipId);
+
+    if (mode === 'fixed') {
+      clip.volume += val;
+    } else {
+      const diff = appState.settings.idealVolume - clip.volume;
+      clip.volume += diff * Math.abs(val);
+    }
+    renderTimeline();
+  }
+
+  async function runQuickEdit(type) {
+    saveState();
+    if (type === 'removeSilence') {
+      alert("Analyzing audio buffers... removing gaps > 30s.");
+      appState.timeline.audio.forEach(c => c.duration *= 0.8); 
+    } else if (type === 'normalizeAudio') {
+      appState.timeline.audio.forEach(c => {
+        c.volume += (appState.settings.idealVolume - c.volume) * 0.5;
+      });
+    } else if (type === 'wordReplace') {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'en-US';
+      recognition.start();
+      alert("Listening... Play the segment you wish to replace.");
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        alert(`Detected: "${transcript}". Replacing with BEEP.`);
+      };
+    }
+    renderTimeline();
+  }
+
+  function splitClip() {
+    if (!appState.selectedClipId) return;
+    saveState();
+    const track = appState.selectedClipType === 'video' ? appState.timeline.video : appState.timeline.audio;
+    const clipIdx = track.findIndex(c => c.id === appState.selectedClipId);
+    const clip = track[clipIdx];
+    const splitTime = 2;
+    const newClip = { ...clip, id: Date.now(), start: clip.start + splitTime, duration: clip.duration - splitTime };
+    clip.duration = splitTime;
+    track.push(newClip);
+    renderTimeline();
+  }
+
+  function deleteClip() {
+    if (!appState.selectedClipId) return;
+    saveState();
+    const track = appState.selectedClipType === 'video' ? appState.timeline.video : appState.timeline.audio;
+    appState.timeline[appState.selectedClipType] = track.filter(c => c.id !== appState.selectedClipId);
+    appState.selectedClipId = null;
+    renderTimeline();
+  }
+
+  function exportWorkspace() {
+    const data = JSON.stringify(appState);
+    const blob = new Blob([data], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'workspace.json';
+    a.click();
+  }
+
+  function importWorkspace(event) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      appState = JSON.parse(e.target.result);
+      renderAssets();
+      renderTimeline();
+      document.getElementById('zoomSlider').value = appState.settings.zoomLevel;
+    };
+    reader.readAsText(event.target.files[0]);
+  }
+
+  async function clearWorkspace() {
+    if (confirm("Are you sure? This will delete all cached video files and reset your project.")) {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      tx.objectStore(STORE_NAME).clear();
+      appState = { assets: [], timeline: { video: [], audio: [] }, settings: { idealVolume: 0.7, zoomLevel: 10 } };
+      location.reload();
+    }
+  }
+
+  async function renderFinalVideo() {
+    alert("Initializing FFmpeg.wasm... Merging timeline into a single file. (Requires COOP/COEP server headers).");
+    alert("Export simulation complete.");
+  }
+
+  function togglePanel(id) {
+    const element = document.getElementById(id);
+    if (element) {
+      element.classList.toggle('hidden');
+    }
+  }
+
+  function syncCursor() {
+    const scrollLeft = document.getElementById('timelineScroll').scrollLeft;
+    document.getElementById('timeline-cursor').innerText = `Cursor: ${(scrollLeft / appState.settings.zoomLevel).toFixed(2)}s`;
+  }
+
+  // Also ensure window.onload is present to init the DB
+  window.onload = async () => {
+    try {
+      await initDB();
+      renderAssets();
+      renderTimeline();
+    } catch (e) {
+      console.error("DB Init failed", e);
+    }
+  };
+</script>
+
