@@ -4353,7 +4353,7 @@ position: relative;
 .db-tab .tab-clone-of.under{ margin-left:0; }
 .db-tab.active .tab-clone-of{ color: rgba(255,255,255,0.7); }
 .db-tab-menu{
-position: fixed; z-index: 65;
+position: fixed; z-index: 9400;
 background: var(--panel);
 border: 1px solid var(--border-strong);
 border-radius: var(--radius);
@@ -4623,7 +4623,7 @@ filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25));
 
 .db-dropdown{
 position: fixed;
-z-index: 60;
+z-index: 9400;
 width: 280px;
 background: var(--panel);
 border: 1px solid var(--border-strong);
@@ -4669,11 +4669,11 @@ background: var(--ink); color:#fff;
 padding: 8px 10px; border-radius: var(--radius-sm);
 font-size: 11.5px; line-height:1.4;
 box-shadow: var(--shadow-pop);
-z-index: 70;
+z-index: 9450;
 }
 
 .db-popup{
-position: fixed; z-index: 65;
+position: fixed; z-index: 9400;
 background: var(--panel);
 border: 1px solid var(--border-strong);
 border-radius: var(--radius);
@@ -4797,6 +4797,7 @@ padding: 1px 7px; border-radius: 999px;
 display:inline-block;
 line-height: 1.5;
 white-space:nowrap;
+border: 1px solid currentColor; 
 }
 .db-rule-row .rule-actions{ display:flex; gap:5px; flex-shrink:0; align-items:center; }
 .db-switch{ position:relative; width:32px; height:18px; flex-shrink:0; }
@@ -4815,7 +4816,7 @@ color: var(--muted); flex-shrink:0;
 .db-modal-overlay{
 position: fixed; inset:0; background: rgba(20,26,36,.5);
 display:flex; align-items:center; justify-content:center;
-z-index: 100; padding: 24px;
+z-index: 9000; padding: 24px;
 }
 .db-modal{
 background: var(--panel);
@@ -4895,10 +4896,47 @@ padding: 8px 10px; margin-top: 10px; color: var(--ink);
 .db-toast{
 position: fixed; bottom: 22px; left:50%; transform: translateX(-50%);
 background: var(--ink); color:#fff; padding: 10px 18px; border-radius: 999px;
-font-size: 12.5px; box-shadow: var(--shadow-pop); z-index: 200;
+font-size: 12.5px; box-shadow: var(--shadow-pop); z-index: 9999;
 display:flex; align-items:center; gap:8px;
 }
 .db-help-text{ font-size: 11.5px; color: var(--muted); line-height:1.5; background: var(--panel-2); border:1px solid var(--border); border-radius: var(--radius-sm); padding:9px 11px; margin-bottom:12px;}
+
+
+@keyframes helpPulseSwirl{
+0% { box-shadow: 0 0 0 5px #2563eb; }
+50% { box-shadow: 0 0 0 5px #16a34a; }
+100% { box-shadow: 0 0 0 5px #2563eb; }
+}
+#btn-help.pulse-attention{
+animation: helpPulseSwirl 1.8s ease-in-out infinite;
+}
+@keyframes rowFlashSwirl{
+0% { background-color: rgba(37,99,235,0.22); }
+25% { background-color: rgba(22,163,74,0.22); }
+50% { background-color: rgba(37,99,235,0.22); }
+75% { background-color: rgba(22,163,74,0.22); }
+100% { background-color: transparent; }
+}
+.db-row-flash-target{ animation: rowFlashSwirl 2.4s ease-in-out 2; }
+
+
+.db-popup-half-btn{ flex: 0 0 calc(50% - 3px); width: calc(50% - 3px); }
+.db-popup .row .db-popup-half-btn{ flex: 0 0 calc(50% - 3px); width: calc(50% - 3px); }
+
+.db-qual-popup{ width: 340px; max-height: 70vh; overflow-y:auto; }
+.db-qual-list{ display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+.db-qual-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 0; border-bottom:1px solid var(--border); }
+.db-qual-row:last-child{ border-bottom:none; }
+.db-qual-pos-name{ font-size:12px; flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.db-qual-btns{ display:flex; gap:4px; flex-shrink:0; }
+.db-qual-btn{
+font-size:10px; font-family: var(--font-mono); padding:3px 7px; border-radius:999px;
+border:1px solid var(--border-strong); background:#fff; color:var(--muted);
+}
+.db-qual-btn:hover{ border-color: var(--accent); color: var(--accent); }
+.db-qual-btn.cannot.on{ background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
+.db-qual-btn.prefnot.on{ background: var(--pref-violation-soft); color: var(--pref-violation); border-color: var(--pref-violation); }
+.db-qual-btn.pref.on{ background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 @media (max-width: 980px){
 .db-main-row{ grid-template-columns: 1fr; }
 }
@@ -4916,6 +4954,7 @@ display:flex; align-items:center; gap:8px;
     </div>
     <div class="db-tabs-bar" id="schedule-tabs"></div>
     <div class="db-toolbar">
+      <button class="btn" id="btn-help" title="Help — a quick tour of the UI">? Help</button>
       <button class="btn" id="btn-xlsx-menu" title="Save or load this schedule as a .xlsx file">Use .xlsx files ▾</button>
       <input type="file" id="file-input" accept=".xlsx" style="display:none">
       <button class="btn btn-icon" id="btn-fullscreen" title="Scheduler fullscreen (chart, decisions, and rules)">⛶</button>
@@ -4942,9 +4981,9 @@ display:flex; align-items:center; gap:8px;
         <div class="db-chart-grid" id="chart-grid"></div>
       </div>
       <div class="db-chart-footer">
-        <button class="btn btn-sm" id="btn-toggle-tags">Person tags: on</button>
-        <select id="hidden-people-select"><option value>No people toggled off</option></select>
-        <button class="btn btn-sm" id="btn-toggle-lock-display" title="When on, lock icons stay visible. When off, they flash briefly then only reappear on hover.">Lock display: off</button>
+        <button class="btn btn-sm" id="btn-toggle-tags">👤 Person tags: on</button>
+        <button class="btn btn-sm" id="hidden-people-btn" disabled>No people toggled off</button>
+        <button class="btn btn-sm" id="btn-toggle-lock-display" title="When on, lock icons stay visible. When off, they flash briefly then only reappear on hover.">🔒 Lock display: off</button>
         <button class="btn btn-sm" id="btn-undo" title="Undo the last change (Ctrl+Z)" style="margin-left:auto;">↶ Undo</button>
       </div>
     </section>
@@ -4956,7 +4995,7 @@ display:flex; align-items:center; gap:8px;
           <h2 class="anchored">Decisions</h2>
           <div class="head-actions">
             <span class="db-panel-note" id="decisions-note"></span>
-            <span class="db-info-icon" id="decisions-info-icon" tabindex="0">i
+            <span class="db-info-icon" id="decisions-info-icon" tabindex="0">?
               <span class="db-info-tooltip">Decisions are based upon rules and ordered in priority of which ones simplify the number of possibilities the most — the &quot;big decisions&quot;.</span>
             </span>
           </div>
@@ -5036,6 +5075,17 @@ display:flex; align-items:center; gap:8px;
     </div>
   </div>
 
+  <!-- Help modal -->
+  <div class="db-modal-overlay" id="help-overlay" style="display:none;">
+    <div class="db-modal" style="max-width:640px;">
+      <div class="db-modal-head">
+        <h2 class="anchored">Help</h2>
+        <button class="db-icon-btn" id="btn-close-help">✕</button>
+      </div>
+      <div class="db-modal-body" id="help-body"></div>
+    </div>
+  </div>
+
 </div>
 <script>
 /* ============================================================
@@ -5050,6 +5100,7 @@ display:flex; align-items:center; gap:8px;
 
 const SLOT_MINUTES = 5;
 const STORAGE_KEY = 'duty-board-state-v1';
+const HELP_SEEN_KEY = 'duty-board-help-seen-v1';
 var idCounter = 1000;
 function genId(prefix){ return `${prefix}_${(idCounter++).toString(36)}`; }
 function range(a,b){ const out=[]; for(let i=a;i<=b;i++) out.push(i); return out; }
@@ -5062,11 +5113,12 @@ function escapeHtml(str){
 var state = {
   settings: {
     startMinutes: 10*60+30, endMinutes: 16*60+30,
-    cloneOriginDisplay: 'right', // 'right' | 'under' | 'hidden' — where the "(clone of X)" text appears
-    autoDeleteEnabled: false, maxSchedules: 10,
-    autoNameMode: 'today', // 'today' | 'nextWeekday' | 'cloneName'
-    autoNameWeekday: 1, // 0=Sunday .. 6=Saturday, used when autoNameMode==='nextWeekday'
+    cloneOriginDisplay: 'under', // 'right' | 'under' | 'hidden' — where the "(clone of X)" text appears
+    autoDeleteEnabled: true, maxSchedules: 10,
+    autoNameMode: 'nextWeekday', // 'today' | 'nextWeekday' | 'cloneName'
+    autoNameWeekday: 4, // 0=Sunday .. 6=Saturday, used when autoNameMode==='nextWeekday' (4 = Thursday)
     autoNameIgnoreToday: true,
+    maxUnfilledMinutes: 15, // gaps up to this size are left alone by "Fill unlocked" / "Fill all"
   },
   people: [
     { id:'p_alice', name:'Alice', tags:['tag_female','tag_bilingual'] },
@@ -5076,17 +5128,26 @@ var state = {
     { id:'p_eve',   name:'Eve',   tags:['tag_female','tag_bilingual'] },
   ],
   positions: [
-    { id:'pos_frontdesk',    name:'Front Desk',    durationMin:15, durationMax:15, preferredDuration:15, singlePerson:false, color:'#2563eb', textColor:'#FFFFFF', tags:[] },
-    { id:'pos_setup',        name:'Setup Crew',    durationMin:30, durationMax:60, preferredDuration:45, singlePerson:false, color:'#ea580c', textColor:'#FFFFFF', tags:['tag_physical'] },
-    { id:'pos_registration', name:'Registration',  durationMin:15, durationMax:15, preferredDuration:15, singlePerson:true,  color:'#16a34a', textColor:'#FFFFFF', tags:[] },
-    { id:'pos_techsupport',  name:'Tech Support',  durationMin:45, durationMax:45, preferredDuration:45, singlePerson:true,  color:'#7c3aed', textColor:'#FFFFFF', tags:[] },
-    { id:'pos_breakrelief',  name:'Break Relief',  durationMin:15, durationMax:15, preferredDuration:15, singlePerson:false, color:'#db2777', textColor:'#FFFFFF', tags:[] },
+    { id:'pos_break',   name:'Break',                  display:'BRK',   durationMin:15, durationMax:15, preferredDuration:15, singlePerson:false, color:'#DA9FC7', textColor:'#000000', tags:[] },
+    { id:'pos_eob',     name:'EOB to Clone',           display:'EOB-#', durationMin:15, durationMax:15, preferredDuration:15, singlePerson:false, color:'#F8BCBC', textColor:'#000000', tags:['tag_eob'] },
+    { id:'pos_iwk',     name:'IWK to Clone',           display:'IWK-#', durationMin:15, durationMax:15, preferredDuration:15, singlePerson:false, color:'#B1FFB1', textColor:'#000000', tags:['tag_iwk'] },
+    { id:'pos_prepmtg', name:'Prep Meeting',           display:'MP',    durationMin:15, durationMax:15, preferredDuration:15, singlePerson:false, color:'#D0D0D0', textColor:'#000000', tags:[] },
+    { id:'pos_rd',      name:'Recommend Desk to Clone',display:'RD#*',  durationMin:15, durationMax:15, preferredDuration:15, singlePerson:false, color:'#E21D1D', textColor:'#000000', tags:['tag_rd'] },
+    { id:'pos_pcv',     name:'PCV to Clone',           display:'PCV-#', durationMin:15, durationMax:15, preferredDuration:15, singlePerson:false, color:'#FFB732', textColor:'#000000', tags:['tag_pcv'] },
+    { id:'pos_vwk',     name:'VWk to Clone',           display:'VWK-#', durationMin:15, durationMax:15, preferredDuration:15, singlePerson:false, color:'#F7AA7E', textColor:'#000000', tags:['tag_vwk'] },
+    { id:'pos_bwk',     name:'BWk',                    display:'BWk',   durationMin:15, durationMax:15, preferredDuration:15, singlePerson:false, color:'#ABDDF4', textColor:'#000000', tags:[] },
+    { id:'pos_home',    name:'Home',                   display:'HOM',   durationMin:15, durationMax:15, preferredDuration:15, singlePerson:false, color:'#DA9FC7', textColor:'#000000', tags:[] },
   ],
   tags: [
     { id:'tag_male',      name:'Male',                 category:'person',   highlightColor:'#E4E7FB', textColor:'#3730A3' },
     { id:'tag_female',    name:'Female',               category:'person',   highlightColor:'#F6E4F5', textColor:'#86198F' },
     { id:'tag_bilingual', name:'Bilingual',             category:'person',   highlightColor:'#DCFCE7', textColor:'#166534' },
     { id:'tag_physical',  name:'Physically demanding',  category:'position', highlightColor:'#FDE7D9', textColor:'#9A3412' },
+    { id:'tag_eob',       name:'eob',                   category:'position', highlightColor:'#F8BCBC', textColor:'#8A2A2A' },
+    { id:'tag_iwk',       name:'iwk',                   category:'position', highlightColor:'#B1FFB1', textColor:'#1E5E1E' },
+    { id:'tag_rd',        name:'rd',                    category:'position', highlightColor:'#F6D0D0', textColor:'#8A1616' },
+    { id:'tag_pcv',       name:'pcv',                   category:'position', highlightColor:'#FFE3B0', textColor:'#7A4A00' },
+    { id:'tag_vwk',       name:'vwk',                   category:'position', highlightColor:'#F7D9C2', textColor:'#7A3C14' },
     { id:'tag_skill',     name:'Skill',                 category:'rule',     highlightColor:'#E0F2FE', textColor:'#0369A1' },
     { id:'tag_coverage',  name:'Coverage',              category:'rule',     highlightColor:'#FCE7F3', textColor:'#9D174D' },
     { id:'tag_comfort',   name:'Comfort',               category:'rule',     highlightColor:'#EDE9FE', textColor:'#5B21B6' },
@@ -5105,29 +5166,9 @@ var state = {
       lockedSlots: new Set(),
       lockedCells: new Set(),
       hiddenPeople: new Set(),
-      rules: [
-        { id:'rule_0', kind:'standard', strength:'required',  effect:'require', active:true, nickname:'',
-          person:{mode:'id', value:'p_bob'}, position:{mode:'id', value:'pos_breakrelief'}, slot:{mode:'id', value:30}, tags:['tag_coverage'] },
-        { id:'rule_1', kind:'standard', strength:'required',  effect:'forbid',  active:true, nickname:'',
-          person:{mode:'id', value:'p_carol'}, position:{mode:'id', value:'pos_setup'}, slot:{mode:'any'}, tags:['tag_skill'] },
-        { id:'rule_2', kind:'standard', strength:'required',  effect:'require', active:true, nickname:'',
-          person:{mode:'any'}, position:{mode:'id', value:'pos_registration'}, slot:{mode:'id', value:0}, tags:['tag_coverage'] },
-        { id:'rule_3', kind:'standard', strength:'preferred', effect:'forbid',  active:true, nickname:'',
-          person:{mode:'tag', value:'tag_female'}, position:{mode:'tag', value:'tag_physical'}, slot:{mode:'any'}, tags:['tag_comfort'] },
-        { id:'rule_4', kind:'standard', strength:'preferred', effect:'require', active:true, nickname:'',
-          person:{mode:'id', value:'p_alice'}, position:{mode:'id', value:'pos_techsupport'}, slot:{mode:'id', value:12}, tags:['tag_skill'] },
-        { id:'rule_5', kind:'standard', strength:'preferred', effect:'require', active:true, nickname:'',
-          person:{mode:'tag', value:'tag_bilingual'}, position:{mode:'id', value:'pos_frontdesk'}, slot:{mode:'range', start:0, end:11}, tags:['tag_language'] },
-        { id:'rule_6', kind:'relative', strength:'preferred', effect:'require', active:true, nickname:'',
-          person:{mode:'id', value:'p_alice'}, position:{mode:'any'}, slot:{mode:'any'},
-          relative:{ type:'together', otherPerson:{mode:'id', value:'p_bob'} }, tags:['tag_pairing'] },
-        { id:'rule_7', kind:'relative', strength:'required', effect:'forbid', active:true, nickname:'',
-          person:{mode:'any'}, position:{mode:'tag', value:'tag_physical'}, slot:{mode:'any'},
-          relative:{ type:'consecutive', maxConsecutive:2 }, tags:['tag_fairness'] },
-        { id:'rule_8', kind:'relative', strength:'required', effect:'forbid', active:true, nickname:'No mutual swaps',
-          person:{mode:'any'}, position:{mode:'any'}, slot:{mode:'any'},
-          relative:{ type:'swap' }, tags:['tag_integrity'] },
-      ],
+      // Demo rules were removed when the default position set changed — add new
+      // ones here (or through the Rules tab) whenever a fresh demo set is wanted.
+      rules: [],
     },
   ],
   activeScheduleId: 'sched_1',
@@ -5149,6 +5190,7 @@ state.hiddenPeople = state.schedules[0].hiddenPeople;
 
 var rulesFocusPersonId = null;
 var rulesFocusSlotIndex = null;
+var tagsTabFilter = 'all'; // 'all' | 'person' | 'position' | 'rule' — which tag category the Tags tab shows
 var showPersonTags = true;
 var fullViewMode = false;
 var resizeDrag = null; // { assignmentId, startX, startSlotCount, cellWidth }
@@ -5250,7 +5292,7 @@ function generateAutoName(sourceSchedule){
   return generateUniqueName(formatCloneDate());
 }
 /* When enabled, keeps the schedule count at or under the configured max by deleting the
-   EARLIEST (leftmost / first-created) schedule — never the one just created — each time a
+   OLDEST (leftmost / first-created) schedule — never the one just created — each time a
    new schedule pushes the total over the limit. */
 function enforceMaxSchedules(){
   if(!state.settings.autoDeleteEnabled) return;
@@ -5320,6 +5362,7 @@ function normalizePosition(pos){
   const safeMax = Math.max(safeMin, Number(durationMax)||safeMin);
   return {
     id: pos.id, name: pos.name,
+    display: pos.display || '',
     durationMin: safeMin, durationMax: safeMax,
     preferredDuration: Math.min(safeMax, Math.max(safeMin, Number(preferredDuration)||safeMin)),
     singlePerson: !!pos.singlePerson,
@@ -5577,6 +5620,10 @@ function ruleLabel(rule){
   }
   if(rel.type==='swap'){
     return `${cap(p)} cannot go from any position X to any position Y when anyone is coming from position Y to position X (no mutual swaps).`;
+  }
+  if(rel.type==='staggeredStart'){
+    const n = Math.max(SLOT_MINUTES, Number(rel.intervalMinutes)||15);
+    return `${cap(p)} ${modal} start ${pos} every ${n} minutes, ${t}.`;
   }
   return `${cap(p)} ${rule.effect==='forbid'?'cannot':'must'} be scheduled for ${pos}, ${t}.`;
 }
@@ -5986,6 +6033,25 @@ function preferredForbidHits(personId, positionId, startSlot, durSlotsOverride){
   });
 }
 
+/* Splits a staggered-start rule's time range (rule.slot — any/id/range, reused here as
+   "the specified time range") into consecutive, non-overlapping windows of intervalMinutes
+   each. Each window needs at least one qualifying assignment to START somewhere inside it —
+   this is the "someone must start every X minutes" coverage requirement, not a per-placement
+   forbid check, so it's handled as its own coverage pass rather than via violatesXRule(). */
+function staggeredStartWindows(rule){
+  const totalSlots = getSlots().length;
+  const rangeSlots = targetSlotIndices(rule.slot, totalSlots);
+  if(rangeSlots.length===0) return [];
+  const rangeStart = rangeSlots[0], rangeEnd = rangeSlots[rangeSlots.length-1];
+  const intervalMinutes = Math.max(SLOT_MINUTES, Number(rule.relative.intervalMinutes)||15);
+  const intervalSlots = Math.max(1, Math.round(intervalMinutes/SLOT_MINUTES));
+  const windows = [];
+  for(let s=rangeStart; s<=rangeEnd; s+=intervalSlots){
+    windows.push({ start:s, end: Math.min(rangeEnd, s+intervalSlots-1) });
+  }
+  return windows;
+}
+
 /* ---------------- Violations / coverage ---------------- */
 function computeViolations(){
   const out = [];
@@ -5994,8 +6060,22 @@ function computeViolations(){
     if(!rule.active) continue;
 
     if(rule.kind==='relative'){
-      if(rule.effect!=='forbid') continue; // required+require relative rules aren't auto-checked for coverage (see docs)
       const relType = rule.relative && rule.relative.type;
+      if(relType==='staggeredStart'){
+        // Coverage-style requirement, not a per-assignment forbid check — only meaningful
+        // (and only currently enforced) as a required "must be scheduled" rule.
+        if(rule.effect==='require' && rule.strength==='required'){
+          for(const win of staggeredStartWindows(rule)){
+            const covered = state.assignments.some(a=>
+              personMatchesTarget(rule.person, a.personId) &&
+              positionMatchesTarget(rule.position, a.positionId) &&
+              a.startSlot>=win.start && a.startSlot<=win.end);
+            if(!covered) out.push({ rule, slot:win.start, windowEnd:win.end, kind:'uncovered' });
+          }
+        }
+        continue;
+      }
+      if(rule.effect!=='forbid') continue; // required+require relative rules (other than staggeredStart) aren't auto-checked for coverage (see docs)
       for(const a of state.assignments){
         const occ = assignmentOccupiesSlots(a);
         let violated = false;
@@ -6042,7 +6122,7 @@ function computeViolations(){
   return out;
 }
 function getUnsatisfiedRequiredCoverage(){
-  return computeViolations().filter(v=>v.kind==='uncovered').map(v=>({ rule:v.rule, slot:v.slot }));
+  return computeViolations().filter(v=>v.kind==='uncovered').map(v=>({ rule:v.rule, slot:v.slot, windowEnd:v.windowEnd }));
 }
 
 /* Auto-materialize fully-specific required "must be scheduled" rules
@@ -6146,7 +6226,8 @@ function computeHotSpots(){
         const personHit = personMatchesTarget(rule.person, person.id) ||
           (rule.kind==='relative' && rule.relative && rule.relative.otherPerson && personMatchesTarget(rule.relative.otherPerson, person.id));
         if(!personHit) continue;
-        const slotHit = rule.kind==='relative' ? true : slotMatchesTarget(rule.slot, slot.index);
+        const isStaggered = rule.kind==='relative' && rule.relative && rule.relative.type==='staggeredStart';
+        const slotHit = (rule.kind==='relative' && !isStaggered) ? true : slotMatchesTarget(rule.slot, slot.index);
         if(!slotHit) continue;
         let weight = 1;
         if(rule.position && rule.position.mode!=='id') weight += 1;
@@ -6162,15 +6243,21 @@ function computeHotSpots(){
 }
 
 /* ---------------- Solver (required rules only) ---------------- */
-function candidatesForCoverage(rule, slot){
+function candidatesForCoverage(rule, slot, windowEnd){
   const totalSlots = getSlots().length;
   const people = state.people.filter(p=>personMatchesTarget(rule.person, p.id)).map(p=>p.id);
   const positions = state.positions.filter(p=>positionMatchesTarget(rule.position, p.id)).map(p=>p.id);
+  const isStaggered = rule.kind==='relative' && rule.relative && rule.relative.type==='staggeredStart';
   const out = [];
   for(const personId of people){
     for(const positionId of positions){
       const durSlots = positionDurationSlots(positionId);
-      const starts = candidateStartSlotsForSlotTarget({mode:'id', value:slot}, durSlots, totalSlots);
+      // A staggered-start window needs a start slot ANYWHERE inside it, not an assignment
+      // occupying one particular slot — a different notion of "coverage" than the standard
+      // per-slot rules below, which candidateStartSlotsForSlotTarget is built for.
+      const starts = isStaggered
+        ? range(Math.max(0, slot), Math.min(totalSlots-durSlots, windowEnd!==undefined ? windowEnd : slot))
+        : candidateStartSlotsForSlotTarget({mode:'id', value:slot}, durSlots, totalSlots);
       for(const startSlot of starts){
         const check = isValidPlacement(personId, positionId, startSlot);
         if(check.ok) out.push({ personId, positionId, startSlot, durSlots });
@@ -6237,6 +6324,7 @@ function shuffleArray(arr){
    and "fill all" leave no gaps — only required-rule placement is exempt from this. */
 function fillAllGaps(sched, respectLocks){
   const slots = getSlots();
+  const maxUnfilledSlots = Math.max(0, Math.round((Number(state.settings.maxUnfilledMinutes)||0)/SLOT_MINUTES));
   const visiblePeople = shuffleArray(state.people.filter(p=>!isPersonHidden(p.id)));
   let placed = 0;
   for(const person of visiblePeople){
@@ -6245,6 +6333,18 @@ function fillAllGaps(sched, respectLocks){
       const occupied = state.assignments.some(a=>a.personId===person.id && assignmentOccupiesSlots(a).includes(s));
       const locked = respectLocks && isCellLocked(sched, person.id, s);
       if(occupied || locked){ s++; continue; }
+
+      // Measure this contiguous empty (unlocked) run first — if it's small enough to be
+      // an acceptable "hole" per the max-unfilled-time setting, skip past it entirely
+      // rather than forcing something into it.
+      let gapEnd = s;
+      while(gapEnd<slots.length){
+        const occ2 = state.assignments.some(a=>a.personId===person.id && assignmentOccupiesSlots(a).includes(gapEnd));
+        const lock2 = respectLocks && isCellLocked(sched, person.id, gapEnd);
+        if(occ2 || lock2) break;
+        gapEnd++;
+      }
+      if((gapEnd-s) <= maxUnfilledSlots){ s = gapEnd; continue; }
 
       const options = [];
       for(const pos of state.positions){
@@ -6277,6 +6377,7 @@ function fillAllGaps(sched, respectLocks){
    extend it to absorb the gap instead of leaving an unfillable hole. */
 function absorbTinyGaps(sched, respectLocks){
   const slots = getSlots();
+  const maxUnfilledSlots = Math.max(0, Math.round((Number(state.settings.maxUnfilledMinutes)||0)/SLOT_MINUTES));
   let absorbed = 0;
   for(const person of state.people.filter(p=>!isPersonHidden(p.id))){
     let s = 0;
@@ -6292,6 +6393,7 @@ function absorbTinyGaps(sched, respectLocks){
         gapEnd++;
       }
       const gapLen = gapEnd-s;
+      if(gapLen <= maxUnfilledSlots){ s = gapEnd; continue; } // acceptable hole — leave it as-is
       const before = state.assignments.find(a=>a.personId===person.id && a.startSlot+a.slotCount===s);
       if(before){
         const newCount = before.slotCount+gapLen;
@@ -6332,7 +6434,7 @@ function solve(mode){
     let best = null;
     const orderedPairs = randomize ? shuffleArray(pairs) : pairs;
     for(const pair of orderedPairs){
-      let cands = candidatesForCoverage(pair.rule, pair.slot);
+      let cands = candidatesForCoverage(pair.rule, pair.slot, pair.windowEnd);
       if(respectLocks) cands = cands.filter(c=>!range(c.startSlot, c.startSlot+c.durSlots-1).some(s=>isCellLocked(sched, c.personId, s)));
       if(cands.length===0) continue;
       if(!best || cands.length<best.candidates.length) best = { pair, candidates: cands };
@@ -6436,23 +6538,41 @@ function syncRightColumnHeight(){
 }
 
 function renderHiddenPeopleControl(){
-  const sel = document.getElementById('hidden-people-select');
-  if(!sel) return;
+  const btn = document.getElementById('hidden-people-btn');
+  if(!btn) return;
   const hidden = state.people.filter(p=>isPersonHidden(p.id));
   if(hidden.length===0){
-    sel.innerHTML = `<option value="">No people toggled off</option>`;
-    sel.disabled = true;
+    btn.textContent = 'No people toggled off';
+    btn.disabled = true;
+    btn.onclick = null;
     return;
   }
-  sel.disabled = false;
-  sel.innerHTML = `<option value="">${hidden.length} toggled off — select to restore</option>` +
-    hidden.map(p=>`<option value="${p.id}">Restore ${escapeHtml(p.name)}</option>`).join('');
-  sel.onchange = ()=>{
-    if(sel.value){
-      togglePersonHidden(sel.value, false);
+  btn.disabled = false;
+  btn.textContent = `${hidden.length} toggled off — select to restore`;
+  // A native <select> would show this same "N toggled off" text as a selectable option
+  // inside its own open list, which reads like a fake choice — so this uses the same
+  // floating-menu pattern as the other toolbar dropdowns instead, where the list holds
+  // ONLY the actual "Restore X" actions.
+  btn.onclick = (e)=>openHiddenPeopleMenu(e, hidden);
+}
+function openHiddenPeopleMenu(e, hidden){
+  closeFloating();
+  const layer = getFloatingLayer();
+  const rect = e.currentTarget.getBoundingClientRect();
+  const menu = document.createElement('div');
+  menu.className = 'db-tab-menu';
+  menu.style.width = '200px';
+  menu.innerHTML = hidden.map(p=>`<button data-restore-person="${p.id}">Restore ${escapeHtml(p.name)}</button>`).join('');
+  layer.appendChild(menu);
+  positionFloating(menu, rect);
+  menu.querySelectorAll('[data-restore-person]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      closeFloating();
+      togglePersonHidden(b.dataset.restorePerson, false);
       renderAll();
-    }
-  };
+    });
+  });
+  registerCloser((ev)=>{ if(!menu.contains(ev.target)) closeFloating(); });
 }
 
 function renderScheduleTabs(){
@@ -6517,7 +6637,7 @@ function renderChart(){
   const scrollEl = document.querySelector('#chart-panel .db-chart-scroll');
   if(scrollEl) scrollEl.classList.toggle('full-view', fullViewMode);
   grid.classList.toggle('full-view', fullViewMode);
-  let colWidth = 38;
+  let colWidth = 32;
   if(fullViewMode && scrollEl){
     const available = scrollEl.clientWidth - rowLabelWidth - 32;
     if(available>0) colWidth = Math.max(3, Math.min(46, Math.floor(available / Math.max(1,slots.length))));
@@ -6608,7 +6728,7 @@ function renderChart(){
     block.style.gridRow = `${pi+2}`;
     block.style.background = pos.color;
     block.style.color = pos.textColor || '#FFFFFF';
-    block.textContent = pos.name;
+    block.textContent = (pos.display && pos.display.trim()) ? pos.display : pos.name;
     block.dataset.assignmentId = a.id;
     block.title = `${pos.name} · ${personName(a.personId)} · click to remove`;
     block.addEventListener('click', (e)=>{ e.stopPropagation(); openAssignmentPopup(e, a); });
@@ -6680,9 +6800,9 @@ function startResizeDrag(e, assignmentId){
   const a = state.assignments.find(x=>x.id===assignmentId);
   if(!a) return;
   const block = document.querySelector(`.db-block[data-assignment-id="${assignmentId}"]`);
-  const rect = block ? block.getBoundingClientRect() : { width: 38*a.slotCount };
-  const perSlotWidth = (rect.width || 38*a.slotCount) / a.slotCount;
-  resizeDrag = { assignmentId, startX: e.clientX, startSlotCount: a.slotCount, perSlotWidth: perSlotWidth||38, lastValidSlotCount: a.slotCount };
+  const rect = block ? block.getBoundingClientRect() : { width: 32*a.slotCount };
+  const perSlotWidth = (rect.width || 32*a.slotCount) / a.slotCount;
+  resizeDrag = { assignmentId, startX: e.clientX, startSlotCount: a.slotCount, perSlotWidth: perSlotWidth||32, lastValidSlotCount: a.slotCount };
   if(block) block.classList.add('resizing');
   document.addEventListener('mousemove', onResizeMouseMove);
   document.addEventListener('mouseup', onResizeMouseUp);
@@ -6780,7 +6900,7 @@ function renderDecisions(){
 
   const pairs = getUnsatisfiedRequiredCoverage();
   const decisionItems = pairs
-    .map(pair=>({ pair, count: candidatesForCoverage(pair.rule, pair.slot).length }))
+    .map(pair=>({ pair, count: candidatesForCoverage(pair.rule, pair.slot, pair.windowEnd).length }))
     .sort((a,b)=>a.count-b.count)
     .slice(0,20);
 
@@ -6959,6 +7079,14 @@ function renderRuleRow(rule, violations){
   const main = document.createElement('div'); main.className = 'rule-main';
   const txt = document.createElement('div'); txt.className = 'rule-text';
   txt.innerHTML = `${ruleNicknamePrefix(rule)}${escapeHtml(ruleLabel(rule))}`;
+  if(isViolated){
+    // Appended to the description text itself (not the tag/meta line below) so it
+    // doesn't read ambiguously as if it were just another tag pill.
+    const isPreferredViol = rule.strength==='preferred';
+    const color = isPreferredViol ? 'var(--pref-violation)' : 'var(--danger)';
+    const label = isPreferredViol ? 'Preferred rule violated.' : 'Required rule violated.';
+    txt.innerHTML += ` <span class="db-inline-violation" style="color:${color};font-weight:700;">${label}</span>`;
+  }
   main.appendChild(txt);
   const meta = document.createElement('div'); meta.className = 'rule-meta';
   (rule.tags||[]).forEach(tid=>{
@@ -6969,15 +7097,6 @@ function renderRuleRow(rule, violations){
       meta.appendChild(wrap.firstChild);
     }
   });
-  if(isViolated){
-    const w = document.createElement('span');
-    w.className = 'db-tag-chip';
-    const isPreferredViol = rule.strength==='preferred';
-    w.style.color = isPreferredViol ? 'var(--pref-violation)' : 'var(--danger)';
-    w.style.background = isPreferredViol ? 'var(--pref-violation-soft)' : 'var(--danger-soft)';
-    w.textContent = isPreferredViol ? 'preferred rule violated' : 'required rule violated';
-    meta.appendChild(w);
-  }
   main.appendChild(meta);
   row.appendChild(main);
 
@@ -7104,8 +7223,16 @@ function findLockBadgeEl(kind, key){
   if(kind==='person') return document.querySelector(`.db-row-label[data-person-id="${key}"] .db-lock-badge`);
   if(kind==='slot') return document.querySelector(`.db-time-head[data-slot="${key}"] .db-lock-badge`);
   if(kind==='cell'){
-    const [pid,slot] = String(key).split('|');
-    return document.querySelector(`.db-cell[data-person="${pid}"][data-slot="${slot}"] .db-lock-badge`);
+    const [pid,slotStr] = String(key).split('|');
+    const slot = Number(slotStr);
+    const cellBadge = document.querySelector(`.db-cell[data-person="${pid}"][data-slot="${slot}"] .db-lock-badge`);
+    if(cellBadge) return cellBadge;
+    // When the locked slot is filled, renderChart() puts the badge on the assignment
+    // BLOCK instead of the (now-covered) empty cell underneath it — look there too,
+    // or a newly-locked position entry would never visibly flash.
+    const covering = state.assignments.find(a=>a.personId===pid && slot>=a.startSlot && slot<a.startSlot+a.slotCount);
+    if(covering) return document.querySelector(`.db-block[data-assignment-id="${covering.id}"] .db-lock-badge`);
+    return null;
   }
   return null;
 }
@@ -7240,7 +7367,7 @@ function openAssignmentPopup(e, a){
   pop.innerHTML = `<div class="title">${escapeHtml(pos ? pos.name : '?')} — ${escapeHtml(personName(a.personId))}</div>
     <div class="rule-hint">${getSlots()[a.startSlot].label} · ${a.slotCount*SLOT_MINUTES} min</div>
     <div class="row"><button class="btn btn-sm" id="pop-cut">Cut</button><button class="btn btn-sm" id="pop-copy">Copy</button></div>
-    <div class="row" style="margin-top:6px;"><button class="btn btn-sm" id="pop-lock">${locked?'Unlock cell':'Lock cell'}</button><button class="btn btn-sm btn-danger-outline" id="pop-remove">Remove</button></div>`;
+    <div class="row" style="margin-top:6px;"><button class="btn btn-sm" id="pop-lock">${locked?'🔓 Unlock cell':'🔒 Lock cell'}</button><button class="btn btn-sm btn-danger-outline" id="pop-remove">Remove</button></div>`;
   layer.appendChild(pop);
   positionFloating(pop, rect);
   pop.querySelector('#pop-cut').addEventListener('click', ()=>{
@@ -7282,17 +7409,29 @@ function openPersonPopup(e, personId){
   const tagsHtml = person.tags.map(t=>tagChipHtml(t)).join(' ') || '<span class="db-empty-note" style="padding:0;">No tags</span>';
   const namesArmed = pendingSwap && pendingSwap.mode==='names';
   const rowsArmed = pendingSwap && pendingSwap.mode==='rows';
-  const namesLabel = namesArmed ? `Swap names: ${escapeHtml(personName(pendingSwap.personId))}` : 'Swap names';
-  const rowsLabel = rowsArmed ? `Swap rows: ${escapeHtml(personName(pendingSwap.personId))}` : 'Swap rows';
-  const pasteRowBtnHtml = rowClipboard ? `<button class="btn btn-sm" id="pop-paste-row">Paste row</button>` : '';
-  pop.innerHTML = `<div class="title">${escapeHtml(person.name)}</div>
+  const namesLabel = namesArmed ? `🔄 Swap names: ${escapeHtml(personName(pendingSwap.personId))}` : '🔄 Swap names';
+  const rowsLabel = rowsArmed ? `🔄 Swap rows: ${escapeHtml(personName(pendingSwap.personId))}` : '🔄 Swap rows';
+  const pasteRowBtnHtml = rowClipboard ? `<div class="row" style="margin-top:6px;"><button class="btn btn-sm" id="pop-paste-row" style="width:100%;">📋 Paste row</button></div>` : '';
+  pop.innerHTML = `<button class="btn btn-sm" id="pop-see-person" style="width:100%;margin-bottom:8px;">See ${escapeHtml(person.name)}</button>
     <div class="rule-hint">${tagsHtml}</div>
-    <div class="row"><button class="btn btn-sm" id="pop-lock-person">${locked?'Unlock row':'Lock row'}</button><button class="btn btn-sm" id="pop-toggle-person">Toggle person</button></div>
-    <div class="row" style="margin-top:6px;"><button class="btn btn-sm ${namesArmed?'armed':''}" id="pop-swap-names">${namesLabel}</button><button class="btn btn-sm ${rowsArmed?'armed':''}" id="pop-swap-rows">${rowsLabel}</button></div>
-    <div class="row" style="margin-top:6px;"><button class="btn btn-sm" id="pop-copy-row">Copy row</button>${pasteRowBtnHtml}<button class="btn btn-sm btn-danger-outline" id="pop-clear-row">Clear row</button></div>
-    <div class="row" style="margin-top:6px;"><button class="btn btn-sm btn-primary" id="pop-show-rules" style="width:100%;">Show rules</button></div>`;
+    <div class="row"><button class="btn btn-sm db-popup-half-btn" id="pop-lock-person">${locked?'🔓 Unlock row':'🔒 Lock row'}</button><button class="btn btn-sm db-popup-half-btn" id="pop-toggle-person">🔘 Toggle person</button></div>
+    <div class="row" style="margin-top:6px;"><button class="btn btn-sm db-popup-half-btn ${namesArmed?'armed':''}" id="pop-swap-names">${namesLabel}</button><button class="btn btn-sm db-popup-half-btn ${rowsArmed?'armed':''}" id="pop-swap-rows">${rowsLabel}</button></div>
+    <div class="row" style="margin-top:6px;"><button class="btn btn-sm db-popup-half-btn" id="pop-copy-row">📋 Copy row</button><button class="btn btn-sm db-popup-half-btn btn-danger-outline" id="pop-clear-row">🗑 Clear row</button></div>
+    ${pasteRowBtnHtml}
+    <div class="row" style="margin-top:6px;"><button class="btn btn-sm btn-primary" id="pop-show-rules" style="width:100%;">▦ Show rules</button></div>`;
   layer.appendChild(pop);
   positionFloating(pop, rect);
+  pop.querySelector('#pop-see-person').addEventListener('click', ()=>{
+    closeFloating();
+    openSettings('people');
+    const row = document.querySelector(`#people-tbody tr[data-person-row="${personId}"]`);
+    if(row){
+      row.classList.remove('db-row-flash-target');
+      void row.offsetWidth; // restart the animation even if it was just played
+      row.classList.add('db-row-flash-target');
+      if(row.scrollIntoView) row.scrollIntoView({ behavior:'smooth', block:'center' });
+    }
+  });
   pop.querySelector('#pop-show-rules').addEventListener('click', ()=>{
     rulesFocusPersonId = personId;
     closeFloating();
@@ -7360,10 +7499,15 @@ function openTimeHeadPopup(e, slotIndex){
   const locked = sched.lockedSlots.has(slotIndex);
   const pop = document.createElement('div');
   pop.className = 'db-popup';
+  // Custom icons — nothing in the existing glyph set reads as "trim just this slice" vs.
+  // "wipe the whole column", so these are small purpose-drawn SVGs instead.
+  const clearTimeIcon = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="vertical-align:-2px;margin-right:5px;"><rect x="1" y="6" width="4" height="4" rx="1" fill="currentColor"/><rect x="6.5" y="6" width="3" height="4" rx="1" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="1.4 1.4"/><rect x="11" y="6" width="4" height="4" rx="1" fill="currentColor"/></svg>`;
+  const clearAllIcon = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="vertical-align:-2px;margin-right:5px;"><rect x="3" y="2" width="10" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><line x1="4" y1="3" x2="12" y2="13" stroke="currentColor" stroke-width="1.3"/><line x1="12" y1="3" x2="4" y2="13" stroke="currentColor" stroke-width="1.3"/></svg>`;
   pop.innerHTML = `<div class="title">${getSlots()[slotIndex].label}</div>
-    <div class="row"><button class="btn btn-sm" id="pop-lock-time" style="width:100%;">${locked?'Unlock column':'Lock column'}</button></div>
-    <div class="row" style="margin-top:6px;"><button class="btn btn-sm btn-danger-outline" id="pop-clear-time" title="Trims just this slot out of any assignment crossing it, keeping the remainder(s).">Clear this time</button><button class="btn btn-sm btn-danger-outline" id="pop-clear-assignments" title="Removes every assignment that overlaps this column, in its entirety.">Clear assignments</button></div>
-    <div class="row" style="margin-top:6px;"><button class="btn btn-sm btn-primary" id="pop-show-time-rules" style="width:100%;">Show rules for this time</button></div>`;
+    <div class="row"><button class="btn btn-sm" id="pop-lock-time" style="width:100%;">${locked?'🔓 Unlock column':'🔒 Lock column'}</button></div>
+    <div class="row" style="margin-top:6px;"><button class="btn btn-sm btn-danger-outline" id="pop-clear-time" style="width:100%;" title="Trims just this slot out of any assignment crossing it, keeping the remainder(s).">${clearTimeIcon}Clear this time</button></div>
+    <div class="row" style="margin-top:6px;"><button class="btn btn-sm btn-danger-outline" id="pop-clear-assignments" style="width:100%;" title="Removes every assignment that overlaps this column, in its entirety.">${clearAllIcon}Clear assignments</button></div>
+    <div class="row" style="margin-top:6px;"><button class="btn btn-sm btn-primary" id="pop-show-time-rules" style="width:100%;">▦ Show rules for this time</button></div>`;
   layer.appendChild(pop);
   positionFloating(pop, rect);
   const lockTimeBtn = pop.querySelector('#pop-lock-time');
@@ -7612,10 +7756,42 @@ function closeSettings(){
   document.getElementById('settings-overlay').style.display = 'none';
   editingRuleId = null;
 }
+const HELP_SECTIONS = [
+  { title: 'The schedule chart', body: 'Click any empty cell to see and pick from every position a person could do there — greyed-out options explain why they\u2019re blocked, and a star marks a preferred match. Click a filled block to cut, copy, lock, or remove it; drag its right edge to resize it when the position allows a range of durations. Click a person\u2019s name or a time-column header for row/column-wide options (lock, swap, clear, and more).' },
+  { title: 'Solve', body: '"Fill required" places only what\u2019s needed to satisfy required rules. "Fill unlocked" clears and refills everything except locked cells/rows/columns. "Fill all" clears and refills the entire chart. All three also try to honor preferred rules and leave star suggestions you can accept or reject with a click.' },
+  { title: 'Decisions', body: 'Lists rule violations and open coverage decisions, roughly ordered by how constrained they are — a "0 options" card needs attention first. Click any card to jump to and flash the relevant cell(s).' },
+  { title: 'Rules', body: 'Every rule that governs this schedule tab, with search and filters. Required rules are hard constraints; preferred rules generate suggestions instead of blocking anything. Toggle a rule off without deleting it, or edit/delete it with the icons on the right.' },
+  { title: 'Advanced settings', body: 'People, Positions, and Tags are shared by every schedule tab; Rules and the schedule-management options are specific to the current tab. Time range is shared. Save/Load settings exports or imports people, positions, tags, and time range as a JSON file.' },
+  { title: 'Schedule tabs & .xlsx', body: 'Each tab is an independent schedule (own assignments, own rules) sharing the same roster. Click the active tab for clone/rename/delete options. "Use .xlsx files" exports the current schedule to a spreadsheet, or imports one as a brand-new tab.' },
+  { title: 'Locking', body: 'Lock a person\u2019s whole row, a whole time column, or a single cell to protect it from Fill/Clear operations and from being displaced. "Lock display" keeps every lock icon always visible instead of only flashing briefly when something is newly locked.' },
+];
+function renderHelpBody(){
+  const body = document.getElementById('help-body');
+  if(!body) return;
+  body.innerHTML = `<div class="db-help-text">A quick tour of each panel and button. This is a work in progress — ask if something isn\u2019t covered yet.</div>` +
+    HELP_SECTIONS.map(s=>`<div class="db-rule-builder"><h3>${escapeHtml(s.title)}</h3><div style="font-size:12.5px;line-height:1.55;color:var(--ink);">${escapeHtml(s.body)}</div></div>`).join('');
+}
+function openHelp(){
+  renderHelpBody();
+  document.getElementById('help-overlay').style.display = 'flex';
+  const btn = document.getElementById('btn-help');
+  if(btn) btn.classList.remove('pulse-attention');
+  try{ localStorage.setItem(HELP_SEEN_KEY, '1'); }catch(e){ /* ignore */ }
+}
+function closeHelp(){
+  document.getElementById('help-overlay').style.display = 'none';
+}
 function switchModalTab(tab){
   document.querySelectorAll('.db-modal-tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===tab));
   const renderers = { people: renderPeopleTab, positions: renderPositionsTab, tags: renderTagsTab, rules: renderRulesTab, time: renderTimeTab, schedules: renderSchedulesTab };
   renderers[tab]();
+}
+/* Opens (or switches to) the Tags tab pre-filtered to one category — used by the
+   People/Positions tabs' "Tags" column headers and the rule builder's tag links. */
+function jumpToTags(category){
+  tagsTabFilter = category;
+  editingRuleId = null;
+  openSettings('tags');
 }
 
 /* ---- People tab ---- */
@@ -7629,7 +7805,8 @@ function renderPeopleTab(){
 <thead>
 <tr class="header">
 <th data-quarto-table-cell-role="th">Name</th>
-<th data-quarto-table-cell-role="th">Tags</th>
+<th id="people-tags-header" data-quarto-table-cell-role="th" style="cursor: pointer; text-decoration: underline" title="View person tags in the Tags tab">Tags</th>
+<th data-quarto-table-cell-role="th">Qualifications</th>
 <th data-quarto-table-cell-role="th"></th>
 </tr>
 </thead>
@@ -7641,15 +7818,20 @@ function renderPeopleTab(){
       <div class="db-field grow"><label>New person name</label><input type="text" id="new-person-name" placeholder="e.g. Jordan"/></div>
       <button class="btn btn-primary" id="add-person-btn">Add person</button>
     </div>`;
+  document.getElementById('people-tags-header').addEventListener('click', ()=>jumpToTags('person'));
   const tbody = document.getElementById('people-tbody');
   state.people.forEach(p=>{
     const tr = document.createElement('tr');
+    tr.dataset.personRow = p.id;
     const tagsHtml = personTags.map(t=>{
       const on = p.tags.includes(t.id);
       const style = on ? `background:${t.highlightColor};color:${t.textColor};border-color:${t.highlightColor};` : '';
       return `<span class="db-chip-toggle ${on?'on':''}" style="${style}" data-person="${p.id}" data-tag="${t.id}">${escapeHtml(t.name)}</span>`;
     }).join('');
-    tr.innerHTML = `<td>${escapeHtml(p.name)}</td><td><div class="db-chip-set">${tagsHtml || '<span class="db-empty-note" style="padding:0;">no person tags defined</span>'}</div></td><td><button class="db-icon-btn" data-del-person="${p.id}">🗑</button></td>`;
+    tr.innerHTML = `<td>${escapeHtml(p.name)}</td>
+      <td><div class="db-chip-set">${tagsHtml || '<span class="db-empty-note" style="padding:0;">no person tags defined</span>'}</div></td>
+      <td><button class="db-icon-btn" data-qual-person="${p.id}" title="Review positions">▦</button></td>
+      <td style="white-space:nowrap;"><button class="db-icon-btn" data-info-person="${p.id}" title="Personal details">ⓘ</button> <button class="db-icon-btn" data-del-person="${p.id}">🗑</button></td>`;
     tbody.appendChild(tr);
   });
   tbody.querySelectorAll('.db-chip-toggle').forEach(chip=>{
@@ -7660,6 +7842,12 @@ function renderPeopleTab(){
       else person.tags.push(tid);
       renderPeopleTab(); renderAll();
     });
+  });
+  tbody.querySelectorAll('[data-qual-person]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>openQualificationsPopup(e, btn.dataset.qualPerson));
+  });
+  tbody.querySelectorAll('[data-info-person]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>openPersonInfoPopup(e, btn.dataset.infoPerson));
   });
   tbody.querySelectorAll('[data-del-person]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -7678,6 +7866,103 @@ function renderPeopleTab(){
     state.people.push({ id:genId('p'), name, tags:[] });
     renderPeopleTab(); renderAll();
   });
+}
+
+/* ---- Qualifications (People tab) ----
+   A "qualification" is just a plain Anytime standard rule for one exact person+position
+   pair, stored the normal way in the current schedule's rules — no separate data model.
+   The three states are mutually exclusive, so changing one clears any other rule that
+   matches this exact shape first. */
+function qualificationRulesFor(personId, positionId){
+  return state.rules.filter(r=>r.kind!=='relative' && r.person && r.person.mode==='id' && r.person.value===personId &&
+    r.position && r.position.mode==='id' && r.position.value===positionId && r.slot && r.slot.mode==='any');
+}
+function currentQualificationState(personId, positionId){
+  const rules = qualificationRulesFor(personId, positionId);
+  for(const r of rules){
+    if(r.strength==='required' && r.effect==='forbid') return 'cannot';
+    if(r.strength==='preferred' && r.effect==='forbid') return 'preferredNot';
+    if(r.strength==='preferred' && r.effect==='require') return 'preferred';
+  }
+  return 'none';
+}
+function setQualification(personId, positionId, newState){
+  const existing = qualificationRulesFor(personId, positionId);
+  if(existing.length){
+    const remove = new Set(existing.map(r=>r.id));
+    state.rules = state.rules.filter(r=>!remove.has(r.id));
+    activeSchedule().rules = state.rules;
+  }
+  const base = { id:genId('rule'), kind:'standard', active:true, nickname:'',
+    person:{mode:'id', value:personId}, position:{mode:'id', value:positionId}, slot:{mode:'any'}, tags:[] };
+  if(newState==='cannot') state.rules.push({ ...base, strength:'required', effect:'forbid' });
+  else if(newState==='preferredNot') state.rules.push({ ...base, strength:'preferred', effect:'forbid' });
+  else if(newState==='preferred') state.rules.push({ ...base, strength:'preferred', effect:'require' });
+}
+function refreshQualRow(row, personId, positionId){
+  const current = currentQualificationState(personId, positionId);
+  row.querySelectorAll('.db-qual-btn').forEach(b=>b.classList.toggle('on', b.dataset.state===current));
+}
+function openQualificationsPopup(e, personId){
+  closeFloating();
+  const layer = getFloatingLayer();
+  const rect = e.currentTarget.getBoundingClientRect();
+  const person = state.people.find(p=>p.id===personId);
+  const pop = document.createElement('div');
+  pop.className = 'db-popup db-qual-popup';
+  pop.innerHTML = `<div class="title">Qualifications — ${escapeHtml(person.name)}</div>
+    <div class="rule-hint">Cannot / Preferred not / Preferred create or update an Anytime rule for that exact person and position, in the current schedule tab. Selecting one clears any other for that same position.</div>
+    <div class="db-qual-list" id="qual-list"></div>`;
+  const list = pop.querySelector('#qual-list');
+  state.positions.forEach(pos=>{
+    const row = document.createElement('div');
+    row.className = 'db-qual-row';
+    const current = currentQualificationState(personId, pos.id);
+    row.innerHTML = `<span class="db-qual-pos-name">${escapeHtml(pos.name)}</span>
+      <span class="db-qual-btns">
+        <button type="button" class="db-qual-btn cannot ${current==='cannot'?'on':''}" data-state="cannot">Cannot</button>
+        <button type="button" class="db-qual-btn prefnot ${current==='preferredNot'?'on':''}" data-state="preferredNot">Preferred Not</button>
+        <button type="button" class="db-qual-btn pref ${current==='preferred'?'on':''}" data-state="preferred">Preferred</button>
+      </span>`;
+    row.querySelectorAll('.db-qual-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        pushUndoSnapshot();
+        const wantState = btn.dataset.state;
+        const already = btn.classList.contains('on');
+        setQualification(personId, pos.id, already ? 'none' : wantState);
+        refreshQualRow(row, personId, pos.id);
+        renderAll();
+      });
+    });
+    list.appendChild(row);
+  });
+  layer.appendChild(pop);
+  positionFloating(pop, rect);
+  registerCloser((ev)=>{ if(!pop.contains(ev.target)) closeFloating(); });
+}
+
+/* ---- Person info (People tab) — free-text notes stored on the person record itself,
+   so they persist and round-trip through the same save/load path as everything else. ---- */
+function openPersonInfoPopup(e, personId){
+  closeFloating();
+  const layer = getFloatingLayer();
+  const rect = e.currentTarget.getBoundingClientRect();
+  const person = state.people.find(p=>p.id===personId);
+  const pop = document.createElement('div');
+  pop.className = 'db-popup';
+  pop.style.width = '280px';
+  pop.innerHTML = `<div class="title">${escapeHtml(person.name)} — personal details</div>
+    <textarea id="person-info-textarea" rows="5" style="width:100%;padding:7px 9px;border:1px solid var(--border-strong);border-radius:5px;font-family:var(--font-body);font-size:12.5px;resize:vertical;" placeholder="Notes only you can see here — allergies, availability quirks, preferences, etc.">${escapeHtml(person.notes||'')}</textarea>
+    <div class="row" style="margin-top:8px;"><button class="btn btn-sm btn-primary" id="person-info-save" style="width:100%;">Save</button></div>`;
+  layer.appendChild(pop);
+  positionFloating(pop, rect);
+  const save = ()=>{ person.notes = pop.querySelector('#person-info-textarea').value; persist(); };
+  pop.querySelector('#person-info-save').addEventListener('click', ()=>{
+    save();
+    closeFloating();
+    showToast(`Saved details for ${person.name}.`);
+  });
+  registerCloser((ev)=>{ if(!pop.contains(ev.target)){ save(); closeFloating(); } });
 }
 
 /* ---- Positions tab ---- */
@@ -7743,19 +8028,20 @@ function renderPositionsTab(){
   const body = document.getElementById('modal-body');
   const posTags = state.tags.filter(t=>t.category==='position');
   body.innerHTML = `
-    <div class="db-help-text">Positions occupy consecutive ${SLOT_MINUTES}‑minute slots. Give a position a duration range and its blocks on the chart can be dragged wider or narrower within that range; "Preferred" is the duration new assignments default to. "Single‑person" positions can only hold one person at a time; otherwise multiple people can share a position at once. Shared by every schedule tab.</div>
+    <div class="db-help-text">Positions occupy consecutive ${SLOT_MINUTES}‑minute slots. Give a position a duration range and its blocks on the chart can be dragged wider or narrower within that range; "Preferred" is the duration new assignments default to. "Single‑person" positions can only hold one person at a time; otherwise multiple people can share a position at once. "Display" is the short label shown on the chart itself (the full name is still used everywhere else). Shared by every schedule tab.</div>
     
 <table class="db-mini-table caption-top" data-quarto-postprocess="true">
 <thead>
 <tr class="header">
 <th data-quarto-table-cell-role="th">Name</th>
+<th data-quarto-table-cell-role="th">Display</th>
 <th data-quarto-table-cell-role="th">Min</th>
 <th data-quarto-table-cell-role="th">Preferred</th>
 <th data-quarto-table-cell-role="th">Max</th>
 <th data-quarto-table-cell-role="th">Single‑person</th>
 <th data-quarto-table-cell-role="th">Fill color</th>
 <th data-quarto-table-cell-role="th">Text color</th>
-<th data-quarto-table-cell-role="th">Tags</th>
+<th id="positions-tags-header" data-quarto-table-cell-role="th" style="cursor: pointer; text-decoration: underline" title="View position tags in the Tags tab">Tags</th>
 <th data-quarto-table-cell-role="th"></th>
 </tr>
 </thead>
@@ -7765,6 +8051,7 @@ function renderPositionsTab(){
 
     <div class="db-field-row" style="margin-top:14px;">
       <div class="db-field"><label>New position name</label><input type="text" id="new-position-name" placeholder="e.g. Greeter"/></div>
+      <div class="db-field"><label>Display</label><input type="text" id="new-position-display" maxlength="8" placeholder="e.g. GR" style="width:64px;"/></div>
       <div class="db-field"><label>Min duration (min)</label><input type="number" id="new-position-duration-min" value="${SLOT_MINUTES}" min="${SLOT_MINUTES}" step="${SLOT_MINUTES}"/></div>
       <div class="db-field"><label>Max duration (min)</label><input type="number" id="new-position-duration-max" value="${SLOT_MINUTES}" min="${SLOT_MINUTES}" step="${SLOT_MINUTES}"/></div>
       <div class="db-field"><label>Fill color</label>
@@ -7776,6 +8063,7 @@ function renderPositionsTab(){
       <div class="db-field checkbox"><input type="checkbox" id="new-position-single"/><label>Single‑person</label></div>
       <button class="btn btn-primary" id="add-position-btn">Add position</button>
     </div>`;
+  document.getElementById('positions-tags-header').addEventListener('click', ()=>jumpToTags('position'));
   wireColorHexPair('new-position-color', 'new-position-color-hex', '#3b6fd6');
   wireColorHexPair('new-position-text-color', 'new-position-text-color-hex', '#FFFFFF');
   const tbody = document.getElementById('positions-tbody');
@@ -7783,6 +8071,7 @@ function renderPositionsTab(){
   state.positions.forEach(pos=>{
     if(pos.preferredDuration===undefined) pos.preferredDuration = pos.durationMin;
     if(pos.textColor===undefined) pos.textColor = '#FFFFFF';
+    if(pos.display===undefined) pos.display = '';
     const tr = document.createElement('tr');
     const tagsHtml = posTags.map(t=>{
       const on = pos.tags.includes(t.id);
@@ -7790,6 +8079,7 @@ function renderPositionsTab(){
       return `<span class="db-chip-toggle ${on?'on':''}" style="${style}" data-position="${pos.id}" data-tag="${t.id}">${escapeHtml(t.name)}</span>`;
     }).join('');
     tr.innerHTML = `<td>${escapeHtml(pos.name)}</td>
+      <td><input type="text" maxlength="8" value="${escapeHtml(pos.display)}" placeholder="${escapeHtml(pos.name.slice(0,4))}" data-display="${pos.id}" style="width:60px;padding:5px 6px;border:1px solid var(--border-strong);border-radius:5px;text-align:center;font-weight:600;background:${pos.color};color:${pos.textColor};"/></td>
       <td><input type="number" min="${SLOT_MINUTES}" step="${SLOT_MINUTES}" value="${pos.durationMin}" data-dur-min="${pos.id}" style="${inputStyle}"/></td>
       <td><input type="number" min="${SLOT_MINUTES}" step="${SLOT_MINUTES}" value="${pos.preferredDuration}" data-dur-pref="${pos.id}" style="${inputStyle}"/></td>
       <td><input type="number" min="${SLOT_MINUTES}" step="${SLOT_MINUTES}" value="${pos.durationMax}" data-dur-max="${pos.id}" style="${inputStyle}"/></td>
@@ -7797,7 +8087,7 @@ function renderPositionsTab(){
       <td><div class="db-color-field"><input type="color" value="${pos.color}" data-color="${pos.id}"/><input type="text" value="${pos.color}" class="db-hex-input" data-color-hex="${pos.id}"/></div></td>
       <td><div class="db-color-field"><input type="color" value="${pos.textColor}" data-text-color="${pos.id}"/><input type="text" value="${pos.textColor}" class="db-hex-input" data-text-color-hex="${pos.id}"/></div></td>
       <td><div class="db-chip-set">${tagsHtml || '<span class="db-empty-note" style="padding:0;">no position tags defined</span>'}</div></td>
-      <td><button class="db-icon-btn" data-del-position="${pos.id}">🗑</button></td>`;
+      <td style="white-space:nowrap;"><button class="db-icon-btn" data-edit-position="${pos.id}" title="Rename or copy this position">✎</button> <button class="db-icon-btn" data-del-position="${pos.id}">🗑</button></td>`;
     tbody.appendChild(tr);
   });
   function clampDuration(pos){
@@ -7805,6 +8095,13 @@ function renderPositionsTab(){
     pos.durationMax = Math.max(pos.durationMin, Math.round(pos.durationMax/SLOT_MINUTES)*SLOT_MINUTES);
     pos.preferredDuration = Math.min(pos.durationMax, Math.max(pos.durationMin, Math.round((pos.preferredDuration||pos.durationMin)/SLOT_MINUTES)*SLOT_MINUTES));
   }
+  tbody.querySelectorAll('[data-display]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const pos = state.positions.find(p=>p.id===inp.dataset.display);
+      pos.display = inp.value;
+      renderAll();
+    });
+  });
   tbody.querySelectorAll('[data-dur-min]').forEach(inp=>{
     inp.addEventListener('change', ()=>{
       const pos = state.positions.find(p=>p.id===inp.dataset.durMin);
@@ -7841,6 +8138,8 @@ function renderPositionsTab(){
       pos.color = inp.value;
       const hexTwin = tbody.querySelector(`[data-color-hex="${pos.id}"]`);
       if(hexTwin) hexTwin.value = inp.value;
+      const displayTwin = tbody.querySelector(`[data-display="${pos.id}"]`);
+      if(displayTwin) displayTwin.style.background = inp.value;
       renderAll();
     });
   });
@@ -7851,6 +8150,8 @@ function renderPositionsTab(){
       pos.color = inp.value;
       const swatchTwin = tbody.querySelector(`[data-color="${pos.id}"]`);
       if(swatchTwin) swatchTwin.value = inp.value;
+      const displayTwin = tbody.querySelector(`[data-display="${pos.id}"]`);
+      if(displayTwin) displayTwin.style.background = inp.value;
       renderAll();
     });
   });
@@ -7860,6 +8161,8 @@ function renderPositionsTab(){
       pos.textColor = inp.value;
       const hexTwin = tbody.querySelector(`[data-text-color-hex="${pos.id}"]`);
       if(hexTwin) hexTwin.value = inp.value;
+      const displayTwin = tbody.querySelector(`[data-display="${pos.id}"]`);
+      if(displayTwin) displayTwin.style.color = inp.value;
       renderAll();
     });
   });
@@ -7870,6 +8173,8 @@ function renderPositionsTab(){
       pos.textColor = inp.value;
       const swatchTwin = tbody.querySelector(`[data-text-color="${pos.id}"]`);
       if(swatchTwin) swatchTwin.value = inp.value;
+      const displayTwin = tbody.querySelector(`[data-display="${pos.id}"]`);
+      if(displayTwin) displayTwin.style.color = inp.value;
       renderAll();
     });
   });
@@ -7881,6 +8186,9 @@ function renderPositionsTab(){
       else pos.tags.push(tid);
       renderPositionsTab(); renderAll();
     });
+  });
+  tbody.querySelectorAll('[data-edit-position]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>openPositionEditPopup(e, btn.dataset.editPosition));
   });
   tbody.querySelectorAll('[data-del-position]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -7897,14 +8205,45 @@ function renderPositionsTab(){
   document.getElementById('add-position-btn').addEventListener('click', ()=>{
     const name = document.getElementById('new-position-name').value.trim();
     if(!name) return;
+    const display = document.getElementById('new-position-display').value.trim();
     const durationMin = Math.max(SLOT_MINUTES, Math.round(Number(document.getElementById('new-position-duration-min').value)/SLOT_MINUTES)*SLOT_MINUTES);
     const durationMax = Math.max(durationMin, Math.round(Number(document.getElementById('new-position-duration-max').value)/SLOT_MINUTES)*SLOT_MINUTES);
     const color = document.getElementById('new-position-color').value;
     const textColor = document.getElementById('new-position-text-color').value;
     const single = document.getElementById('new-position-single').checked;
-    state.positions.push({ id:genId('pos'), name, durationMin, durationMax, preferredDuration:durationMin, singlePerson:single, color, textColor, tags:[] });
+    state.positions.push({ id:genId('pos'), name, display, durationMin, durationMax, preferredDuration:durationMin, singlePerson:single, color, textColor, tags:[] });
     renderPositionsTab(); renderAll();
   });
+}
+
+/* Rename a position, or duplicate it (all settings and tags included) as a starting
+   point for numbered variants — this is what the "X to Clone" preset positions are
+   for: copy the template, then rename the copy's Display (e.g. "EOB-#" -> "EOB-1"). */
+function openPositionEditPopup(e, posId){
+  closeFloating();
+  const layer = getFloatingLayer();
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pos = state.positions.find(p=>p.id===posId);
+  const pop = document.createElement('div');
+  pop.className = 'db-popup';
+  pop.style.width = '250px';
+  pop.innerHTML = `<div class="title">Edit position</div>
+    <div class="db-field grow" style="margin-bottom:8px;"><label>Name</label><input type="text" id="pos-edit-name" value="${escapeHtml(pos.name)}" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:5px;"/></div>
+    <div class="row"><button class="btn btn-sm btn-primary" id="pos-edit-save" style="width:100%;">Save name</button></div>
+    <div class="row" style="margin-top:6px;"><button class="btn btn-sm" id="pos-edit-copy" style="width:100%;">📋 Copy this position</button></div>`;
+  layer.appendChild(pop);
+  positionFloating(pop, rect);
+  pop.querySelector('#pos-edit-save').addEventListener('click', ()=>{
+    const val = pop.querySelector('#pos-edit-name').value.trim();
+    if(val){ pos.name = val; closeFloating(); renderPositionsTab(); renderAll(); }
+  });
+  pop.querySelector('#pos-edit-copy').addEventListener('click', ()=>{
+    const copy = { ...JSON.parse(JSON.stringify(pos)), id: genId('pos'), name: `${pos.name} (copy)` };
+    state.positions.push(copy);
+    closeFloating(); renderPositionsTab(); renderAll();
+    showToast(`Copied "${pos.name}" as "${copy.name}" — all settings and tags carried over.`);
+  });
+  registerCloser((ev)=>{ if(!pop.contains(ev.target)) closeFloating(); });
 }
 
 /* ---- Tags tab ---- */
@@ -7913,6 +8252,16 @@ function renderTagsTab(){
   const palette = nextTagPalette();
   body.innerHTML = `
     <div class="db-help-text">Tags classify people, positions, or rules (e.g. "Female", "Physically demanding", "Coverage") so rules can target a group instead of one individual, and so rules can be grouped for searching. Each tag's colors control how it's shown as a chip throughout the app.</div>
+    <div class="db-field-row" style="margin-bottom:10px;">
+      <div class="db-field"><label>Show</label>
+        <select id="tags-type-filter">
+          <option value="all">All tag types</option>
+          <option value="person">People tags</option>
+          <option value="position">Position tags</option>
+          <option value="rule">Rule tags</option>
+        </select>
+      </div>
+    </div>
     
 <table class="db-mini-table caption-top" data-quarto-postprocess="true">
 <thead>
@@ -7936,18 +8285,38 @@ function renderTagsTab(){
         <select id="new-tag-category"><option value="person">People</option><option value="position">Positions</option><option value="rule">Rules</option></select>
       </div>
       <div class="db-field"><label>Highlight</label>
-        <div class="db-color-field"><input type="color" id="new-tag-highlight"/><input type="text" id="new-tag-highlight-hex" class="db-hex-input"/></div>
+        <div class="db-color-field"><input type="color" id="new-tag-highlight"/><input type="text" id="new-tag-highlight-hex" class="db-hex-input" style="width:64px;"/></div>
       </div>
       <div class="db-field"><label>Text</label>
-        <div class="db-color-field"><input type="color" id="new-tag-text"/><input type="text" id="new-tag-text-hex" class="db-hex-input"/></div>
+        <div class="db-color-field"><input type="color" id="new-tag-text"/><input type="text" id="new-tag-text-hex" class="db-hex-input" style="width:64px;"/></div>
       </div>
       <button class="btn btn-primary" id="add-tag-btn">Add tag</button>
+      <div class="db-field"><label>Preview</label><span class="db-tag-pill" id="new-tag-preview" style="background:${palette.bg};color:${palette.text};">Preview</span></div>
     </div>`;
+  document.getElementById('tags-type-filter').value = tagsTabFilter;
+  document.getElementById('tags-type-filter').addEventListener('change', (e)=>{
+    tagsTabFilter = e.target.value;
+    renderTagsTab();
+  });
   wireColorHexPair('new-tag-highlight', 'new-tag-highlight-hex', palette.bg);
   wireColorHexPair('new-tag-text', 'new-tag-text-hex', palette.text);
+  const newTagPreview = document.getElementById('new-tag-preview');
+  const refreshNewTagPreview = ()=>{
+    newTagPreview.style.background = document.getElementById('new-tag-highlight').value;
+    newTagPreview.style.color = document.getElementById('new-tag-text').value;
+    const name = document.getElementById('new-tag-name').value.trim();
+    newTagPreview.textContent = name || 'Preview';
+  };
+  ['new-tag-highlight','new-tag-highlight-hex','new-tag-text','new-tag-text-hex','new-tag-name'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', refreshNewTagPreview);
+  });
   const categoryLabel = c => c==='person' ? 'People' : c==='position' ? 'Positions' : 'Rules';
   const tbody = document.getElementById('tags-tbody');
-  state.tags.forEach(t=>{
+  const visibleTags = state.tags.filter(t=>tagsTabFilter==='all' || t.category===tagsTabFilter);
+  if(visibleTags.length===0){
+    tbody.innerHTML = `<tr><td colspan="7" class="db-empty-note">No ${tagsTabFilter==='all'?'':categoryLabel(tagsTabFilter).toLowerCase()+' '}tags yet.</td></tr>`;
+  }
+  visibleTags.forEach(t=>{
     const usageCount = t.category==='person'
       ? state.people.filter(p=>p.tags.includes(t.id)).length
       : t.category==='position'
@@ -8049,7 +8418,11 @@ function renderTimeTab(){
       <div class="db-field"><label>End time</label><input type="time" id="range-end" value="${minutesToTimeInput(state.settings.endMinutes)}" step="${stepSeconds}"/></div>
       <button class="btn btn-primary" id="apply-range-btn">Apply</button>
     </div>
-    <div class="db-rule-preview"><span class="lbl">Current range</span>${getSlots().length} slots · ${formatTime(state.settings.startMinutes)} – ${formatTime(state.settings.endMinutes)}</div>`;
+    <div class="db-rule-preview"><span class="lbl">Current range</span>${getSlots().length} slots · ${formatTime(state.settings.startMinutes)} – ${formatTime(state.settings.endMinutes)}</div>
+    <div class="db-field-row" style="margin-top:16px;">
+      <div class="db-field"><label>Maximum unfilled time (min)</label><input type="number" id="max-unfilled-minutes" min="0" step="${SLOT_MINUTES}" value="${state.settings.maxUnfilledMinutes}"/></div>
+    </div>
+    <div class="db-help-text">"Fill unlocked" and "Fill all" will leave gaps up to this size alone instead of forcing something into every last hole. Gaps larger than this are still filled if anything can go there.</div>`;
   document.getElementById('apply-range-btn').addEventListener('click', ()=>{
     const startVal = document.getElementById('range-start').value;
     const endVal = document.getElementById('range-end').value;
@@ -8065,6 +8438,11 @@ function renderTimeTab(){
     });
     state.assignments = activeSchedule().assignments;
     renderTimeTab(); renderAll();
+  });
+  document.getElementById('max-unfilled-minutes').addEventListener('change', (e)=>{
+    state.settings.maxUnfilledMinutes = Math.max(0, Math.round((Number(e.target.value)||0)/SLOT_MINUTES)*SLOT_MINUTES);
+    e.target.value = state.settings.maxUnfilledMinutes;
+    persist();
   });
 }
 
@@ -8091,7 +8469,7 @@ function renderSchedulesTab(){
     <div class="db-rule-builder">
       <h3>Auto-delete</h3>
       <div class="db-field-row">
-        <div class="db-field checkbox"><input type="checkbox" id="sched-auto-delete" ${s.autoDeleteEnabled?'checked':''}/><label>Delete the earliest schedule when a new one is made and the limit is exceeded</label></div>
+        <div class="db-field checkbox"><input type="checkbox" id="sched-auto-delete" ${s.autoDeleteEnabled?'checked':''}/><label>Delete the oldest schedule when a new one is made and the limit is exceeded</label></div>
       </div>
       <div class="db-field-row">
         <div class="db-field"><label>Max number of schedules</label><input type="number" id="sched-max-count" min="1" step="1" value="${s.maxSchedules}"/></div>
@@ -8121,9 +8499,9 @@ function renderSchedulesTab(){
       <div class="db-help-text" id="sched-auto-name-hint" style="margin-top:0;"></div>
     </div>`;
 
-  document.getElementById('sched-clone-origin').value = s.cloneOriginDisplay || 'right';
-  document.getElementById('sched-auto-name-mode').value = s.autoNameMode || 'today';
-  document.getElementById('sched-auto-name-weekday').value = s.autoNameWeekday!==undefined ? s.autoNameWeekday : 1;
+  document.getElementById('sched-clone-origin').value = s.cloneOriginDisplay || 'under';
+  document.getElementById('sched-auto-name-mode').value = s.autoNameMode || 'nextWeekday';
+  document.getElementById('sched-auto-name-weekday').value = s.autoNameWeekday!==undefined ? s.autoNameWeekday : 4;
 
   function updateAutoNameFieldsVisibility(){
     const mode = document.getElementById('sched-auto-name-mode').value;
@@ -8198,13 +8576,14 @@ function renderRulesTab(){
         <div class="db-field" id="rb-person-value-wrap"><label>&nbsp;</label><select id="rb-person-value"></select></div>
       </div>
       <div class="db-field-row" id="rb-anyone-fields" style="display:none;">
-        <div class="db-field grow"><label>Required tags (must have all)</label><div class="db-chip-set" id="rb-anyone-required-chips"></div></div>
-        <div class="db-field grow"><label>Prohibited tags (must have none)</label><div class="db-chip-set" id="rb-anyone-prohibited-chips"></div></div>
+        <div class="db-field grow"><label>Required <span class="db-tag-link" id="rb-required-tags-link" style="text-decoration:underline;cursor:pointer;">tags</span> (must have all)</label><div class="db-chip-set" id="rb-anyone-required-chips"></div></div>
+        <div class="db-field grow"><label>Prohibited <span class="db-tag-link" id="rb-prohibited-tags-link" style="text-decoration:underline;cursor:pointer;">tags</span> (must have none)</label><div class="db-chip-set" id="rb-anyone-prohibited-chips"></div></div>
         <div class="db-field" id="rb-anyone-count-wrap"><label>Count (min–max)</label>
-          <div style="display:flex;align-items:center;gap:6px;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             <input type="number" id="rb-anyone-count-min" value="1" min="1" step="1" style="width:60px;padding:7px 9px;border:1px solid var(--border-strong);border-radius:5px;"/>
             <span style="color:var(--muted);">to</span>
             <input type="number" id="rb-anyone-count-max" value="1" min="1" step="1" style="width:60px;padding:7px 9px;border:1px solid var(--border-strong);border-radius:5px;"/>
+            <button type="button" class="btn btn-sm" id="rb-anyone-count-all" style="display:none;">All people</button>
           </div>
         </div>
       </div>
@@ -8232,6 +8611,7 @@ function renderRulesTab(){
               <option value="totalLimit">Total limit (whole schedule)</option>
               <option value="crossSchedule">Schedules in a row</option>
               <option value="swap">Mutual swap (X→Y while someone else Y→X)</option>
+              <option value="staggeredStart">Staggered start (coverage every X minutes)</option>
             </select>
           </div>
         </div>
@@ -8267,6 +8647,9 @@ function renderRulesTab(){
         </div>
         <div class="db-field-row" id="rb-crossschedule-fields" style="display:none;">
           <div class="db-field"><label>Max consecutive schedules</label><input type="number" id="rb-cross-max" value="2" min="2" step="1"/></div>
+        </div>
+        <div class="db-field-row" id="rb-staggered-fields" style="display:none;">
+          <div class="db-field"><label>Interval (minutes)</label><input type="number" id="rb-staggered-interval" value="15" min="${SLOT_MINUTES}" step="${SLOT_MINUTES}"/></div>
         </div>
         <div class="db-help-text" id="rb-relative-hint" style="margin-top:6px;"></div>
       </div>
@@ -8318,6 +8701,15 @@ function renderRulesTab(){
     document.getElementById('rb-anyone-fields').style.display = isAnyone ? 'flex' : 'none';
     const effectSel = document.getElementById('rb-effect');
     document.getElementById('rb-anyone-count-wrap').style.display = (isAnyone && effectSel && effectSel.value==='require') ? 'flex' : 'none';
+    updateAllPeopleButtonVisibility();
+  }
+  function updateAllPeopleButtonVisibility(){
+    const btn = document.getElementById('rb-anyone-count-all');
+    if(!btn) return;
+    const total = state.people.length;
+    const min = Number(document.getElementById('rb-anyone-count-min').value)||0;
+    const max = Number(document.getElementById('rb-anyone-count-max').value)||0;
+    btn.style.display = (total>0 && (min!==total || max!==total)) ? 'inline-flex' : 'none';
   }
   function fillPositionValueOptions(mode){
     if(mode==='id') positionValueSel.innerHTML = state.positions.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
@@ -8350,17 +8742,22 @@ function renderRulesTab(){
   }
   function updateKindVisibility(){
     const isRelative = kindSel.value==='relative';
-    document.getElementById('rb-time-row').style.display = isRelative ? 'none' : 'flex';
     document.getElementById('rb-relative-section').style.display = isRelative ? 'block' : 'none';
-    if(isRelative) updateRelativeTypeVisibility();
+    if(isRelative){
+      updateRelativeTypeVisibility(); // decides rb-time-row itself — staggeredStart needs it, others don't
+    } else {
+      document.getElementById('rb-time-row').style.display = 'flex';
+    }
   }
   function updateRelativeTypeVisibility(){
     const t = relTypeSel.value;
+    document.getElementById('rb-time-row').style.display = (t==='staggeredStart') ? 'flex' : 'none';
     document.getElementById('rb-seq-fields').style.display = t==='sequence' ? 'flex' : 'none';
     document.getElementById('rb-together-fields').style.display = t==='together' ? 'flex' : 'none';
     document.getElementById('rb-consecutive-fields').style.display = t==='consecutive' ? 'flex' : 'none';
     document.getElementById('rb-totallimit-fields').style.display = t==='totalLimit' ? 'flex' : 'none';
     document.getElementById('rb-crossschedule-fields').style.display = t==='crossSchedule' ? 'flex' : 'none';
+    document.getElementById('rb-staggered-fields').style.display = t==='staggeredStart' ? 'flex' : 'none';
     if(t==='consecutive') updateConsecMeasureVisibility();
     if(t==='totalLimit') updateTotalMeasureVisibility();
     const hints = {
@@ -8370,6 +8767,7 @@ function renderRulesTab(){
       totalLimit: 'Example: "No one should do Position A more than twice" or "No more than 45 total minutes of Physically demanding positions." Counts across the whole schedule, not just consecutive slots.',
       crossSchedule: 'Example: "Bob shouldn\u2019t have the same assignment for more than two schedules in a row." Compares the same time slot across consecutive schedule tabs, in their current order.',
       swap: 'Example: "No mutual swaps" — nobody can go from position X to position Y while someone else goes from Y to X. Applies across any pair of positions; no extra fields needed.',
+      staggeredStart: 'Example: "Someone must start Front Desk every 15 minutes, from 10:30 AM to 4:30 PM." Use the Time field above to set that range (or leave it as Any time for the whole schedule). Works as a Required + "Must be scheduled" rule — currently the only combination this type is checked against.',
     };
     document.getElementById('rb-relative-hint').textContent = hints[t] || '';
   }
@@ -8424,8 +8822,9 @@ function renderRulesTab(){
     }
     const position = positionMode==='any' ? {mode:'any'} : {mode:positionMode, value:positionValueSel.value};
     const kind = kindSel.value;
+    const relType = kind==='relative' ? relTypeSel.value : null;
     let slot;
-    if(kind==='relative'){
+    if(kind==='relative' && relType!=='staggeredStart'){
       slot = {mode:'any'};
     } else {
       const slotMode = slotModeSel.value;
@@ -8439,7 +8838,6 @@ function renderRulesTab(){
     }
     let relative = null;
     if(kind==='relative'){
-      const relType = relTypeSel.value;
       if(relType==='sequence'){
         const opMode = document.getElementById('rb-seq-other-position-mode').value;
         const orderVal = document.getElementById('rb-seq-order').value;
@@ -8469,6 +8867,8 @@ function renderRulesTab(){
             : Math.max(1, Number(document.getElementById('rb-total-max').value)||2) };
       } else if(relType==='crossSchedule'){
         relative = { type:'crossSchedule', maxRepeat: Math.max(2, Number(document.getElementById('rb-cross-max').value)||2) };
+      } else if(relType==='staggeredStart'){
+        relative = { type:'staggeredStart', intervalMinutes: Math.max(SLOT_MINUTES, Number(document.getElementById('rb-staggered-interval').value)||15) };
       } else {
         relative = { type:'swap' };
       }
@@ -8484,6 +8884,7 @@ function renderRulesTab(){
     };
   }
   function updatePreview(){
+    updateAllPeopleButtonVisibility();
     document.getElementById('rb-preview').textContent = ruleLabel(buildRuleFromForm());
   }
   function renderTagChips(){
@@ -8525,11 +8926,19 @@ function renderRulesTab(){
   ['rb-strength','rb-person-value','rb-position-value','rb-slot-value','rb-slot-end','rb-active',
    'rb-seq-order','rb-seq-other-position-value','rb-seq-max-gap','rb-together-other-person-value',
    'rb-consec-max','rb-consec-max-minutes','rb-total-max','rb-total-max-minutes','rb-cross-max',
-   'rb-anyone-count-min','rb-anyone-count-max'].forEach(id=>{
+   'rb-staggered-interval','rb-anyone-count-min','rb-anyone-count-max'].forEach(id=>{
     const el = document.getElementById(id);
     el.addEventListener('change', updatePreview);
     el.addEventListener('input', updatePreview);
   });
+  document.getElementById('rb-anyone-count-all').addEventListener('click', ()=>{
+    const total = state.people.length;
+    document.getElementById('rb-anyone-count-min').value = total;
+    document.getElementById('rb-anyone-count-max').value = total;
+    updatePreview();
+  });
+  document.getElementById('rb-required-tags-link').addEventListener('click', ()=>jumpToTags('person'));
+  document.getElementById('rb-prohibited-tags-link').addEventListener('click', ()=>jumpToTags('person'));
 
   if(editing){
     document.getElementById('rb-nickname').value = editing.nickname || '';
@@ -8582,6 +8991,8 @@ function renderRulesTab(){
         updateTotalMeasureVisibility();
       } else if(editing.relative.type==='crossSchedule'){
         document.getElementById('rb-cross-max').value = editing.relative.maxRepeat || 2;
+      } else if(editing.relative.type==='staggeredStart'){
+        document.getElementById('rb-staggered-interval').value = editing.relative.intervalMinutes || 15;
       }
     }
   } else {
@@ -8726,6 +9137,7 @@ function exportToExcel(){
     relMaxConsecutiveMinutes: r.kind==='relative' && r.relative && r.relative.maxConsecutiveMinutes ? r.relative.maxConsecutiveMinutes : '',
     relMax: r.kind==='relative' && r.relative && r.relative.max ? r.relative.max : '',
     relMaxRepeat: r.kind==='relative' && r.relative && r.relative.maxRepeat ? r.relative.maxRepeat : '',
+    relIntervalMinutes: r.kind==='relative' && r.relative && r.relative.intervalMinutes ? r.relative.intervalMinutes : '',
     tags:(r.tags||[]).join(','), note: ruleLabel(r)
   }))), 'Rules');
 
@@ -8802,6 +9214,8 @@ async function importFromExcel(file){
           relative.max = Number(r.relMax) || (relative.measure==='minutes'?45:2);
         } else if(relType==='crossSchedule'){
           relative.maxRepeat = Number(r.relMaxRepeat)||2;
+        } else if(relType==='staggeredStart'){
+          relative.intervalMinutes = Number(r.relIntervalMinutes)||15;
         }
         // 'swap' has no extra fields
       }
@@ -8856,10 +9270,27 @@ async function importFromExcel(file){
 function init(){
   loadPersisted();
 
+  // Move the overlay/floating/toast layers to be direct children of <body>, so their
+  // `position:fixed` is always relative to the real viewport rather than to whatever
+  // Quarto wraps this document's content in — otherwise scrolling can leave menus
+  // rendering underneath the page title or a sticky nav bar. z-index alone (see CSS)
+  // covers the rest of that same issue.
+  ['settings-overlay','floating-layer','toast-layer','help-overlay'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && el.parentElement !== document.body) document.body.appendChild(el);
+  });
+
   document.getElementById('btn-settings').addEventListener('click', ()=>openSettings('people'));
   document.getElementById('btn-close-settings').addEventListener('click', closeSettings);
   document.getElementById('settings-overlay').addEventListener('click', (e)=>{ if(e.target.id==='settings-overlay') closeSettings(); });
-  document.querySelectorAll('.db-modal-tab').forEach(t=>t.addEventListener('click', ()=>{ editingRuleId = null; switchModalTab(t.dataset.tab); }));
+  document.querySelectorAll('.db-modal-tab').forEach(t=>t.addEventListener('click', ()=>{ editingRuleId = null; tagsTabFilter = 'all'; switchModalTab(t.dataset.tab); }));
+
+  document.getElementById('btn-help').addEventListener('click', openHelp);
+  document.getElementById('btn-close-help').addEventListener('click', closeHelp);
+  document.getElementById('help-overlay').addEventListener('click', (e)=>{ if(e.target.id==='help-overlay') closeHelp(); });
+  try{
+    if(!localStorage.getItem(HELP_SEEN_KEY)) document.getElementById('btn-help').classList.add('pulse-attention');
+  }catch(e){ /* localStorage unavailable — skip the first-visit pulse */ }
 
   document.getElementById('btn-solve').addEventListener('click', openSolveMenu);
   document.getElementById('btn-xlsx-menu').addEventListener('click', openXlsxMenu);
@@ -8881,13 +9312,13 @@ function init(){
 
   document.getElementById('btn-toggle-tags').addEventListener('click', ()=>{
     showPersonTags = !showPersonTags;
-    document.getElementById('btn-toggle-tags').textContent = `Person tags: ${showPersonTags ? 'on' : 'off'}`;
+    document.getElementById('btn-toggle-tags').textContent = `👤 Person tags: ${showPersonTags ? 'on' : 'off'}`;
     renderChart();
   });
 
   document.getElementById('btn-toggle-lock-display').addEventListener('click', ()=>{
     lockDisplayMode = !lockDisplayMode;
-    document.getElementById('btn-toggle-lock-display').textContent = `Lock display: ${lockDisplayMode ? 'on' : 'off'}`;
+    document.getElementById('btn-toggle-lock-display').textContent = `🔒 Lock display: ${lockDisplayMode ? 'on' : 'off'}`;
     document.getElementById('duty-board').classList.toggle('lock-display-on', lockDisplayMode);
   });
 
