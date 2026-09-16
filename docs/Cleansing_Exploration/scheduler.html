@@ -6,9 +6,9 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="Caleb Hale">
+<meta name="author" content>
 
-<title>Scheduler project – Caleb Hale Portfolio</title>
+<title>scheduler – Caleb Hale Portfolio</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -4002,7 +4002,7 @@ vertical-align: -.125em;
   </script>
 
 <div id="quarto-search-results"></div>
-  <header id="quarto-header" class="headroom fixed-top quarto-banner">
+  <header id="quarto-header" class="headroom fixed-top">
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
@@ -4053,29 +4053,7 @@ vertical-align: -.125em;
   </nav>
 </header>
 <!-- content -->
-<header id="title-block-header" class="quarto-title-block default page-columns page-full">
-  <div class="quarto-title-banner page-columns page-full">
-    <div class="quarto-title column-page-right">
-      <h1 class="title">Scheduler project</h1>
-                      </div>
-  </div>
-    
-  
-  <div class="quarto-title-meta column-page-right">
-
-      <div>
-      <div class="quarto-title-meta-heading">Author</div>
-      <div class="quarto-title-meta-contents">
-               <p>Caleb Hale </p>
-            </div>
-    </div>
-      
-    
-      
-    </div>
-    
-  
-  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
 <!-- sidebar -->
   <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
     <div class="pt-lg-2 mt-2 text-left sidebar-header sidebar-header-stacked">
@@ -4120,8 +4098,7 @@ vertical-align: -.125em;
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
     </div>
 <!-- main -->
-<main class="content quarto-banner-title-block column-page-right" id="quarto-document-content">
-
+<main class="content column-page-right" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
 
 
 
@@ -4858,11 +4835,6 @@ padding: 7px 9px; border:1px solid var(--border-strong); border-radius: var(--ra
 .db-color-field{ display:flex; align-items:center; gap:6px; }
 .db-color-field input[type="color"]{ width:36px; height:32px; padding:2px; border:2px solid var(--border-strong); border-radius: var(--radius-sm); cursor:pointer; flex-shrink:0; }
 .db-color-field input[type="color"]:hover{ border-color: var(--accent); }
-.db-hex-input{
-width:92px; font-family: var(--font-mono); font-size:11.5px; text-transform:uppercase;
-padding:6px 8px; border:2px solid var(--border-strong); border-radius: var(--radius-sm);
-}
-.db-hex-input:focus{ border-color: var(--accent); outline:none; }
 .db-field.checkbox{ flex-direction:row; align-items:center; gap:6px; }
 .db-field.checkbox label{ text-transform:none; font-family:var(--font-body); font-size:12.5px; }
 .db-field.grow{ flex:1; }
@@ -5114,7 +5086,7 @@ var state = {
   settings: {
     startMinutes: 10*60+30, endMinutes: 16*60+30,
     cloneOriginDisplay: 'under', // 'right' | 'under' | 'hidden' — where the "(clone of X)" text appears
-    autoDeleteEnabled: true, maxSchedules: 10,
+    autoDeleteEnabled: true, maxSchedules: 5,
     autoNameMode: 'nextWeekday', // 'today' | 'nextWeekday' | 'cloneName'
     autoNameWeekday: 4, // 0=Sunday .. 6=Saturday, used when autoNameMode==='nextWeekday' (4 = Thursday)
     autoNameIgnoreToday: true,
@@ -5296,7 +5268,7 @@ function generateAutoName(sourceSchedule){
    new schedule pushes the total over the limit. */
 function enforceMaxSchedules(){
   if(!state.settings.autoDeleteEnabled) return;
-  const max = Math.max(1, Number(state.settings.maxSchedules)||10);
+  const max = Math.max(1, Number(state.settings.maxSchedules)||5);
   while(state.schedules.length>max && state.schedules.length>1){
     deleteSchedule(state.schedules[0].id);
   }
@@ -7966,18 +7938,6 @@ function openPersonInfoPopup(e, personId){
 }
 
 /* ---- Positions tab ---- */
-function wireColorHexPair(colorId, hexId, defaultValue){
-  const colorEl = document.getElementById(colorId);
-  const hexEl = document.getElementById(hexId);
-  if(!colorEl || !hexEl) return;
-  if(defaultValue){ colorEl.value = defaultValue; hexEl.value = defaultValue; }
-  else hexEl.value = colorEl.value;
-  colorEl.addEventListener('input', ()=>{ hexEl.value = colorEl.value; });
-  hexEl.addEventListener('change', ()=>{
-    if(/^#[0-9a-fA-F]{6}$/.test(hexEl.value)) colorEl.value = hexEl.value;
-    else hexEl.value = colorEl.value;
-  });
-}
 
 /* Finds the first rule (in any schedule) that references this position directly by
    id — either as its main target or as a relative rule's "other position" — so
@@ -8055,17 +8015,15 @@ function renderPositionsTab(){
       <div class="db-field"><label>Min duration (min)</label><input type="number" id="new-position-duration-min" value="${SLOT_MINUTES}" min="${SLOT_MINUTES}" step="${SLOT_MINUTES}"/></div>
       <div class="db-field"><label>Max duration (min)</label><input type="number" id="new-position-duration-max" value="${SLOT_MINUTES}" min="${SLOT_MINUTES}" step="${SLOT_MINUTES}"/></div>
       <div class="db-field"><label>Fill color</label>
-        <div class="db-color-field"><input type="color" id="new-position-color"/><input type="text" id="new-position-color-hex" class="db-hex-input"/></div>
+        <div class="db-color-field"><input type="color" id="new-position-color" value="#3b6fd6"/></div>
       </div>
       <div class="db-field"><label>Text color</label>
-        <div class="db-color-field"><input type="color" id="new-position-text-color"/><input type="text" id="new-position-text-color-hex" class="db-hex-input"/></div>
+        <div class="db-color-field"><input type="color" id="new-position-text-color" value="#FFFFFF"/></div>
       </div>
       <div class="db-field checkbox"><input type="checkbox" id="new-position-single"/><label>Single‑person</label></div>
       <button class="btn btn-primary" id="add-position-btn">Add position</button>
     </div>`;
   document.getElementById('positions-tags-header').addEventListener('click', ()=>jumpToTags('position'));
-  wireColorHexPair('new-position-color', 'new-position-color-hex', '#3b6fd6');
-  wireColorHexPair('new-position-text-color', 'new-position-text-color-hex', '#FFFFFF');
   const tbody = document.getElementById('positions-tbody');
   const inputStyle = 'width:58px;padding:5px 6px;border:1px solid var(--border-strong);border-radius:5px;';
   state.positions.forEach(pos=>{
@@ -8084,8 +8042,8 @@ function renderPositionsTab(){
       <td><input type="number" min="${SLOT_MINUTES}" step="${SLOT_MINUTES}" value="${pos.preferredDuration}" data-dur-pref="${pos.id}" style="${inputStyle}"/></td>
       <td><input type="number" min="${SLOT_MINUTES}" step="${SLOT_MINUTES}" value="${pos.durationMax}" data-dur-max="${pos.id}" style="${inputStyle}"/></td>
       <td><input type="checkbox" data-single="${pos.id}" ${pos.singlePerson?'checked':''}/></td>
-      <td><div class="db-color-field"><input type="color" value="${pos.color}" data-color="${pos.id}"/><input type="text" value="${pos.color}" class="db-hex-input" data-color-hex="${pos.id}"/></div></td>
-      <td><div class="db-color-field"><input type="color" value="${pos.textColor}" data-text-color="${pos.id}"/><input type="text" value="${pos.textColor}" class="db-hex-input" data-text-color-hex="${pos.id}"/></div></td>
+      <td><div class="db-color-field"><input type="color" value="${pos.color}" data-color="${pos.id}"/></div></td>
+      <td><div class="db-color-field"><input type="color" value="${pos.textColor}" data-text-color="${pos.id}"/></div></td>
       <td><div class="db-chip-set">${tagsHtml || '<span class="db-empty-note" style="padding:0;">no position tags defined</span>'}</div></td>
       <td style="white-space:nowrap;"><button class="db-icon-btn" data-edit-position="${pos.id}" title="Rename or copy this position">✎</button> <button class="db-icon-btn" data-del-position="${pos.id}">🗑</button></td>`;
     tbody.appendChild(tr);
@@ -8136,20 +8094,6 @@ function renderPositionsTab(){
     inp.addEventListener('input', ()=>{
       const pos = state.positions.find(p=>p.id===inp.dataset.color);
       pos.color = inp.value;
-      const hexTwin = tbody.querySelector(`[data-color-hex="${pos.id}"]`);
-      if(hexTwin) hexTwin.value = inp.value;
-      const displayTwin = tbody.querySelector(`[data-display="${pos.id}"]`);
-      if(displayTwin) displayTwin.style.background = inp.value;
-      renderAll();
-    });
-  });
-  tbody.querySelectorAll('[data-color-hex]').forEach(inp=>{
-    inp.addEventListener('change', ()=>{
-      const pos = state.positions.find(p=>p.id===inp.dataset.colorHex);
-      if(!/^#[0-9a-fA-F]{6}$/.test(inp.value)){ inp.value = pos.color; return; }
-      pos.color = inp.value;
-      const swatchTwin = tbody.querySelector(`[data-color="${pos.id}"]`);
-      if(swatchTwin) swatchTwin.value = inp.value;
       const displayTwin = tbody.querySelector(`[data-display="${pos.id}"]`);
       if(displayTwin) displayTwin.style.background = inp.value;
       renderAll();
@@ -8159,20 +8103,6 @@ function renderPositionsTab(){
     inp.addEventListener('input', ()=>{
       const pos = state.positions.find(p=>p.id===inp.dataset.textColor);
       pos.textColor = inp.value;
-      const hexTwin = tbody.querySelector(`[data-text-color-hex="${pos.id}"]`);
-      if(hexTwin) hexTwin.value = inp.value;
-      const displayTwin = tbody.querySelector(`[data-display="${pos.id}"]`);
-      if(displayTwin) displayTwin.style.color = inp.value;
-      renderAll();
-    });
-  });
-  tbody.querySelectorAll('[data-text-color-hex]').forEach(inp=>{
-    inp.addEventListener('change', ()=>{
-      const pos = state.positions.find(p=>p.id===inp.dataset.textColorHex);
-      if(!/^#[0-9a-fA-F]{6}$/.test(inp.value)){ inp.value = pos.textColor; return; }
-      pos.textColor = inp.value;
-      const swatchTwin = tbody.querySelector(`[data-text-color="${pos.id}"]`);
-      if(swatchTwin) swatchTwin.value = inp.value;
       const displayTwin = tbody.querySelector(`[data-display="${pos.id}"]`);
       if(displayTwin) displayTwin.style.color = inp.value;
       renderAll();
@@ -8285,10 +8215,10 @@ function renderTagsTab(){
         <select id="new-tag-category"><option value="person">People</option><option value="position">Positions</option><option value="rule">Rules</option></select>
       </div>
       <div class="db-field"><label>Highlight</label>
-        <div class="db-color-field"><input type="color" id="new-tag-highlight"/><input type="text" id="new-tag-highlight-hex" class="db-hex-input" style="width:64px;"/></div>
+        <div class="db-color-field"><input type="color" id="new-tag-highlight" value="${palette.bg}"/></div>
       </div>
       <div class="db-field"><label>Text</label>
-        <div class="db-color-field"><input type="color" id="new-tag-text"/><input type="text" id="new-tag-text-hex" class="db-hex-input" style="width:64px;"/></div>
+        <div class="db-color-field"><input type="color" id="new-tag-text" value="${palette.text}"/></div>
       </div>
       <button class="btn btn-primary" id="add-tag-btn">Add tag</button>
       <div class="db-field"><label>Preview</label><span class="db-tag-pill" id="new-tag-preview" style="background:${palette.bg};color:${palette.text};">Preview</span></div>
@@ -8298,8 +8228,6 @@ function renderTagsTab(){
     tagsTabFilter = e.target.value;
     renderTagsTab();
   });
-  wireColorHexPair('new-tag-highlight', 'new-tag-highlight-hex', palette.bg);
-  wireColorHexPair('new-tag-text', 'new-tag-text-hex', palette.text);
   const newTagPreview = document.getElementById('new-tag-preview');
   const refreshNewTagPreview = ()=>{
     newTagPreview.style.background = document.getElementById('new-tag-highlight').value;
@@ -8307,7 +8235,7 @@ function renderTagsTab(){
     const name = document.getElementById('new-tag-name').value.trim();
     newTagPreview.textContent = name || 'Preview';
   };
-  ['new-tag-highlight','new-tag-highlight-hex','new-tag-text','new-tag-text-hex','new-tag-name'].forEach(id=>{
+  ['new-tag-highlight','new-tag-text','new-tag-name'].forEach(id=>{
     document.getElementById(id).addEventListener('input', refreshNewTagPreview);
   });
   const categoryLabel = c => c==='person' ? 'People' : c==='position' ? 'Positions' : 'Rules';
@@ -8325,8 +8253,8 @@ function renderTagsTab(){
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${escapeHtml(t.name)}</td>
       <td>${categoryLabel(t.category)}</td>
-      <td><div class="db-color-field"><input type="color" value="${t.highlightColor}" data-tag-highlight="${t.id}"/><input type="text" value="${t.highlightColor}" class="db-hex-input" data-tag-highlight-hex="${t.id}"/></div></td>
-      <td><div class="db-color-field"><input type="color" value="${t.textColor}" data-tag-text="${t.id}"/><input type="text" value="${t.textColor}" class="db-hex-input" data-tag-text-hex="${t.id}"/></div></td>
+      <td><div class="db-color-field"><input type="color" value="${t.highlightColor}" data-tag-highlight="${t.id}"/></div></td>
+      <td><div class="db-color-field"><input type="color" value="${t.textColor}" data-tag-text="${t.id}"/></div></td>
       <td><span class="db-tag-pill" id="tag-preview-${t.id}" style="background:${t.highlightColor};color:${t.textColor};">${escapeHtml(t.name)}</span></td>
       <td>${usageCount}</td>
       <td><button class="db-icon-btn" data-del-tag="${t.id}">🗑</button></td>`;
@@ -8338,20 +8266,6 @@ function renderTagsTab(){
       t.highlightColor = inp.value;
       const preview = document.getElementById(`tag-preview-${t.id}`);
       if(preview) preview.style.background = inp.value;
-      const hexTwin = tbody.querySelector(`[data-tag-highlight-hex="${t.id}"]`);
-      if(hexTwin) hexTwin.value = inp.value;
-      renderAll();
-    });
-  });
-  tbody.querySelectorAll('[data-tag-highlight-hex]').forEach(inp=>{
-    inp.addEventListener('change', ()=>{
-      const t = state.tags.find(x=>x.id===inp.dataset.tagHighlightHex);
-      if(!/^#[0-9a-fA-F]{6}$/.test(inp.value)){ inp.value = t.highlightColor; return; }
-      t.highlightColor = inp.value;
-      const preview = document.getElementById(`tag-preview-${t.id}`);
-      if(preview) preview.style.background = inp.value;
-      const swatchTwin = tbody.querySelector(`[data-tag-highlight="${t.id}"]`);
-      if(swatchTwin) swatchTwin.value = inp.value;
       renderAll();
     });
   });
@@ -8361,20 +8275,6 @@ function renderTagsTab(){
       t.textColor = inp.value;
       const preview = document.getElementById(`tag-preview-${t.id}`);
       if(preview) preview.style.color = inp.value;
-      const hexTwin = tbody.querySelector(`[data-tag-text-hex="${t.id}"]`);
-      if(hexTwin) hexTwin.value = inp.value;
-      renderAll();
-    });
-  });
-  tbody.querySelectorAll('[data-tag-text-hex]').forEach(inp=>{
-    inp.addEventListener('change', ()=>{
-      const t = state.tags.find(x=>x.id===inp.dataset.tagTextHex);
-      if(!/^#[0-9a-fA-F]{6}$/.test(inp.value)){ inp.value = t.textColor; return; }
-      t.textColor = inp.value;
-      const preview = document.getElementById(`tag-preview-${t.id}`);
-      if(preview) preview.style.color = inp.value;
-      const swatchTwin = tbody.querySelector(`[data-tag-text="${t.id}"]`);
-      if(swatchTwin) swatchTwin.value = inp.value;
       renderAll();
     });
   });
@@ -8525,7 +8425,7 @@ function renderSchedulesTab(){
     persist();
   });
   document.getElementById('sched-max-count').addEventListener('change', (e)=>{
-    state.settings.maxSchedules = Math.max(1, Number(e.target.value)||10);
+    state.settings.maxSchedules = Math.max(1, Number(e.target.value)||5);
     e.target.value = state.settings.maxSchedules;
     persist();
   });
