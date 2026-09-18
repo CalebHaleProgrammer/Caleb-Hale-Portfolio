@@ -791,6 +791,69 @@ html, body{
 .db-qual-btn.prefnot.on{ background: var(--pref-violation-soft); color: var(--pref-violation); border-color: var(--pref-violation); }
 .db-qual-btn.pref.on{ background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 
+/* ---------------- Sentence-builder (natural-language rule UI) ---------------- */
+.db-sentence{
+  display:flex; flex-wrap:wrap; align-items:center; gap:6px 5px;
+  font-size:14.5px; line-height:1.7; padding:12px 2px 16px;
+}
+.db-bubble{
+  position:relative; display:inline-flex; align-items:center; gap:5px;
+  border:1px solid var(--border-strong); border-radius:14px;
+  padding:4px 9px 8px 9px; background:#fff; color:var(--ink);
+  cursor:default; user-select:none;
+}
+.db-bubble.unset{ color:#8a92a3; font-style:italic; } /* not-yet-chosen piece shown in gray, per spec */
+.db-bubble-arrow{
+  position:absolute; left:50%; bottom:1px; transform:translate(-50%, 0);
+  width:14px; height:9px; border:none; background:transparent; padding:0; margin:0;
+  color:#9aa3b2; cursor:pointer; font-size:9px; line-height:1; display:flex; align-items:flex-end; justify-content:center;
+}
+.db-bubble-arrow:hover{ color:var(--accent); }
+.db-bubble-input{
+  border:none; outline:none; font: inherit; color:inherit; background:transparent;
+  padding:0; text-align:center;
+}
+.db-bubble-input.narrow{ width:44px; }
+.db-bubble-input.wide{ width:120px; }
+.db-bubble-static{ color: var(--muted); padding: 4px 0; font-size:14.5px; }
+.db-bubble-add{
+  display:inline-flex; align-items:center; border:1px dashed var(--border-strong); border-radius:14px;
+  padding:4px 10px; color:#8a92a3; background:transparent; cursor:pointer; font-size:13px;
+}
+.db-bubble-add:hover{ border-color:var(--accent); color:var(--accent); }
+.db-tag-combo-chip{
+  display:inline-flex; align-items:center; gap:4px; border:1px solid var(--border-strong); border-radius:999px;
+  padding:2px 4px 2px 9px; font-size:12px; background:#fff;
+}
+.db-tag-combo-chip .rm{ border:none; background:transparent; color:#b4bcc9; cursor:pointer; font-size:13px; line-height:1; padding:2px 5px; }
+.db-tag-combo-chip .rm:hover{ color: var(--danger); }
+.db-bubble-menu{
+  position:fixed; z-index:9400; min-width:170px; max-width:280px; max-height:280px; overflow-y:auto;
+  background:#fff; border:1px solid var(--border-strong); border-radius:10px; box-shadow: var(--shadow-pop);
+  padding:5px; display:flex; flex-direction:column; gap:1px;
+}
+.db-bubble-option{
+  display:block; width:100%; text-align:left; border:none; background:transparent; border-radius:7px;
+  padding:7px 9px; font-size:13px; color:#8a92a3; cursor:pointer;
+}
+.db-bubble-option:hover{ background: var(--panel-2); }
+.db-bubble-option.selected{ color: var(--ink); font-weight:600; }
+.db-bubble-menu .db-bubble-menu-search{
+  width:100%; border:1px solid var(--border-strong); border-radius:7px; padding:6px 8px; font-size:12.5px; margin-bottom:3px;
+}
+.db-sentence-preview{
+  font-size:12.5px; color:var(--muted); padding:8px 11px; background: var(--panel-2);
+  border:1px solid var(--border); border-radius: var(--radius-sm); margin-top:2px;
+}
+details.db-manual-toggle{ margin-top:16px; border-top:1px solid var(--border); padding-top:12px; }
+details.db-manual-toggle > summary{ cursor:pointer; font-size:12.5px; font-weight:600; color:var(--muted); }
+details.db-manual-toggle > summary:hover{ color:var(--accent); }
+.db-exclusive-row{ display:flex; align-items:flex-start; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); }
+.db-exclusive-row:last-child{ border-bottom:none; }
+.db-exclusive-row input[type="checkbox"]{ margin-top:3px; accent-color: var(--accent); }
+.db-exclusive-row.marked-remove label{ text-decoration: line-through; color:#8a92a3; }
+.db-exclusive-mark{ color: var(--danger); font-weight:700; margin-right:4px; }
+
 @media (max-width: 980px){
   .db-main-row{ grid-template-columns: 1fr; }
 }
@@ -1364,24 +1427,40 @@ function personMatchesTarget(target, personId){
   }
   if(target.mode==='id') return target.value===personId;
   if(target.mode==='tag'){ const p = state.people.find(p=>p.id===personId); return !!p && p.tags.includes(target.value); }
+  if(target.mode==='except') return target.value!==personId; // "anyone except {person}" — used by generated exclusivity companions
   return false;
 }
 function positionMatchesTarget(target, positionId){
-  if(!target || target.mode==='any') return true;
+  if(!target) return true;
+  if(target.mode==='any'){
+    const reqTags = target.requiredTags || [];
+    const prohTags = target.prohibitedTags || [];
+    if(reqTags.length===0 && prohTags.length===0) return true;
+    const p = state.positions.find(p=>p.id===positionId);
+    if(!p) return false;
+    if(!reqTags.every(t=>p.tags.includes(t))) return false;
+    if(prohTags.some(t=>p.tags.includes(t))) return false;
+    return true;
+  }
   if(target.mode==='id') return target.value===positionId;
-  if(target.mode==='tag'){ const p = state.positions.find(p=>p.id===positionId); return !!p && p.tags.includes(target.value); }
+  if(target.mode==='tag'){ const p = state.positions.find(p=>p.id===positionId); return !!p && p.tags.includes(target.value); } // legacy single-tag mode; 'any' with requiredTags is the general form now
+  if(target.mode==='except') return target.value!==positionId;
   return false;
 }
 function slotMatchesTarget(target, slotIndex){
   if(!target || target.mode==='any') return true;
   if(target.mode==='id') return target.value===slotIndex;
   if(target.mode==='range') return slotIndex>=target.start && slotIndex<=target.end;
+  if(target.mode==='except') return slotIndex!==target.value; // "any time other than X" — used by generated exclusivity companions
+  if(target.mode==='exceptRange') return slotIndex<target.start || slotIndex>target.end; // "any time outside this range"
   return false;
 }
 function targetSlotIndices(target, totalSlots){
   if(!target || target.mode==='any') return range(0, totalSlots-1);
   if(target.mode==='id') return [target.value];
   if(target.mode==='range') return range(Math.max(0,target.start), Math.min(totalSlots-1,target.end));
+  if(target.mode==='except') return range(0, totalSlots-1).filter(i=>i!==target.value);
+  if(target.mode==='exceptRange') return range(0, totalSlots-1).filter(i=>i<target.start || i>target.end);
   return [];
 }
 function candidateStartSlotsForSlotTarget(target, durSlots, totalSlots){
@@ -1396,24 +1475,37 @@ function candidateStartSlotsForSlotTarget(target, durSlots, totalSlots){
     const lo = Math.max(0, target.start-durSlots+1), hi = Math.min(maxStart, target.end);
     return lo<=hi ? range(lo,hi) : [];
   }
+  // 'except' / 'exceptRange' are only ever used by generated forbid-only exclusivity
+  // companions, which never need coverage-candidate generation — no case needed here.
   return [];
 }
 
 /* ---------------- Rule label generation ---------------- */
+/* "tagged X" / "and tagged Y" (more required tags) / "not tagged Z" (first prohibited,
+   no required tags) / "but not tagged Z" (first prohibited, after some required tags) /
+   "nor tagged W" (further prohibited tags) — used both live in the sentence bubbles and
+   here in the auto-generated description, so the grammar always matches. */
+function tagComboPhrase(reqTags, prohTags){
+  let phrase = '';
+  (reqTags||[]).forEach((tid,i)=>{ phrase += (i===0 ? `tagged \u201c${tagName(tid)}\u201d` : ` and tagged \u201c${tagName(tid)}\u201d`); });
+  (prohTags||[]).forEach((tid,i)=>{
+    const word = i===0 ? (phrase ? 'but not' : 'not') : 'nor';
+    phrase += (phrase ? ' ' : '') + `${word} tagged \u201c${tagName(tid)}\u201d`;
+  });
+  return phrase;
+}
 function targetDescription(target, kind){
   if(!target) return kind==='person' ? 'anyone' : 'any position';
   if(target.mode==='any'){
-    if(kind!=='person') return 'any position';
     const reqTags = target.requiredTags || [], prohTags = target.prohibitedTags || [];
-    if(reqTags.length===0 && prohTags.length===0) return 'anyone';
-    const parts = [];
-    if(reqTags.length) parts.push(`tagged ${reqTags.map(t=>`"${tagName(t)}"`).join(' & ')}`);
-    if(prohTags.length) parts.push(`not tagged ${prohTags.map(t=>`"${tagName(t)}"`).join(' or ')}`);
+    if(reqTags.length===0 && prohTags.length===0) return kind==='person' ? 'anyone' : 'any position';
+    const phrase = tagComboPhrase(reqTags, prohTags);
+    if(kind!=='person') return `positions ${phrase}`;
     const countRange = target.count || {min:1, max:1};
     const countPhrase = (countRange.min===countRange.max)
       ? `${countRange.min} ${countRange.min===1?'person':'people'}`
       : `${countRange.min}–${countRange.max} people`;
-    return `${countPhrase} ${parts.join(', ')}`;
+    return `${countPhrase} ${phrase}`;
   }
   if(target.mode==='id') return kind==='person' ? personName(target.value) : positionName(target.value);
   if(target.mode==='tag'){
@@ -1421,65 +1513,86 @@ function targetDescription(target, kind){
     const n = t ? t.name : '?';
     return kind==='person' ? `people tagged "${n}"` : `positions tagged "${n}"`;
   }
+  if(target.mode==='except'){
+    return kind==='person' ? `anyone except ${personName(target.value)}` : `any position except ${positionName(target.value)}`;
+  }
   return '?';
 }
 function slotDescription(target){
   const slots = getSlots();
+  const endLabel = i => (slots[i] ? formatTime(slots[i].minutes + SLOT_MINUTES) : '?'); // the CLOSE of a slot, not its start — so a range can read through to actual closing time
   if(!target || target.mode==='any') return 'at any time';
   if(target.mode==='id') return `at ${slots[target.value] ? slots[target.value].label : '?'}`;
-  if(target.mode==='range') return `from ${slots[target.start] ? slots[target.start].label : '?'} to ${slots[target.end] ? slots[target.end].label : '?'}`;
+  if(target.mode==='range') return `from ${slots[target.start] ? slots[target.start].label : '?'} to ${endLabel(target.end)}`;
+  if(target.mode==='except') return `at any time other than ${slots[target.value] ? slots[target.value].label : '?'}`;
+  if(target.mode==='exceptRange') return `at any time outside ${slots[target.start] ? slots[target.start].label : '?'}–${endLabel(target.end)}`;
   return '';
 }
+/* True for a person target that means "forbidden for literally everyone, no
+   restrictions" — the one case where "Anyone cannot..." reads as a mild double
+   negative and "No one can..." is both clearer and matches how the sentence
+   builder phrases the same rule. */
+function isNoOnePerson(target, effect){
+  return effect==='forbid' && !!target && target.mode==='any' &&
+    !((target.requiredTags||[]).length) && !((target.prohibitedTags||[]).length) && !target.count;
+}
 function ruleLabel(rule){
-  const p = targetDescription(rule.person, 'person');
+  if(rule.kind==='unfilledAllowance'){
+    const noOne = isNoOnePerson(rule.person, rule.effect);
+    const p = noOne ? 'No one' : cap(targetDescription(rule.person, 'person'));
+    const modal = noOne ? 'can' : (rule.effect==='forbid' ? 'cannot' : 'must');
+    const scopePhrase = rule.scope==='total' ? 'throughout the whole day' : 'at a time';
+    return `${p} ${modal} have ${rule.minutes} minutes of unfilled time, ${scopePhrase}.`;
+  }
+  const noOne = isNoOnePerson(rule.person, rule.effect);
+  const p = noOne ? 'No one' : cap(targetDescription(rule.person, 'person'));
+  const modal = noOne ? 'can' : (rule.effect==='forbid' ? 'cannot' : 'must');
   const pos = targetDescription(rule.position, 'position');
   const t = slotDescription(rule.slot);
 
   if(rule.kind!=='relative'){
-    const verb = rule.effect==='forbid' ? 'cannot be scheduled' : 'must be scheduled';
-    return `${cap(p)} ${verb} for ${pos}, ${t}.`;
+    return `${p} ${modal} be scheduled for ${pos}, ${t}.`;
   }
   const rel = rule.relative || {};
-  const modal = rule.effect==='forbid' ? 'cannot' : 'must';
   if(rel.type==='sequence'){
     const other = targetDescription(rel.otherPosition, 'position');
     const gapPhrase = (rel.maxGapMinutes!==undefined && rel.maxGapMinutes!==null && rel.maxGapMinutes!=='') ? ` within ${rel.maxGapMinutes} minutes` : '';
     if(rel.order==='either'){
-      return `${cap(p)} ${modal} be scheduled for ${pos}${gapPhrase} of being scheduled for ${other}.`;
+      return `${p} ${modal} be scheduled for ${pos}${gapPhrase} of being scheduled for ${other}.`;
     }
     const order = rel.order==='before' ? 'before' : 'after';
-    return `${cap(p)} ${modal} be scheduled for ${pos} ${order} being scheduled for ${other}${gapPhrase}.`;
+    return `${p} ${modal} be scheduled for ${pos} ${order} being scheduled for ${other}${gapPhrase}.`;
   }
   if(rel.type==='together'){
     const other = targetDescription(rel.otherPerson, 'person');
     const posClause = (rule.position && rule.position.mode!=='any') ? ` (specifically ${pos})` : '';
-    return `${cap(p)} ${modal} be scheduled for the same position and time as ${other}${posClause}.`;
+    return `${p} ${modal} be scheduled for the same position and time as ${other}${posClause}.`;
   }
   if(rel.type==='consecutive'){
     if(rel.measure==='minutes'){
       const n = rel.maxConsecutiveMinutes || 30;
-      return `${cap(p)} ${modal} have more than ${n} consecutive minutes of ${pos}.`;
+      return `${p} ${modal} have more than ${n} consecutive minutes of ${pos}.`;
     }
     const n = rel.maxConsecutive || 2;
-    return `${cap(p)} ${modal} be scheduled for ${pos} in ${n} consecutive slots.`;
+    return `${p} ${modal} be scheduled for ${pos} in ${n} consecutive slots.`;
   }
   if(rel.type==='totalLimit'){
     const isMinutes = rel.measure==='minutes';
     const n = rel.max || (isMinutes?45:2);
-    return `${cap(p)} ${modal} have more than ${n} ${isMinutes?'total minutes':'total occurrences'} of ${pos} in this schedule.`;
+    return `${p} ${modal} have more than ${n} ${isMinutes?'total minutes':'total occurrences'} of ${pos} in this schedule.`;
   }
   if(rel.type==='crossSchedule'){
     const n = rel.maxRepeat || 2;
-    return `${cap(p)} ${modal} repeat the same ${pos} assignment (same time slot) in ${n} consecutive schedules (viewing order).`;
+    return `${p} ${modal} repeat the same ${pos} assignment (same time slot) in ${n} consecutive schedules (viewing order).`;
   }
   if(rel.type==='swap'){
-    return `${cap(p)} cannot go from any position X to any position Y when anyone is coming from position Y to position X (no mutual swaps).`;
+    return `${p} ${modal} swap positions with someone else (X\u2192Y while they go Y\u2192X).`;
   }
   if(rel.type==='staggeredStart'){
     const n = Math.max(SLOT_MINUTES, Number(rel.intervalMinutes)||15);
-    return `${cap(p)} ${modal} start ${pos} every ${n} minutes, ${t}.`;
+    return `${p} ${modal} start ${pos} every ${n} minutes, ${t}.`;
   }
-  return `${cap(p)} ${rule.effect==='forbid'?'cannot':'must'} be scheduled for ${pos}, ${t}.`;
+  return `${p} ${modal} be scheduled for ${pos}, ${t}.`;
 }
 
 /* ---------------- Relative-rule matching (hard constraint side) ---------------- */
@@ -1727,7 +1840,7 @@ function isValidPlacement(personId, positionId, startSlot, opts){
   }
 
   for(const rule of state.rules){
-    if(!rule.active || rule.strength!=='required' || rule.effect!=='forbid') continue;
+    if(!rule.active || rule.strength!=='required' || rule.effect!=='forbid' || rule.kind==='unfilledAllowance') continue;
 
     if(rule.kind==='relative'){
       const relType = rule.relative && rule.relative.type;
@@ -1870,7 +1983,7 @@ function preferredForbidHits(personId, positionId, startSlot, durSlotsOverride){
   const durSlots = durSlotsOverride!==undefined ? durSlotsOverride : positionDurationSlots(positionId);
   const occupied = range(startSlot, startSlot+durSlots-1);
   return state.rules.filter(rule=>{
-    if(!rule.active || rule.strength!=='preferred' || rule.effect!=='forbid') return false;
+    if(!rule.active || rule.strength!=='preferred' || rule.effect!=='forbid' || rule.kind==='unfilledAllowance') return false;
     if(rule.kind==='relative'){
       const relType = rule.relative && rule.relative.type;
       if(relType==='sequence') return violatesSequenceRule(rule, personId, positionId, occupied);
@@ -1911,7 +2024,7 @@ function computeViolations(){
   const out = [];
   const totalSlots = getSlots().length;
   for(const rule of state.rules){
-    if(!rule.active) continue;
+    if(!rule.active || rule.kind==='unfilledAllowance') continue; // a solver setting, not a placement constraint — never produces violations
 
     if(rule.kind==='relative'){
       const relType = rule.relative && rule.relative.type;
@@ -1985,7 +2098,7 @@ function getUnsatisfiedRequiredCoverage(){
 function syncDirectRequiredAssignments(){
   const totalSlots = getSlots().length;
   for(const rule of state.rules){
-    if(!rule.active || rule.strength!=='required' || rule.effect!=='require' || rule.kind==='relative') continue;
+    if(!rule.active || rule.strength!=='required' || rule.effect!=='require' || rule.kind==='relative' || rule.kind==='unfilledAllowance') continue;
     if(rule.person.mode!=='id' || rule.position.mode!=='id' || rule.slot.mode!=='id') continue;
     const already = state.assignments.some(a=>
       a.personId===rule.person.value && a.positionId===rule.position.value &&
@@ -2018,7 +2131,7 @@ function computeSuggestions(){
   }
 
   for(const rule of state.rules){
-    if(!rule.active || rule.strength!=='preferred' || rule.effect!=='require') continue;
+    if(!rule.active || rule.strength!=='preferred' || rule.effect!=='require' || rule.kind==='unfilledAllowance') continue;
 
     if(rule.kind==='relative'){
       const relType = rule.relative && rule.relative.type;
@@ -2076,7 +2189,7 @@ function computeHotSpots(){
       if(covered) continue;
       let impact = 0;
       for(const rule of state.rules){
-        if(!rule.active) continue;
+        if(!rule.active || rule.kind==='unfilledAllowance') continue;
         const personHit = personMatchesTarget(rule.person, person.id) ||
           (rule.kind==='relative' && rule.relative && rule.relative.otherPerson && personMatchesTarget(rule.relative.otherPerson, person.id));
         if(!personHit) continue;
@@ -2176,12 +2289,34 @@ function shuffleArray(arr){
 /* Tiles every remaining empty slot (respecting locks when asked) with some valid
    position, preferring options that also satisfy preferred rules, so "fill unlocked"
    and "fill all" leave no gaps — only required-rule placement is exempt from this. */
+/* Resolves one person's effective "acceptable gap" thresholds from the global default
+   plus any active unfilledAllowance rules that apply to them. Reuses the same must/can't/
+   should/shouldn't framing as every other rule shape: a require-flavored allowance rule
+   can only RAISE a threshold (guarantees at least this much slack), a forbid-flavored one
+   can only LOWER it (caps it, even below the global default) — so if two rules disagree,
+   the forbid side wins, matching how forbid generally trumps require elsewhere here.
+   'perInstance' governs any single contiguous gap ("at a time"); 'total' is a cumulative
+   per-schedule budget ("throughout the day") that starts at 0 unless a rule grants some. */
+function personGapAllowance(personId){
+  let perInstance = Number(state.settings.maxUnfilledMinutes)||0;
+  let total = 0;
+  for(const rule of state.rules){
+    if(!rule.active || rule.kind!=='unfilledAllowance') continue;
+    if(!personMatchesTarget(rule.person, personId)) continue;
+    const minutes = Math.max(0, Number(rule.minutes)||0);
+    if(rule.scope==='total') total = rule.effect==='forbid' ? Math.min(total, minutes) : Math.max(total, minutes);
+    else perInstance = rule.effect==='forbid' ? Math.min(perInstance, minutes) : Math.max(perInstance, minutes);
+  }
+  return { perInstance: Math.max(0, perInstance), total: Math.max(0, total) };
+}
 function fillAllGaps(sched, respectLocks){
   const slots = getSlots();
-  const maxUnfilledSlots = Math.max(0, Math.round((Number(state.settings.maxUnfilledMinutes)||0)/SLOT_MINUTES));
   const visiblePeople = shuffleArray(state.people.filter(p=>!isPersonHidden(p.id)));
   let placed = 0;
   for(const person of visiblePeople){
+    const allowance = personGapAllowance(person.id);
+    const perInstanceSlots = Math.round(allowance.perInstance/SLOT_MINUTES);
+    let totalBudgetSlots = Math.round(allowance.total/SLOT_MINUTES);
     let s = 0;
     while(s < slots.length){
       const occupied = state.assignments.some(a=>a.personId===person.id && assignmentOccupiesSlots(a).includes(s));
@@ -2189,8 +2324,9 @@ function fillAllGaps(sched, respectLocks){
       if(occupied || locked){ s++; continue; }
 
       // Measure this contiguous empty (unlocked) run first — if it's small enough to be
-      // an acceptable "hole" per the max-unfilled-time setting, skip past it entirely
-      // rather than forcing something into it.
+      // an acceptable "hole" (per this person's own allowance, or the remaining slice of
+      // their cumulative daily budget), skip past it entirely rather than forcing
+      // something into it.
       let gapEnd = s;
       while(gapEnd<slots.length){
         const occ2 = state.assignments.some(a=>a.personId===person.id && assignmentOccupiesSlots(a).includes(gapEnd));
@@ -2198,7 +2334,13 @@ function fillAllGaps(sched, respectLocks){
         if(occ2 || lock2) break;
         gapEnd++;
       }
-      if((gapEnd-s) <= maxUnfilledSlots){ s = gapEnd; continue; }
+      const gapLen = gapEnd-s;
+      const fitsPerInstance = gapLen <= perInstanceSlots;
+      const fitsFromBudget = gapLen <= totalBudgetSlots;
+      if(fitsPerInstance || fitsFromBudget){
+        if(fitsFromBudget && !fitsPerInstance) totalBudgetSlots -= gapLen; // only spend the cumulative budget when the per-instance allowance alone wasn't enough
+        s = gapEnd; continue;
+      }
 
       const options = [];
       for(const pos of state.positions){
@@ -2231,9 +2373,11 @@ function fillAllGaps(sched, respectLocks){
    extend it to absorb the gap instead of leaving an unfillable hole. */
 function absorbTinyGaps(sched, respectLocks){
   const slots = getSlots();
-  const maxUnfilledSlots = Math.max(0, Math.round((Number(state.settings.maxUnfilledMinutes)||0)/SLOT_MINUTES));
   let absorbed = 0;
   for(const person of state.people.filter(p=>!isPersonHidden(p.id))){
+    const allowance = personGapAllowance(person.id);
+    const perInstanceSlots = Math.round(allowance.perInstance/SLOT_MINUTES);
+    let totalBudgetSlots = Math.round(allowance.total/SLOT_MINUTES);
     let s = 0;
     while(s < slots.length){
       const occupied = state.assignments.some(a=>a.personId===person.id && assignmentOccupiesSlots(a).includes(s));
@@ -2247,7 +2391,12 @@ function absorbTinyGaps(sched, respectLocks){
         gapEnd++;
       }
       const gapLen = gapEnd-s;
-      if(gapLen <= maxUnfilledSlots){ s = gapEnd; continue; } // acceptable hole — leave it as-is
+      const fitsPerInstance = gapLen <= perInstanceSlots;
+      const fitsFromBudget = gapLen <= totalBudgetSlots;
+      if(fitsPerInstance || fitsFromBudget){
+        if(fitsFromBudget && !fitsPerInstance) totalBudgetSlots -= gapLen;
+        s = gapEnd; continue; // acceptable hole — leave it as-is
+      }
       const before = state.assignments.find(a=>a.personId===person.id && a.startSlot+a.slotCount===s);
       if(before){
         const newCount = before.slotCount+gapLen;
@@ -2821,6 +2970,7 @@ function flashCell(personId, slotIndex){
 /* ---------------- Rules list ---------------- */
 function matchesDimFilter(target, filterVal){
   if(filterVal==='all') return true;
+  if(!target) return false; // this rule kind doesn't have this dimension at all (e.g. an unfilled-time allowance has no position/time)
   const isAnyRestricted = target.mode==='any' && (((target.requiredTags||[]).length) || ((target.prohibitedTags||[]).length));
   if(filterVal==='unused') return target.mode==='any' && !isAnyRestricted;
   if(filterVal==='general') return target.mode==='tag' || target.mode==='range' || isAnyRestricted;
@@ -2928,6 +3078,13 @@ function renderRuleRow(rule, violations){
     relChip.style.background = '#EDE9FE'; relChip.style.color = '#5B21B6';
     relChip.textContent = 'RELATIVE';
     row.appendChild(relChip);
+  }
+  if(rule.kind==='unfilledAllowance'){
+    const allowChip = document.createElement('span');
+    allowChip.className = 'effect-chip';
+    allowChip.style.background = '#DCFCE7'; allowChip.style.color = '#166534';
+    allowChip.textContent = 'ALLOWANCE';
+    row.appendChild(allowChip);
   }
 
   const main = document.createElement('div'); main.className = 'rule-main';
@@ -4125,11 +4282,12 @@ function renderTagsTab(){
     btn.addEventListener('click', ()=>{
       const tid = btn.dataset.delTag;
       const usedByRules = state.schedules.some(s=>s.rules.some(r=>
-        r.person.value===tid || r.position.value===tid || (r.tags||[]).includes(tid) ||
+        (r.person && r.person.value===tid) || (r.position && r.position.value===tid) || (r.tags||[]).includes(tid) ||
         (r.kind==='relative' && r.relative && (
           (r.relative.otherPosition && r.relative.otherPosition.value===tid) ||
           (r.relative.otherPerson && r.relative.otherPerson.value===tid)
-        ))
+        )) ||
+        (r.person && (r.person.requiredTags||[]).includes(tid)) || (r.person && (r.person.prohibitedTags||[]).includes(tid))
       ));
       if(!confirm(`Delete this tag? It will be removed from all people/positions/rules${usedByRules ? ' — some rules reference it and will stop matching anything' : ''}.`)) return;
       state.tags = state.tags.filter(t=>t.id!==tid);
@@ -4288,13 +4446,886 @@ function renderSchedulesTab(){
 }
 
 /* ---- Rules tab (builder + list) ---- */
+/* ================================================================
+   NATURAL-LANGUAGE RULE BUILDER — shared bubble widgets
+   ================================================================
+   A rule reads as a row of "bubbles". Each bubble's arrow (▾) reopens a small
+   floating list of alternatives for that piece; the rest of the bubble is live
+   content (a number, a name, a tag combo) when the piece has any. Unselected
+   options in an open list render gray, the current selection black. Choosing a
+   new option on an earlier bubble re-renders the whole sentence from the shape's
+   current draft, so anything downstream that's no longer compatible resets. */
+
+function bubbleEl(labelText, onArrowClick, opts){
+  opts = opts || {};
+  const b = document.createElement('span');
+  b.className = 'db-bubble' + (opts.unset ? ' unset' : '');
+  const content = document.createElement('span');
+  content.className = 'db-bubble-content';
+  if(opts.contentEl) content.appendChild(opts.contentEl); else content.textContent = labelText;
+  b.appendChild(content);
+  if(onArrowClick){
+    const arrow = document.createElement('button');
+    arrow.type = 'button'; arrow.className = 'db-bubble-arrow'; arrow.textContent = '▾';
+    arrow.addEventListener('click', (e)=>{ e.stopPropagation(); onArrowClick(arrow); });
+    b.appendChild(arrow);
+  }
+  return { el:b, content };
+}
+function staticTextEl(text){ const s = document.createElement('span'); s.className = 'db-bubble-static'; s.textContent = text; return s; }
+function addChipEl(label, onClick){
+  const c = document.createElement('button');
+  c.type = 'button'; c.className = 'db-bubble-add'; c.textContent = label;
+  c.addEventListener('click', onClick);
+  return c;
+}
+/* Floating vertical option list, anchored under whatever bubble/arrow/chip was clicked. */
+function openBubbleMenu(anchorEl, options, currentValue, onSelect, opts){
+  opts = opts || {};
+  closeFloating();
+  const layer = getFloatingLayer();
+  const menu = document.createElement('div');
+  menu.className = 'db-bubble-menu';
+  let searchInput = null;
+  if(opts.searchable && options.length>8){
+    searchInput = document.createElement('input');
+    searchInput.className = 'db-bubble-menu-search';
+    searchInput.placeholder = 'Search…';
+    menu.appendChild(searchInput);
+  }
+  const list = document.createElement('div');
+  menu.appendChild(list);
+  function renderList(filter){
+    list.innerHTML = '';
+    const shown = options.filter(o=>!filter || o.label.toLowerCase().includes(filter.toLowerCase()));
+    if(shown.length===0){
+      const none = document.createElement('div');
+      none.className = 'db-bubble-option'; none.style.color = '#c3cad6'; none.style.cursor = 'default';
+      none.textContent = 'No matches';
+      list.appendChild(none);
+      return;
+    }
+    shown.forEach(o=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'db-bubble-option' + (o.value===currentValue ? ' selected' : '');
+      btn.textContent = o.label;
+      btn.addEventListener('click', ()=>{ closeFloating(); onSelect(o.value); });
+      list.appendChild(btn);
+    });
+  }
+  renderList('');
+  if(searchInput) searchInput.addEventListener('input', ()=>renderList(searchInput.value));
+  layer.appendChild(menu);
+  positionFloating(menu, anchorEl.getBoundingClientRect());
+  if(searchInput) setTimeout(()=>searchInput.focus(), 0);
+  registerCloser((ev)=>{ if(!menu.contains(ev.target)) closeFloating(); });
+}
+
+/* ---- Tag-combination follow-up: "+ tagged …" / "+ but not …", each addable more
+   than once, so a target can read e.g. tagged "hardworking", not "trained". ---- */
+function renderTagComboFollowup(container, tagFilter, category, onChange){
+  const allTags = state.tags.filter(t=>t.category===category);
+  const reqList = tagFilter.required||[], prohList = tagFilter.prohibited||[];
+  reqList.forEach((tid,i)=>{
+    const word = i===0 ? 'tagged' : 'and tagged';
+    const chip = document.createElement('span');
+    chip.className = 'db-tag-combo-chip';
+    chip.innerHTML = `${word} \u201c${escapeHtml(tagName(tid))}\u201d <button type="button" class="rm">✕</button>`;
+    chip.querySelector('.rm').addEventListener('click', ()=>{ tagFilter.required = tagFilter.required.filter(x=>x!==tid); onChange(); });
+    container.appendChild(chip);
+  });
+  prohList.forEach((tid,i)=>{
+    const word = i===0 ? (reqList.length ? 'but not' : 'not') : 'nor';
+    const chip = document.createElement('span');
+    chip.className = 'db-tag-combo-chip';
+    chip.innerHTML = `${word} tagged \u201c${escapeHtml(tagName(tid))}\u201d <button type="button" class="rm">✕</button>`;
+    chip.querySelector('.rm').addEventListener('click', ()=>{ tagFilter.prohibited = tagFilter.prohibited.filter(x=>x!==tid); onChange(); });
+    container.appendChild(chip);
+  });
+  const addOne = (label, key)=>addChipEl(label, (e)=>{
+    const already = new Set([...(tagFilter.required||[]), ...(tagFilter.prohibited||[])]);
+    const options = allTags.filter(t=>!already.has(t.id)).map(t=>({value:t.id, label:t.name}));
+    if(options.length===0){ showToast('No more tags to add.'); return; }
+    openBubbleMenu(e.currentTarget, options, null, (val)=>{
+      tagFilter[key] = [...(tagFilter[key]||[]), val];
+      onChange();
+    });
+  });
+  const addReqLabel = reqList.length ? '+ and tagged…' : '+ tagged…';
+  const addProhLabel = prohList.length ? '+ nor tagged…' : (reqList.length ? '+ but not tagged…' : '+ not tagged…');
+  container.appendChild(addOne(addReqLabel, 'required'));
+  container.appendChild(addOne(addProhLabel, 'prohibited'));
+}
+
+/* ---- Person/position target piece ----
+   draft shape: { primary: 'specific'|'any'|'someone'|'everyone'|'noone', specificId,
+                  tagFilter:{required:[],prohibited:[]}, count:{min,max} }
+   'someone'/'everyone'/'noone' only make sense for person targets with require/forbid
+   framing (shapes 1 & 9); plain person/position targets elsewhere just use
+   'specific'/'any', with the tag combo as an optional refinement on 'any'. */
+function targetDraftToField(t, kind){
+  if(t.primary==='specific') return { mode:'id', value:t.specificId };
+  const field = { mode:'any' };
+  if((t.tagFilter.required||[]).length) field.requiredTags = t.tagFilter.required.slice();
+  if((t.tagFilter.prohibited||[]).length) field.prohibitedTags = t.tagFilter.prohibited.slice();
+  if(kind==='person' && t.primary==='someone') field.count = { min:t.count.min, max:t.count.max };
+  if(kind==='person' && t.primary==='everyone') field.count = { min: Math.max(1,state.people.length), max: Math.max(1,state.people.length) };
+  return field;
+}
+function fieldToTargetDraft(field, kind, ruleEffect){
+  const blank = { primary:'any', specificId:null, tagFilter:{required:[],prohibited:[]}, count:{min:1,max:1} };
+  if(!field) return blank;
+  if(field.mode==='id') return { primary:'specific', specificId:field.value, tagFilter:{required:[],prohibited:[]}, count:{min:1,max:1} };
+  if(field.mode==='tag') return { ...blank, tagFilter:{required:[field.value], prohibited:[]} }; // legacy single-tag position mode
+  // mode 'any'
+  const reqTags = field.requiredTags || [], prohTags = field.prohibitedTags || [];
+  let primary = 'any';
+  if(kind==='person'){
+    if(field.count){
+      const total = Math.max(1,state.people.length);
+      primary = (field.count.min===total && field.count.max===total) ? 'everyone' : 'someone';
+    } else {
+      primary = ruleEffect==='forbid' ? 'noone' : 'any';
+    }
+  }
+  return { primary, specificId:null, tagFilter:{required:reqTags.slice(), prohibited:prohTags.slice()}, count: field.count || {min:1,max:1} };
+}
+function renderTargetBubble(container, target, cfg, onChange){
+  let mainLabel;
+  if(target.primary==='specific'){
+    const name = target.specificId ? (cfg.kind==='person' ? personName(target.specificId) : positionName(target.specificId)) : null;
+    mainLabel = name || `choose a ${cfg.kind}`;
+  } else {
+    mainLabel = cfg.labels[target.primary] || target.primary;
+  }
+  const isUnset = target.primary==='specific' && !target.specificId;
+  const { el } = bubbleEl(mainLabel, (arrowEl)=>{
+    const options = cfg.primaryOptions.map(p=>({ value:p, label: cfg.labels[p] }));
+    openBubbleMenu(arrowEl, options, target.primary, (val)=>{
+      target.primary = val;
+      if(val==='specific') target.specificId = null;
+      if(cfg.requireTagWhenAny && val==='any' && (target.tagFilter.required||[]).length===0){
+        // this shape doesn't allow a fully-unrestricted "any" — prompt for the first tag immediately
+        const allTags = state.tags.filter(t=>t.category===cfg.tagCategory);
+        if(allTags.length){
+          openBubbleMenu(arrowEl, allTags.map(t=>({value:t.id, label:t.name})), null, (tv)=>{
+            target.tagFilter.required = [tv];
+            onChange();
+          });
+          return;
+        }
+      }
+      onChange();
+    });
+  }, { unset:isUnset });
+  el.style.cursor = 'pointer';
+  el.addEventListener('click', (e)=>{
+    if(e.target.classList.contains('db-bubble-arrow')) return;
+    if(target.primary==='specific'){
+      const options = (cfg.kind==='person' ? state.people : state.positions).map(p=>({value:p.id, label:p.name}));
+      openBubbleMenu(el, options, target.specificId, (val)=>{ target.specificId = val; onChange(); }, {searchable:true});
+    }
+  });
+  container.appendChild(el);
+  if(cfg.allowCount && target.primary==='someone'){
+    const total = Math.max(1,state.people.length);
+    const cl = (target.count.min===target.count.max) ? `${target.count.min} ${target.count.min===1?'person':'people'}` : `${target.count.min}\u2013${target.count.max} people`;
+    const { el: countBubble } = bubbleEl(`for ${cl}`, (arrowEl)=>openCountEditor(arrowEl, target.count, total, onChange));
+    container.appendChild(countBubble);
+  }
+  if(target.primary!=='specific'){
+    renderTagComboFollowup(container, target.tagFilter, cfg.tagCategory, onChange);
+  }
+}
+function openCountEditor(anchorEl, count, total, onChange){
+  closeFloating();
+  const layer = getFloatingLayer();
+  const pop = document.createElement('div');
+  pop.className = 'db-bubble-menu'; pop.style.padding = '10px'; pop.style.minWidth = '190px';
+  pop.innerHTML = `<div style="display:flex;align-items:center;gap:6px;font-size:12.5px;">
+    <input type="number" id="count-min-input" min="1" max="${total}" value="${count.min}" style="width:44px;padding:4px 6px;border:1px solid var(--border-strong);border-radius:5px;"/>
+    <span>to</span>
+    <input type="number" id="count-max-input" min="1" max="${total}" value="${count.max}" style="width:44px;padding:4px 6px;border:1px solid var(--border-strong);border-radius:5px;"/>
+    <span>people</span>
+  </div>
+  <button type="button" class="btn btn-sm" id="count-all-btn" style="width:100%;margin-top:8px;">All ${total} people</button>`;
+  layer.appendChild(pop);
+  positionFloating(pop, anchorEl.getBoundingClientRect());
+  const minInp = pop.querySelector('#count-min-input'), maxInp = pop.querySelector('#count-max-input');
+  const commit = ()=>{
+    count.min = Math.max(1, Math.min(total, Number(minInp.value)||1));
+    count.max = Math.max(count.min, Math.min(total, Number(maxInp.value)||count.min));
+    onChange();
+  };
+  minInp.addEventListener('change', commit);
+  maxInp.addEventListener('change', commit);
+  pop.querySelector('#count-all-btn').addEventListener('click', ()=>{ count.min=total; count.max=total; closeFloating(); onChange(); });
+  registerCloser((ev)=>{ if(!pop.contains(ev.target)){ commit(); closeFloating(); } });
+}
+
+/* ---- Time piece: any / a specific slot / a range. Range end shows the CLOSE of
+   that slot (not its start) so a range can visibly reach the schedule's actual
+   closing time, matching the same fix applied to the manual builder. ---- */
+function timeDraftToField(t){
+  if(t.kind==='any') return {mode:'any'};
+  if(t.kind==='specific') return {mode:'id', value:t.slotIndex};
+  return {mode:'range', start:t.start, end:t.end};
+}
+function fieldToTimeDraft(field){
+  if(!field || field.mode==='any') return {kind:'any', slotIndex:0, start:0, end:Math.max(0,getSlots().length-1)};
+  if(field.mode==='id') return {kind:'specific', slotIndex:field.value, start:field.value, end:field.value};
+  if(field.mode==='range') return {kind:'range', slotIndex:field.start, start:field.start, end:field.end};
+  return {kind:'any', slotIndex:0, start:0, end:Math.max(0,getSlots().length-1)};
+}
+function renderTimeBubble(container, timeDraft, onChange, opts){
+  opts = opts || {};
+  const slots = getSlots();
+  const primaryOptions = [{value:'any', label: opts.anyLabel || 'at any time'}, {value:'specific', label:'at a specific time'}, {value:'range', label:'during a range'}];
+  let mainLabel;
+  if(timeDraft.kind==='any') mainLabel = opts.anyLabel || 'at any time';
+  else if(timeDraft.kind==='specific') mainLabel = slots[timeDraft.slotIndex] ? `at ${slots[timeDraft.slotIndex].label}` : 'at…';
+  else mainLabel = (slots[timeDraft.start] && slots[timeDraft.end]!==undefined && slots[timeDraft.end]) ? `from ${slots[timeDraft.start].label} to ${formatTime(slots[timeDraft.end].minutes+SLOT_MINUTES)}` : 'during…';
+  const { el } = bubbleEl(mainLabel, (arrowEl)=>{
+    openBubbleMenu(arrowEl, primaryOptions, timeDraft.kind, (val)=>{
+      timeDraft.kind = val;
+      if(val==='specific' && timeDraft.slotIndex===undefined) timeDraft.slotIndex = 0;
+      if(val==='range'){ if(timeDraft.start===undefined) timeDraft.start=0; if(timeDraft.end===undefined) timeDraft.end = Math.max(0,slots.length-1); }
+      onChange();
+    });
+  });
+  el.style.cursor = 'pointer';
+  el.addEventListener('click', (e)=>{
+    if(e.target.classList.contains('db-bubble-arrow')) return;
+    if(timeDraft.kind==='specific'){
+      const options = slots.map((s,i)=>({value:i, label:s.label}));
+      openBubbleMenu(el, options, timeDraft.slotIndex, (val)=>{ timeDraft.slotIndex=Number(val); onChange(); }, {searchable:true});
+    } else if(timeDraft.kind==='range'){
+      openTimeRangeEditor(el, timeDraft, onChange);
+    }
+  });
+  container.appendChild(el);
+}
+function openTimeRangeEditor(anchorEl, timeDraft, onChange){
+  closeFloating();
+  const layer = getFloatingLayer();
+  const slots = getSlots();
+  const startOpts = slots.map((s,i)=>`<option value="${i}" ${i===timeDraft.start?'selected':''}>${s.label}</option>`).join('');
+  const endOpts = slots.map((s,i)=>`<option value="${i}" ${i===timeDraft.end?'selected':''}>${formatTime(s.minutes+SLOT_MINUTES)}</option>`).join('');
+  const pop = document.createElement('div');
+  pop.className = 'db-bubble-menu'; pop.style.padding = '10px'; pop.style.minWidth = '220px';
+  pop.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;">
+    <label>From<select id="range-start-sel" style="width:100%;margin-top:2px;">${startOpts}</select></label>
+    <label>To<select id="range-end-sel" style="width:100%;margin-top:2px;">${endOpts}</select></label>
+  </div>`;
+  layer.appendChild(pop);
+  positionFloating(pop, anchorEl.getBoundingClientRect());
+  const startSel = pop.querySelector('#range-start-sel'), endSel = pop.querySelector('#range-end-sel');
+  const commit = ()=>{
+    let a = Number(startSel.value), b = Number(endSel.value);
+    if(b<a){ const t=a; a=b; b=t; }
+    timeDraft.start = a; timeDraft.end = b;
+    onChange();
+  };
+  startSel.addEventListener('change', commit);
+  endSel.addEventListener('change', commit);
+  registerCloser((ev)=>{ if(!pop.contains(ev.target)){ commit(); closeFloating(); } });
+}
+
+/* ---- must / can't / should / shouldn't — one logical piece everywhere, though which
+   of the four are offered (and their exact verb phrasing) varies by shape, and
+   sometimes by another bubble's current choice (e.g. Who="no one" only pairs with
+   forbid-flavored modals — see shape configs below). ---- */
+function modalToStrengthEffect(modal){
+  if(modal==='must') return {strength:'required', effect:'require'};
+  if(modal==='cant') return {strength:'required', effect:'forbid'};
+  if(modal==='should') return {strength:'preferred', effect:'require'};
+  return {strength:'preferred', effect:'forbid'};
+}
+function strengthEffectToModal(strength, effect){
+  if(strength==='required') return effect==='forbid' ? 'cant' : 'must';
+  return effect==='forbid' ? 'shouldnt' : 'should';
+}
+function modalWord(modal, isNegative){
+  if(modal==='must') return 'must';
+  if(modal==='should') return 'should';
+  if(modal==='cant') return isNegative ? 'can' : 'can\u2019t';
+  return isNegative ? 'should' : 'shouldn\u2019t'; // 'shouldnt'
+}
+
+/* ================================================================
+   NATURAL-LANGUAGE RULE BUILDER
+   ================================================================
+   The sentence builds up one bubble at a time with nothing preselected: bubble 1
+   ("subject") offers person AND position openers side by side; once it resolves,
+   bubble 2 ("predicate") offers every applicable "verb phrase", filtered by what
+   the subject was (a plain list, not a named-shape picker) — choosing one fixes
+   which underlying rule "shape" is being built. Each further bubble only appears
+   once the one before it has a value, and stops once the sentence is a complete,
+   valid rule; purely optional refinements (tag combos, a person-count) still use
+   their own "+" add-chips whenever they're available.
+
+   'no one' is the one subject that is grammatically negative by itself, so its
+   predicate options render with an affirmative verb ("No one CAN...", "No one
+   SHOULD...") instead of can't/shouldn't, avoiding a double negative. */
+var PREDICATE_DEFS = {
+  assignment:     { dropdownVerb:'be scheduled for a position', restingVerb:'be scheduled for', reachableFrom:{person:['specific','someone','everyone','noone']} },
+  together:       { dropdownVerb:'always be scheduled together with someone else', restingVerb:'always be scheduled together with', reachableFrom:{person:['specific','noone']} },
+  sequence:       { dropdownVerb:'do one position right before or after another', restingVerb:'do', reachableFrom:{person:['specific','noone']} },
+  limit:          { dropdownVerb:'have too much of one position', restingVerb:'have more than', reachableFrom:{person:['specific','noone']} },
+  crossSchedule:  { dropdownVerb:'repeat the same assignment across schedules', restingVerb:'have the same assignment for more than', reachableFrom:{person:['specific','noone']} },
+  swap:           { dropdownVerb:'swap positions with someone else', restingVerb:'swap positions with someone else (X\u2192Y while they go Y\u2192X)', reachableFrom:{person:['noone']} },
+  staggeredStart: { dropdownVerb:'start a position on a repeating cadence', restingVerb:'start', reachableFrom:{person:['specific','someone']} },
+  allowance:      { dropdownVerb:'have unfilled time', restingVerb:'have', reachableFrom:{person:['specific','everyone','noone']} },
+  positionWindow: { dropdownVerb:'only run in a certain time window', restingVerb:'only run', reachableFrom:{position:['specific','any']} },
+};
+function reachablePredicates(subject){
+  if(!subject) return [];
+  const out = [];
+  for(const id in PREDICATE_DEFS){
+    const whoList = PREDICATE_DEFS[id].reachableFrom[subject.kind];
+    if(!whoList) continue;
+    const current = subject.kind==='person' ? subject.who : subject.which;
+    if(whoList.includes(current)) out.push(id);
+  }
+  return out;
+}
+function predicateModals(predicateId, subject){
+  if(predicateId==='limit' || predicateId==='crossSchedule' || predicateId==='swap') return ['cant','shouldnt'];
+  if(predicateId==='staggeredStart') return ['must','should'];
+  if(subject.kind==='person' && subject.who==='noone') return ['cant','shouldnt'];
+  if(subject.kind==='person' && subject.who==='someone') return ['must','should'];
+  return ['must','cant','should','shouldnt'];
+}
+var SUBJECT_OPTIONS = [
+  {value:'person:specific', label:'a specific person'},
+  {value:'person:someone', label:'someone'},
+  {value:'person:everyone', label:'everyone'},
+  {value:'person:noone', label:'no one'},
+  {value:'position:specific', label:'a specific position'},
+  {value:'position:any', label:'positions tagged\u2026'},
+];
+function subjectCurrentValue(subject){
+  if(!subject) return null;
+  return subject.kind==='person' ? 'person:'+subject.who : 'position:'+subject.which;
+}
+function isSubjectResolved(subject){
+  if(!subject) return false;
+  if(subject.kind==='person') return subject.who!=='specific' || !!subject.specificId;
+  if(subject.which==='specific') return !!subject.specificId;
+  return (subject.tagFilter.required||[]).length>0; // "positions tagged\u2026" needs at least one tag to mean anything
+}
+function blankTarget(){ return {primary:'specific', specificId:null, tagFilter:{required:[],prohibited:[]}, count:{min:1,max:1}}; }
+
+/* rule person/position field <-> subject draft */
+function fieldToSubjectDraft(field, effect, allowedWho){
+  const base = fieldToTargetDraft(field, 'person', effect);
+  let who = base.primary;
+  if(who==='any') who = effect==='forbid' ? 'noone' : 'everyone';
+  if(!allowedWho.includes(who)) return null;
+  return { kind:'person', who, specificId: base.specificId, tagFilter: base.tagFilter, count: base.count };
+}
+function subjectToPersonField(subj){
+  if(subj.who==='specific') return { mode:'id', value:subj.specificId };
+  const field = { mode:'any' };
+  if((subj.tagFilter.required||[]).length) field.requiredTags = subj.tagFilter.required.slice();
+  if((subj.tagFilter.prohibited||[]).length) field.prohibitedTags = subj.tagFilter.prohibited.slice();
+  if(subj.who==='someone') field.count = { min:subj.count.min, max:subj.count.max };
+  if(subj.who==='everyone') field.count = { min:Math.max(1,state.people.length), max:Math.max(1,state.people.length) };
+  return field;
+}
+function subjectToPositionField(subj){
+  if(subj.which==='specific') return { mode:'id', value:subj.specificId };
+  const field = { mode:'any' };
+  if((subj.tagFilter.required||[]).length) field.requiredTags = subj.tagFilter.required.slice();
+  if((subj.tagFilter.prohibited||[]).length) field.prohibitedTags = subj.tagFilter.prohibited.slice();
+  return field;
+}
+
+/* ---- Detecting / reconstructing a draft from an existing rule (for editing).
+   Always fully resolved immediately — the step-by-step reveal is a creation-time
+   aid, not something an already-complete rule should be forced back through. ---- */
+function detectPredicateFromRule(rule){
+  if(rule.kind==='unfilledAllowance') return 'allowance';
+  if(rule.kind==='relative'){
+    const t = rule.relative && rule.relative.type;
+    if(t==='together') return 'together';
+    if(t==='sequence') return 'sequence';
+    if(t==='consecutive' || t==='totalLimit') return 'limit';
+    if(t==='crossSchedule') return 'crossSchedule';
+    if(t==='swap') return 'swap';
+    if(t==='staggeredStart') return 'staggeredStart';
+    return null;
+  }
+  if(!rule.kind || rule.kind==='standard') return 'assignment';
+  return null;
+}
+function blankDraft(predicateId){
+  return { subject:null, predicate:predicateId||null, modal:null,
+    position:null, time:null, personB:null, positionA:null, positionB:null,
+    order:null, maxGap:null, amount:null, unit:null, scope:null, maxRepeat:null, interval:null, minutes:null };
+}
+function initDraftFromRule(rule){
+  const predicateId = detectPredicateFromRule(rule);
+  if(!predicateId) return null;
+  const draft = blankDraft(predicateId);
+  if(predicateId==='allowance'){
+    draft.subject = fieldToSubjectDraft(rule.person, rule.effect, ['specific','everyone','noone']);
+    if(!draft.subject) return null;
+    draft.modal = strengthEffectToModal(rule.strength, rule.effect);
+    draft.minutes = rule.minutes; draft.scope = rule.scope||'perInstance';
+    return draft;
+  }
+  if(predicateId==='swap'){
+    draft.subject = { kind:'person', who:'noone', specificId:null, tagFilter:{required:[],prohibited:[]}, count:{min:1,max:1} };
+    draft.modal = strengthEffectToModal(rule.strength, 'forbid');
+    return draft;
+  }
+  if(predicateId==='assignment'){
+    draft.subject = fieldToSubjectDraft(rule.person, rule.effect, ['specific','someone','everyone','noone']);
+    if(!draft.subject) return null;
+    draft.modal = strengthEffectToModal(rule.strength, rule.effect);
+    draft.position = fieldToTargetDraft(rule.position, 'position');
+    draft.time = fieldToTimeDraft(rule.slot);
+    return draft;
+  }
+  if(predicateId==='together'){
+    draft.subject = fieldToSubjectDraft(rule.person, rule.effect, ['specific','noone']);
+    if(!draft.subject) return null;
+    draft.modal = strengthEffectToModal(rule.strength, rule.effect);
+    draft.personB = fieldToTargetDraft(rule.relative.otherPerson, 'person');
+    return draft;
+  }
+  if(predicateId==='sequence'){
+    draft.subject = fieldToSubjectDraft(rule.person, rule.effect, ['specific','noone']);
+    if(!draft.subject) return null;
+    draft.modal = strengthEffectToModal(rule.strength, rule.effect);
+    draft.positionA = fieldToTargetDraft(rule.position, 'position');
+    draft.positionB = fieldToTargetDraft(rule.relative.otherPosition, 'position');
+    draft.order = rule.relative.order || 'after';
+    draft.maxGap = (rule.relative.maxGapMinutes===undefined ? null : rule.relative.maxGapMinutes);
+    return draft;
+  }
+  if(predicateId==='limit'){
+    draft.subject = fieldToSubjectDraft(rule.person, rule.effect, ['specific','noone']);
+    if(!draft.subject) return null;
+    draft.modal = strengthEffectToModal(rule.strength, rule.effect);
+    draft.position = fieldToTargetDraft(rule.position, 'position');
+    const isConsec = rule.relative.type==='consecutive';
+    draft.scope = isConsec ? 'perInstance' : 'total';
+    draft.unit = rule.relative.measure==='minutes' ? 'minutes' : 'count';
+    draft.amount = isConsec ? (draft.unit==='minutes'?rule.relative.maxConsecutiveMinutes:rule.relative.maxConsecutive) : rule.relative.max;
+    return draft;
+  }
+  if(predicateId==='crossSchedule'){
+    draft.subject = fieldToSubjectDraft(rule.person, rule.effect, ['specific','noone']);
+    if(!draft.subject) return null;
+    draft.modal = strengthEffectToModal(rule.strength, rule.effect);
+    draft.maxRepeat = rule.relative.maxRepeat;
+    return draft;
+  }
+  if(predicateId==='staggeredStart'){
+    draft.subject = fieldToSubjectDraft(rule.person, rule.effect, ['specific','someone']);
+    if(!draft.subject) return null;
+    draft.modal = strengthEffectToModal(rule.strength, rule.effect);
+    draft.position = fieldToTargetDraft(rule.position, 'position');
+    draft.interval = rule.relative.intervalMinutes;
+    draft.time = fieldToTimeDraft(rule.slot);
+    return draft;
+  }
+  return null;
+}
+
+/* ---- Per-predicate remaining field steps. Each step knows how to render its own
+   bubble and whether it currently has a usable value; the sentence stops revealing
+   further steps the moment it reaches one that doesn't yet. ---- */
+function getPredicateSteps(draft){
+  const mkPositionStep = (key, prefixText, labels)=>({
+    ensureInit(){ if(!draft[key]) draft[key] = blankTarget(); },
+    render(c,r){ if(prefixText) c.appendChild(staticTextEl(prefixText)); renderTargetBubble(c, draft[key], {kind:'position', primaryOptions:['specific','any'], labels: labels||{specific:'a specific position', any:'any position'}, tagCategory:'position'}, r); },
+    isComplete(){ return !!draft[key] && (draft[key].primary!=='specific' || !!draft[key].specificId); },
+  });
+  const mkPersonStep = (key, prefixText, labels)=>({
+    ensureInit(){ if(!draft[key]) draft[key] = blankTarget(); },
+    render(c,r){ if(prefixText) c.appendChild(staticTextEl(prefixText)); renderTargetBubble(c, draft[key], {kind:'person', primaryOptions:['specific','any'], labels: labels||{specific:'a specific person', any:'anyone'}, tagCategory:'person'}, r); },
+    isComplete(){ return !!draft[key] && (draft[key].primary!=='specific' || !!draft[key].specificId); },
+  });
+  const mkTimeStep = (opts)=>({
+    ensureInit(){ if(!draft.time) draft.time = { kind:(opts&&opts.defaultKind)||'any', slotIndex:0, start:0, end:Math.max(0,getSlots().length-1) }; },
+    render(c,r){ renderTimeBubble(c, draft.time, r, opts); },
+    isComplete(){ return true; },
+  });
+  const mkNumberStep = (key, opts)=>({
+    ensureInit(){ if(draft[key]===null || draft[key]===undefined) draft[key] = (opts.default===undefined?null:opts.default); },
+    render(c,r){
+      if(opts.prefix) c.appendChild(staticTextEl(opts.prefix));
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.className = 'db-bubble-input narrow';
+      if(opts.min!==undefined) inp.min = opts.min;
+      if(opts.step!==undefined) inp.step = opts.step;
+      if(opts.placeholder) inp.placeholder = opts.placeholder;
+      inp.value = (draft[key]===null || draft[key]===undefined) ? '' : draft[key];
+      inp.addEventListener('change', ()=>{
+        draft[key] = (inp.value==='' && opts.allowEmpty) ? null : (Number(inp.value)||opts.default);
+        r();
+      });
+      const { el } = bubbleEl(null, null, {contentEl:inp});
+      c.appendChild(el);
+      if(opts.suffix) c.appendChild(staticTextEl(opts.suffix));
+    },
+    isComplete(){ return true; },
+  });
+  const mkChoiceStep = (key, initial, options, render1st)=>({
+    ensureInit(){ if(!draft[key]) draft[key] = initial; },
+    render(c,r){
+      const current = options.find(o=>o.value===draft[key]) || options[0];
+      const { el } = bubbleEl(current.label, (arrowEl)=>{
+        openBubbleMenu(arrowEl, options, draft[key], (v)=>{ if(render1st) render1st(v); draft[key]=v; r(); });
+      });
+      c.appendChild(el);
+    },
+    isComplete(){ return true; },
+  });
+
+  switch(draft.predicate){
+    case 'assignment': return [ mkPositionStep('position','for'), mkTimeStep() ];
+    case 'together': return [ mkPersonStep('personB', null) ];
+    case 'sequence': return [
+      mkPositionStep('positionB', null),
+      mkChoiceStep('order', 'after', [{value:'after',label:'right after'},{value:'before',label:'right before'},{value:'either',label:'within'}]),
+      mkPositionStep('positionA', 'doing'),
+      { applicable(){ return draft.order==='either'; },
+        ensureInit(){ if(draft.maxGap===undefined) draft.maxGap = null; },
+        render(c,r){ mkNumberStep('maxGap', {min:0, step:5, default:null, placeholder:'any gap', allowEmpty:true, suffix:'minutes'}).render(c,r); },
+        isComplete(){ return true; } },
+    ];
+    case 'limit': return [
+      mkNumberStep('amount', {prefix:'more than', min: draft.unit==='minutes'?SLOT_MINUTES:1, step: draft.unit==='minutes'?SLOT_MINUTES:1, default:2}),
+      mkChoiceStep('unit', 'count', [{value:'count',label:'slots'},{value:'minutes',label:'minutes'}], (v)=>{ if(v!==draft.unit) draft.amount = v==='minutes'?30:2; }),
+      mkPositionStep('position', 'of'),
+      mkChoiceStep('scope', 'perInstance', [{value:'perInstance',label:'at a time'},{value:'total',label:'throughout the day'}]),
+    ];
+    case 'crossSchedule': return [
+      mkNumberStep('maxRepeat', {prefix:'the same assignment for more than', min:2, step:1, default:2, suffix:'schedules in a row'}),
+    ];
+    case 'staggeredStart': return [
+      mkPositionStep('position', null),
+      mkNumberStep('interval', {prefix:'every', min:SLOT_MINUTES, step:SLOT_MINUTES, default:15, suffix:'minutes'}),
+      mkTimeStep(),
+    ];
+    case 'allowance': return [
+      mkNumberStep('minutes', {min:0, step:SLOT_MINUTES, default:15, suffix:'minutes of unfilled time,'}),
+      mkChoiceStep('scope', 'perInstance', [{value:'perInstance',label:'at a time'},{value:'total',label:'throughout the whole day'}]),
+    ];
+    case 'positionWindow': return [ mkTimeStep({defaultKind:'range', anyLabel:'at any time (no restriction)'}) ];
+    case 'swap': return [];
+    default: return [];
+  }
+}
+
+function buildRuleFromDraft(draft){
+  if(!draft.subject || !isSubjectResolved(draft.subject) || !draft.predicate || !draft.modal) return null;
+  for(const step of getPredicateSteps(draft)){
+    if(step.applicable && !step.applicable()) continue;
+    if(!step.isComplete()) return null;
+  }
+  const { strength, effect } = modalToStrengthEffect(draft.modal);
+  const subj = draft.subject;
+  switch(draft.predicate){
+    case 'allowance': return { kind:'unfilledAllowance', strength, effect, person: subjectToPersonField(subj), minutes: Math.max(0,Number(draft.minutes)||0), scope: draft.scope||'perInstance' };
+    case 'swap': return { kind:'relative', strength, effect:'forbid', person:{mode:'any'}, position:{mode:'any'}, slot:{mode:'any'}, relative:{type:'swap'} };
+    case 'assignment': return { kind:'standard', strength, effect, person: subjectToPersonField(subj), position: targetDraftToField(draft.position,'position'), slot: timeDraftToField(draft.time) };
+    case 'together': return { kind:'relative', strength, effect, person: subjectToPersonField(subj), position:{mode:'any'}, slot:{mode:'any'}, relative:{type:'together', otherPerson: targetDraftToField(draft.personB,'person')} };
+    case 'sequence': return { kind:'relative', strength, effect, person: subjectToPersonField(subj), position: targetDraftToField(draft.positionA,'position'), slot:{mode:'any'},
+      relative:{ type:'sequence', order:draft.order, otherPosition: targetDraftToField(draft.positionB,'position'), maxGapMinutes: draft.maxGap } };
+    case 'limit': {
+      const relType = draft.scope==='total' ? 'totalLimit' : 'consecutive';
+      const relative = { type: relType, measure: draft.unit };
+      if(relType==='consecutive'){
+        if(draft.unit==='minutes') relative.maxConsecutiveMinutes = Math.max(SLOT_MINUTES, Number(draft.amount)||SLOT_MINUTES);
+        else relative.maxConsecutive = Math.max(2, Number(draft.amount)||2);
+      } else {
+        relative.max = Math.max(draft.unit==='minutes'?SLOT_MINUTES:1, Number(draft.amount)||(draft.unit==='minutes'?SLOT_MINUTES:1));
+      }
+      return { kind:'relative', strength, effect, person: subjectToPersonField(subj), position: targetDraftToField(draft.position,'position'), slot:{mode:'any'}, relative };
+    }
+    case 'crossSchedule': return { kind:'relative', strength, effect, person: subjectToPersonField(subj), position:{mode:'any'}, slot:{mode:'any'}, relative:{type:'crossSchedule', maxRepeat: Math.max(2, Number(draft.maxRepeat)||2)} };
+    case 'staggeredStart': return { kind:'relative', strength, effect, person: subjectToPersonField(subj), position: targetDraftToField(draft.position,'position'), slot: timeDraftToField(draft.time), relative:{type:'staggeredStart', intervalMinutes: Math.max(SLOT_MINUTES, Number(draft.interval)||15)} };
+    case 'positionWindow': return { kind:'standard', strength, effect, person:{mode:'any'}, position: subjectToPositionField(subj), slot: timeDraftToField(draft.time) };
+    default: return null;
+  }
+}
+
+/* ---- Bubble 1 (subject) ---- */
+function renderSubjectBubble(container, draft, rerender){
+  const subject = draft.subject;
+  const isUnset = !subject;
+  let mainLabel;
+  if(!subject) mainLabel = 'choose who or what';
+  else if(subject.kind==='person'){
+    if(subject.who==='specific') mainLabel = subject.specificId ? personName(subject.specificId) : 'choose a person';
+    else mainLabel = {someone:'someone', everyone:'everyone', noone:'no one'}[subject.who];
+  } else {
+    if(subject.which==='specific') mainLabel = subject.specificId ? positionName(subject.specificId) : 'choose a position';
+    else mainLabel = 'positions ' + (tagComboPhrase(subject.tagFilter.required, subject.tagFilter.prohibited) || '\u2026');
+  }
+  const { el } = bubbleEl(mainLabel, (arrowEl)=>{
+    openBubbleMenu(arrowEl, SUBJECT_OPTIONS, subjectCurrentValue(subject), (val)=>{
+      const [kind, sub] = val.split(':');
+      if(kind==='person') draft.subject = { kind:'person', who:sub, specificId:null, tagFilter:{required:[],prohibited:[]}, count:{min:1,max:1} };
+      else draft.subject = { kind:'position', which:sub, specificId:null, tagFilter:{required:[],prohibited:[]} };
+      draft.predicate = null; draft.modal = null;
+      ['position','time','personB','positionA','positionB','order','maxGap','amount','unit','scope','maxRepeat','interval','minutes'].forEach(k=>{ draft[k]=null; });
+      rerender();
+      if(kind==='position' && sub==='any'){
+        const freshBubble = document.querySelector('.db-sentence .db-bubble');
+        const tags = state.tags.filter(t=>t.category==='position');
+        if(freshBubble && tags.length){
+          openBubbleMenu(freshBubble, tags.map(t=>({value:t.id,label:t.name})), null, (tv)=>{ draft.subject.tagFilter.required=[tv]; rerender(); });
+        }
+      }
+    });
+  }, { unset:isUnset });
+  el.style.cursor = 'pointer';
+  el.addEventListener('click', (e)=>{
+    if(e.target.classList.contains('db-bubble-arrow') || !subject) return;
+    if(subject.kind==='person' && subject.who==='specific'){
+      openBubbleMenu(el, state.people.map(p=>({value:p.id,label:p.name})), subject.specificId, (v)=>{ subject.specificId=v; rerender(); }, {searchable:true});
+    } else if(subject.kind==='position' && subject.which==='specific'){
+      openBubbleMenu(el, state.positions.map(p=>({value:p.id,label:p.name})), subject.specificId, (v)=>{ subject.specificId=v; rerender(); }, {searchable:true});
+    }
+  });
+  container.appendChild(el);
+  if(subject && subject.kind==='person' && subject.who==='someone'){
+    const total = Math.max(1,state.people.length);
+    const cl = (subject.count.min===subject.count.max) ? `${subject.count.min} ${subject.count.min===1?'person':'people'}` : `${subject.count.min}\u2013${subject.count.max} people`;
+    const { el: countBubble } = bubbleEl(`for ${cl}`, (arrowEl)=>openCountEditor(arrowEl, subject.count, total, rerender));
+    container.appendChild(countBubble);
+  }
+  if(subject && subject.kind==='person' && subject.who!=='specific'){
+    renderTagComboFollowup(container, subject.tagFilter, 'person', rerender);
+  }
+  if(subject && subject.kind==='position' && subject.which==='any'){
+    renderTagComboFollowup(container, subject.tagFilter, 'position', rerender);
+  }
+}
+
+/* ---- Bubble 2 (predicate + modal, combined into one list of full verb phrases) ---- */
+function renderPredicateBubble(container, draft, rerender){
+  const subject = draft.subject;
+  const isNegative = subject.kind==='person' && subject.who==='noone';
+  const options = [];
+  reachablePredicates(subject).forEach(id=>{
+    predicateModals(id, subject).forEach(modal=>{
+      options.push({ value: id+'|'+modal, label: `${modalWord(modal, isNegative)} ${PREDICATE_DEFS[id].dropdownVerb}` });
+    });
+  });
+  const isUnset = !draft.predicate;
+  const mainLabel = draft.predicate ? `${modalWord(draft.modal, isNegative)} ${PREDICATE_DEFS[draft.predicate].restingVerb}` : 'choose what happens';
+  const { el } = bubbleEl(mainLabel, (arrowEl)=>{
+    openBubbleMenu(arrowEl, options, draft.predicate ? draft.predicate+'|'+draft.modal : null, (val)=>{
+      const [predicateId, modal] = val.split('|');
+      if(draft.predicate!==predicateId){
+        ['position','time','personB','positionA','positionB','order','maxGap','amount','unit','scope','maxRepeat','interval','minutes'].forEach(k=>{ draft[k]=null; });
+      }
+      draft.predicate = predicateId; draft.modal = modal;
+      rerender();
+    }, {searchable:true});
+  }, { unset:isUnset });
+  container.appendChild(el);
+}
+
+/* ---- "Make Exclusive" — only for the assignment predicate's require side. ---- */
+function ruleShapeKey(r){ return JSON.stringify({ kind:r.kind||'standard', person:r.person, position:r.position, slot:r.slot, effect:r.effect }); }
+function findExistingMatchingRule(candidateRuleFields){
+  const key = ruleShapeKey(candidateRuleFields);
+  return state.rules.find(r=>ruleShapeKey(r)===key);
+}
+function computeExclusiveCandidates(predicateId, built){
+  if(predicateId!=='assignment' || !built || built.effect!=='require') return [];
+  const candidates = [];
+  if(built.slot.mode==='id' || built.slot.mode==='range'){
+    const exceptSlot = built.slot.mode==='id' ? {mode:'except', value:built.slot.value} : {mode:'exceptRange', start:built.slot.start, end:built.slot.end};
+    const timePhrase = slotDescription(built.slot).replace(/^at |^from /,'');
+    candidates.push({ key:'notOtherTime',
+      description: `${cap(targetDescription(built.person,'person'))} must not be at ${targetDescription(built.position,'position')} other than (an assignment at) ${timePhrase}`,
+      rule: { kind:'standard', strength:built.strength, effect:'forbid', person: built.person, position: built.position, slot: exceptSlot, tags:[] } });
+  }
+  if(built.person.mode==='id'){
+    candidates.push({ key:'noOneElse',
+      description: `No one except ${personName(built.person.value)} can be at ${targetDescription(built.position,'position')} ${slotDescription(built.slot)}`,
+      rule: { kind:'standard', strength:built.strength, effect:'forbid', person:{mode:'except', value:built.person.value}, position: built.position, slot: built.slot, tags:[] } });
+  }
+  return candidates;
+}
+
+var sbExclusiveSelections = {};
+var sbOnlyDisableDeselected = false;
+
+function renderSentenceBuilder(editing){
+  const root = document.getElementById('sentence-builder-root');
+  if(!root) return;
+  let draft = editing ? initDraftFromRule(editing) : blankDraft(null);
+  if(editing && !draft) draft = blankDraft(null); // couldn't represent it — manual-rule-details will be forced open instead
+  sbExclusiveSelections = {}; sbOnlyDisableDeselected = false;
+
+  function renderExclusiveSection(built){
+    if(!draft.predicate || draft.predicate!=='assignment' || !built || built.effect!=='require') return;
+    const candidates = computeExclusiveCandidates(draft.predicate, built).filter(c=>{
+      const existing = findExistingMatchingRule(c.rule);
+      return !(editing && existing && existing.id===editing.id);
+    });
+    const wrap = document.createElement('div');
+    wrap.style.marginTop = '16px';
+    const title = document.createElement('div');
+    title.style.fontWeight = '600'; title.style.fontSize = '12.5px'; title.style.marginBottom = '6px';
+    title.textContent = 'Make Exclusive:';
+    wrap.appendChild(title);
+    if(candidates.length===0){
+      const none = document.createElement('div');
+      none.className = 'db-empty-note'; none.style.padding = '0';
+      none.textContent = 'No exclusive companion rules apply to this rule.';
+      wrap.appendChild(none);
+      root.appendChild(wrap);
+      return;
+    }
+    let anyExisting = false;
+    candidates.forEach(c=>{
+      const existingRule = findExistingMatchingRule(c.rule);
+      if(existingRule) anyExisting = true;
+      if(!(c.key in sbExclusiveSelections)) sbExclusiveSelections[c.key] = !!existingRule;
+      const checked = sbExclusiveSelections[c.key];
+      const markedForRemoval = !!(existingRule && !checked);
+      const row = document.createElement('div');
+      row.className = 'db-exclusive-row' + (markedForRemoval ? ' marked-remove' : '');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = checked;
+      cb.addEventListener('change', ()=>{ sbExclusiveSelections[c.key] = cb.checked; rerender(); });
+      row.appendChild(cb);
+      const label = document.createElement('label');
+      if(existingRule){ const star=document.createElement('span'); star.className='db-exclusive-mark'; star.textContent='*'; label.appendChild(star); }
+      if(markedForRemoval){ const redX=document.createElement('span'); redX.style.color='var(--danger)'; redX.style.fontWeight='700'; redX.style.marginRight='4px'; redX.textContent='✕'; label.appendChild(redX); }
+      label.appendChild(document.createTextNode(c.description + '.'));
+      row.appendChild(label);
+      wrap.appendChild(row);
+    });
+    if(anyExisting){
+      const note = document.createElement('div');
+      note.className = 'db-help-text'; note.style.marginTop = '6px';
+      note.textContent = '*this rule already exists, select to remove it instead.';
+      wrap.appendChild(note);
+      const toggleRow = document.createElement('div');
+      toggleRow.className = 'db-field checkbox'; toggleRow.style.marginTop = '8px';
+      const toggleCb = document.createElement('input');
+      toggleCb.type = 'checkbox'; toggleCb.id = 'sb-only-disable-toggle'; toggleCb.checked = sbOnlyDisableDeselected;
+      toggleCb.addEventListener('change', ()=>{ sbOnlyDisableDeselected = toggleCb.checked; });
+      toggleRow.appendChild(toggleCb);
+      const toggleLabel = document.createElement('label');
+      toggleLabel.setAttribute('for','sb-only-disable-toggle');
+      toggleLabel.textContent = 'Only disable deselected rules';
+      toggleRow.appendChild(toggleLabel);
+      wrap.appendChild(toggleRow);
+    }
+    root.appendChild(wrap);
+  }
+
+  function rerender(){
+    root.innerHTML = '';
+    const helpRow = document.createElement('div');
+    helpRow.style.display='flex'; helpRow.style.justifyContent='space-between'; helpRow.style.alignItems='flex-start'; helpRow.style.gap='8px';
+    const help = document.createElement('div');
+    help.className = 'db-help-text';
+    help.textContent = 'Click any part of the sentence to change it, or its arrow to pick something else entirely. The ? icon has examples.';
+    helpRow.appendChild(help);
+    const qIcon = document.createElement('span');
+    qIcon.className = 'db-info-icon'; qIcon.tabIndex = 0; qIcon.style.flexShrink = '0';
+    qIcon.innerHTML = '?<span class="db-info-tooltip">Build a rule as a sentence: the first bubble is who or what the rule is about, the next is what happens, and the rest fill themselves in from there. Examples: "Someone must be scheduled for Front Desk, from 10:30 AM to 12:00 PM." \u00b7 "No one can be scheduled for positions tagged \u2018Physically demanding\u2019 for more than 2 slots at a time." \u00b7 "Allow Alice to have 30 minutes of unfilled time, throughout the whole day."</span>';
+    helpRow.appendChild(qIcon);
+    root.appendChild(helpRow);
+
+    const sentence = document.createElement('div');
+    sentence.className = 'db-sentence';
+    renderSubjectBubble(sentence, draft, rerender);
+    let built = null;
+    if(isSubjectResolved(draft.subject)){
+      renderPredicateBubble(sentence, draft, rerender);
+      if(draft.predicate){
+        for(const step of getPredicateSteps(draft)){
+          if(step.applicable && !step.applicable()) continue;
+          step.ensureInit();
+          step.render(sentence, rerender);
+          if(!step.isComplete()) break;
+        }
+        built = buildRuleFromDraft(draft);
+      }
+    }
+    root.appendChild(sentence);
+
+    const preview = document.createElement('div');
+    preview.className = 'db-sentence-preview';
+    preview.textContent = built ? ruleLabel(built) : 'Keep choosing to complete this rule.';
+    root.appendChild(preview);
+
+    renderExclusiveSection(built);
+
+    const actionsRow = document.createElement('div');
+    actionsRow.className = 'row'; actionsRow.style.marginTop = '12px';
+    const submitBtn = document.createElement('button');
+    submitBtn.className = 'btn btn-primary';
+    submitBtn.textContent = editing ? 'Update rule' : 'Add rule';
+    submitBtn.disabled = !built;
+    submitBtn.addEventListener('click', ()=>submitSentenceRule(draft, built, editing));
+    actionsRow.appendChild(submitBtn);
+    if(editing){
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'btn'; cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', ()=>{ editingRuleId = null; renderRulesTab(); });
+      actionsRow.appendChild(cancelBtn);
+    }
+    root.appendChild(actionsRow);
+  }
+  rerender();
+}
+
+function submitSentenceRule(draft, built, editing){
+  if(!built) return;
+  pushUndoSnapshot();
+  if(editing){
+    const idx = state.rules.findIndex(r=>r.id===editing.id);
+    if(idx>=0) state.rules[idx] = { ...editing, ...built };
+  } else {
+    state.rules.push({ id:genId('rule'), active:true, nickname:'', tags:[], ...built });
+  }
+  if(draft.predicate==='assignment' && built.effect==='require'){
+    computeExclusiveCandidates(draft.predicate, built).forEach(c=>{
+      const existingRule = findExistingMatchingRule(c.rule);
+      if(editing && existingRule && existingRule.id===editing.id) return;
+      const checked = !!sbExclusiveSelections[c.key];
+      if(!existingRule && checked){
+        state.rules.push({ id:genId('rule'), active:true, nickname:'', tags:[], ...c.rule });
+      } else if(existingRule && !checked){
+        if(sbOnlyDisableDeselected) existingRule.active = false;
+        else state.rules = state.rules.filter(r=>r.id!==existingRule.id);
+      }
+    });
+  }
+  const wasEditing = !!editing;
+  editingRuleId = null;
+  sbExclusiveSelections = {}; sbOnlyDisableDeselected = false;
+  if(wasEditing) closeSettings(); else renderRulesTab();
+  renderAll();
+}
+
 function renderRulesTab(){
   const body = document.getElementById('modal-body');
   const editing = editingRuleId ? state.rules.find(r=>r.id===editingRuleId) : null;
   let selectedRuleTagIds = new Set(editing ? (editing.tags||[]) : []);
 
   body.innerHTML = `
-    <div class="db-help-text">"Any time" on a required rule applies to every slot, so "must be scheduled, any time" means required at every slot, and "cannot be scheduled, any time" means forbidden at every slot. Preferred rules generate star suggestions instead of hard blocks. Relative rules compare an assignment to other assignments (sequence, pairing, repetition, swaps) rather than to a fixed time. Rules are specific to this schedule tab.</div>
+    <div class="db-help-text">Build a rule below in plain language, or use "Manually define rule" for full control over every field. Rules are specific to this schedule tab.</div>
+    <div id="sentence-builder-root"></div>
+    <details class="db-manual-toggle" id="manual-rule-details" ${editing && !initDraftFromRule(editing) ? 'open' : ''}>
+      <summary>Manually define rule</summary>
     <div class="db-rule-builder">
       <h3>${editing ? 'Edit rule' : 'New rule'}</h3>
       <div class="db-field-row">
@@ -4406,6 +5437,7 @@ function renderRulesTab(){
         ${editing ? '<button class="btn" id="rb-cancel">Cancel</button>' : ''}
       </div>
     </div>
+    </details>
     <table class="db-mini-table">
       <thead><tr><th>Rule</th><th>Strength</th><th>Active</th><th></th></tr></thead>
       <tbody id="rules-tbody"></tbody>
@@ -4452,7 +5484,8 @@ function renderRulesTab(){
   }
   function fillSlotOptions(){
     const opts = slots.map((s,i)=>`<option value="${i}">${s.label}</option>`).join('');
-    slotValueSel.innerHTML = opts; slotEndSel.innerHTML = opts;
+    const endOpts = slots.map((s,i)=>`<option value="${i}">${formatTime(s.minutes+SLOT_MINUTES)}</option>`).join('');
+    slotValueSel.innerHTML = opts; slotEndSel.innerHTML = endOpts;
   }
   function updateSlotVisibility(mode){
     document.getElementById('rb-slot-value-wrap').style.display = mode==='any' ? 'none' : 'flex';
@@ -4781,6 +5814,8 @@ function renderRulesTab(){
       renderRulesTab(); renderAll();
     });
   });
+
+  renderSentenceBuilder(editing);
 }
 
 /* ================================================================
@@ -4849,15 +5884,15 @@ function exportToExcel(){
   ))), 'Tags');
 
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(state.rules.map(r=>({
-    id:r.id, nickname:r.nickname||'', strength:r.strength, active:r.active, effect:r.effect, kind:r.kind||'standard',
-    personMode:r.person.mode, personValue:r.person.value||'',
-    personRequiredTags: r.person.mode==='any' ? (r.person.requiredTags||[]).join(',') : '',
-    personProhibitedTags: r.person.mode==='any' ? (r.person.prohibitedTags||[]).join(',') : '',
-    personCountMin: r.person.mode==='any' && r.person.count ? r.person.count.min : '',
-    personCountMax: r.person.mode==='any' && r.person.count ? r.person.count.max : '',
-    positionMode:r.position.mode, positionValue:r.position.value||'',
-    slotMode:r.slot.mode,
-    slotValue: r.slot.mode==='range' ? `${r.slot.start}-${r.slot.end}` : (r.slot.value!==undefined ? r.slot.value : ''),
+    id:r.id, nickname:r.nickname||'', strength:r.strength, active:r.active, effect:r.effect||'', kind:r.kind||'standard',
+    personMode:r.person ? r.person.mode : '', personValue:(r.person && r.person.value)||'',
+    personRequiredTags: r.person && r.person.mode==='any' ? (r.person.requiredTags||[]).join(',') : '',
+    personProhibitedTags: r.person && r.person.mode==='any' ? (r.person.prohibitedTags||[]).join(',') : '',
+    personCountMin: r.person && r.person.mode==='any' && r.person.count ? r.person.count.min : '',
+    personCountMax: r.person && r.person.mode==='any' && r.person.count ? r.person.count.max : '',
+    positionMode: r.position ? r.position.mode : '', positionValue:(r.position && r.position.value)||'',
+    slotMode: r.slot ? r.slot.mode : '',
+    slotValue: r.slot && r.slot.mode==='range' ? `${r.slot.start}-${r.slot.end}` : (r.slot && r.slot.value!==undefined ? r.slot.value : ''),
     relativeType: r.kind==='relative' && r.relative ? r.relative.type||'' : '',
     relOtherPositionMode: r.kind==='relative' && r.relative && r.relative.otherPosition ? r.relative.otherPosition.mode : '',
     relOtherPositionValue: r.kind==='relative' && r.relative && r.relative.otherPosition ? (r.relative.otherPosition.value||'') : '',
@@ -4871,6 +5906,8 @@ function exportToExcel(){
     relMax: r.kind==='relative' && r.relative && r.relative.max ? r.relative.max : '',
     relMaxRepeat: r.kind==='relative' && r.relative && r.relative.maxRepeat ? r.relative.maxRepeat : '',
     relIntervalMinutes: r.kind==='relative' && r.relative && r.relative.intervalMinutes ? r.relative.intervalMinutes : '',
+    allowanceMinutes: r.kind==='unfilledAllowance' ? r.minutes : '',
+    allowanceScope: r.kind==='unfilledAllowance' ? r.scope : '',
     tags:(r.tags||[]).join(','), note: ruleLabel(r)
   }))), 'Rules');
 
@@ -4922,6 +5959,20 @@ async function importFromExcel(file){
   let newRules = [];
   if(wb.Sheets['Rules']){
     newRules = XLSX.utils.sheet_to_json(wb.Sheets['Rules']).map(r=>{
+      if(r.kind==='unfilledAllowance'){
+        const person = { mode:r.personMode||'any', value:r.personValue||null };
+        if(person.mode==='any'){
+          person.requiredTags = String(r.personRequiredTags||'').split(',').map(s=>s.trim()).filter(Boolean);
+          person.prohibitedTags = String(r.personProhibitedTags||'').split(',').map(s=>s.trim()).filter(Boolean);
+        }
+        return {
+          id:String(r.id), nickname:String(r.nickname||''), kind:'unfilledAllowance',
+          strength:r.strength==='preferred'?'preferred':'required', effect:r.effect==='forbid'?'forbid':'require',
+          active: r.active===true || r.active==='TRUE' || r.active==='true',
+          person, minutes: Number(r.allowanceMinutes)||15, scope: r.allowanceScope==='total' ? 'total' : 'perInstance',
+          tags:String(r.tags||'').split(',').map(s=>s.trim()).filter(Boolean)
+        };
+      }
       let slot;
       if(r.slotMode==='range'){ const [a,b]=String(r.slotValue).split('-').map(Number); slot={mode:'range', start:a, end:b}; }
       else if(r.slotMode==='id'){ slot = {mode:'id', value:Number(r.slotValue)}; }
