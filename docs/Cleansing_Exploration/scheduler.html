@@ -4911,20 +4911,20 @@ border:1px solid var(--border-strong); background:#fff; color:var(--muted);
 .db-qual-btn.pref.on{ background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 
 .db-sentence{
-display:flex; flex-wrap:wrap; align-items:center; gap:6px 5px;
-font-size:14.5px; line-height:1.7; padding:12px 2px 16px;
+display:flex; flex-wrap:wrap; align-items:center; gap:10px 5px;
+font-size:14.5px; line-height:1.7; padding:12px 2px 24px;
 }
 .db-bubble{
 position:relative; display:inline-flex; align-items:center; gap:5px;
 border:1px solid var(--border-strong); border-radius:14px;
-padding:4px 9px 8px 9px; background:#fff; color:var(--ink);
+padding:4px 9px 20px 9px; background:#fff; color:var(--ink);
 cursor:default; user-select:none;
 }
 .db-bubble.unset{ color:#8a92a3; font-style:italic; } 
 .db-bubble-arrow{
-position:absolute; left:50%; bottom:1px; transform:translate(-50%, 0);
-width:14px; height:9px; border:none; background:transparent; padding:0; margin:0;
-color:#9aa3b2; cursor:pointer; font-size:9px; line-height:1; display:flex; align-items:flex-end; justify-content:center;
+position:absolute; left:50%; bottom:-2px; transform:translate(-50%, 0);
+width:40px; height:22px; border:none; background:transparent; padding:0; margin:0;
+color:#9aa3b2; cursor:pointer; font-size:30px; line-height:0.6; display:flex; align-items:flex-end; justify-content:center;
 }
 .db-bubble-arrow:hover{ color:var(--accent); }
 .db-bubble-input{
@@ -5570,6 +5570,12 @@ function slotMatchesTarget(target, slotIndex){
   if(target.mode==='range') return slotIndex>=target.start && slotIndex<=target.end;
   if(target.mode==='except') return slotIndex!==target.value; // "any time other than X" — used by generated exclusivity companions
   if(target.mode==='exceptRange') return slotIndex<target.start || slotIndex>target.end; // "any time outside this range"
+  if(target.mode==='nearPosition'){
+    // Dynamic: near any CURRENT assignment of the referenced position, not a fixed clock time.
+    const gapSlots = Math.max(0, Math.round((Number(target.maxGapMinutes)||15)/SLOT_MINUTES));
+    return state.assignments.some(a=>positionMatchesTarget(target.position, a.positionId) &&
+      slotIndex >= a.startSlot-gapSlots && slotIndex <= a.startSlot+a.slotCount-1+gapSlots);
+  }
   return false;
 }
 function targetSlotIndices(target, totalSlots){
@@ -5578,6 +5584,7 @@ function targetSlotIndices(target, totalSlots){
   if(target.mode==='range') return range(Math.max(0,target.start), Math.min(totalSlots-1,target.end));
   if(target.mode==='except') return range(0, totalSlots-1).filter(i=>i!==target.value);
   if(target.mode==='exceptRange') return range(0, totalSlots-1).filter(i=>i<target.start || i>target.end);
+  if(target.mode==='nearPosition') return range(0, totalSlots-1).filter(i=>slotMatchesTarget(target, i));
   return [];
 }
 function candidateStartSlotsForSlotTarget(target, durSlots, totalSlots){
@@ -5593,7 +5600,9 @@ function candidateStartSlotsForSlotTarget(target, durSlots, totalSlots){
     return lo<=hi ? range(lo,hi) : [];
   }
   // 'except' / 'exceptRange' are only ever used by generated forbid-only exclusivity
-  // companions, which never need coverage-candidate generation — no case needed here.
+  // companions, and 'nearPosition' depends on assignments that may not exist yet —
+  // none of these need (or safely can support) coverage-candidate generation here;
+  // they still work correctly for validating placements, just not for auto-filling.
   return [];
 }
 
@@ -5615,14 +5624,16 @@ function targetDescription(target, kind){
   if(!target) return kind==='person' ? 'anyone' : 'any position';
   if(target.mode==='any'){
     const reqTags = target.requiredTags || [], prohTags = target.prohibitedTags || [];
-    if(reqTags.length===0 && prohTags.length===0) return kind==='person' ? 'anyone' : 'any position';
-    const phrase = tagComboPhrase(reqTags, prohTags);
-    if(kind!=='person') return `positions ${phrase}`;
-    const countRange = target.count || {min:1, max:1};
+    const hasTagFilter = reqTags.length>0 || prohTags.length>0;
+    if(!hasTagFilter && !target.count) return kind==='person' ? 'anyone' : 'any position';
+    const phrase = hasTagFilter ? tagComboPhrase(reqTags, prohTags) : '';
+    if(kind!=='person') return phrase ? `positions ${phrase}` : 'any position';
+    if(!target.count) return phrase ? `people ${phrase}` : 'anyone'; // no coverage-count concept here — every matching person individually, not a fixed subset
+    const countRange = target.count;
     const countPhrase = (countRange.min===countRange.max)
       ? `${countRange.min} ${countRange.min===1?'person':'people'}`
       : `${countRange.min}–${countRange.max} people`;
-    return `${countPhrase} ${phrase}`;
+    return phrase ? `${countPhrase} ${phrase}` : countPhrase;
   }
   if(target.mode==='id') return kind==='person' ? personName(target.value) : positionName(target.value);
   if(target.mode==='tag'){
@@ -5643,27 +5654,29 @@ function slotDescription(target){
   if(target.mode==='range') return `from ${slots[target.start] ? slots[target.start].label : '?'} to ${endLabel(target.end)}`;
   if(target.mode==='except') return `at any time other than ${slots[target.value] ? slots[target.value].label : '?'}`;
   if(target.mode==='exceptRange') return `at any time outside ${slots[target.start] ? slots[target.start].label : '?'}–${endLabel(target.end)}`;
+  if(target.mode==='nearPosition') return `within ${Math.max(SLOT_MINUTES, Number(target.maxGapMinutes)||15)} minutes of ${targetDescription(target.position,'position')}`;
   return '';
 }
 /* True for a person target that means "forbidden for literally everyone, no
    restrictions" — the one case where "Anyone cannot..." reads as a mild double
    negative and "No one can..." is both clearer and matches how the sentence
    builder phrases the same rule. */
-function isNoOnePerson(target, effect){
-  return effect==='forbid' && !!target && target.mode==='any' &&
-    !((target.requiredTags||[]).length) && !((target.prohibitedTags||[]).length) && !target.count;
+function noOnePersonPhrase(target, effect){
+  if(effect!=='forbid' || !target || target.mode!=='any' || target.count) return null;
+  const tagPhrase = tagComboPhrase(target.requiredTags||[], target.prohibitedTags||[]);
+  return { subject: tagPhrase ? `No one ${tagPhrase}` : 'No one', modal: 'can' };
 }
 function ruleLabel(rule){
   if(rule.kind==='unfilledAllowance'){
-    const noOne = isNoOnePerson(rule.person, rule.effect);
-    const p = noOne ? 'No one' : cap(targetDescription(rule.person, 'person'));
-    const modal = noOne ? 'can' : (rule.effect==='forbid' ? 'cannot' : 'must');
+    const noOne = noOnePersonPhrase(rule.person, rule.effect);
+    const p = noOne ? noOne.subject : cap(targetDescription(rule.person, 'person'));
+    const modal = noOne ? noOne.modal : (rule.effect==='forbid' ? 'cannot' : 'must');
     const scopePhrase = rule.scope==='total' ? 'throughout the whole day' : 'at a time';
     return `${p} ${modal} have ${rule.minutes} minutes of unfilled time, ${scopePhrase}.`;
   }
-  const noOne = isNoOnePerson(rule.person, rule.effect);
-  const p = noOne ? 'No one' : cap(targetDescription(rule.person, 'person'));
-  const modal = noOne ? 'can' : (rule.effect==='forbid' ? 'cannot' : 'must');
+  const noOne = noOnePersonPhrase(rule.person, rule.effect);
+  const p = noOne ? noOne.subject : cap(targetDescription(rule.person, 'person'));
+  const modal = noOne ? noOne.modal : (rule.effect==='forbid' ? 'cannot' : 'must');
   const pos = targetDescription(rule.position, 'position');
   const t = slotDescription(rule.slot);
 
@@ -8715,17 +8728,17 @@ function renderTagComboFollowup(container, tagFilter, category, onChange){
 }
 
 /* ---- Person/position target piece ----
-   draft shape: { primary: 'specific'|'any'|'someone'|'everyone'|'noone', specificId,
+   draft shape: { primary: 'specific'|'any'|'countRange'|'everyone'|'noone', specificId,
                   tagFilter:{required:[],prohibited:[]}, count:{min,max} }
-   'someone'/'everyone'/'noone' only make sense for person targets with require/forbid
-   framing (shapes 1 & 9); plain person/position targets elsewhere just use
+   'countRange'/'everyone'/'noone' only make sense for person targets with require/forbid
+   framing (the subject bubble); plain person/position targets elsewhere just use
    'specific'/'any', with the tag combo as an optional refinement on 'any'. */
 function targetDraftToField(t, kind){
   if(t.primary==='specific') return { mode:'id', value:t.specificId };
   const field = { mode:'any' };
   if((t.tagFilter.required||[]).length) field.requiredTags = t.tagFilter.required.slice();
   if((t.tagFilter.prohibited||[]).length) field.prohibitedTags = t.tagFilter.prohibited.slice();
-  if(kind==='person' && t.primary==='someone') field.count = { min:t.count.min, max:t.count.max };
+  if(kind==='person' && t.primary==='countRange') field.count = { min:t.count.min, max:t.count.max };
   if(kind==='person' && t.primary==='everyone') field.count = { min: Math.max(1,state.people.length), max: Math.max(1,state.people.length) };
   return field;
 }
@@ -8740,7 +8753,7 @@ function fieldToTargetDraft(field, kind, ruleEffect){
   if(kind==='person'){
     if(field.count){
       const total = Math.max(1,state.people.length);
-      primary = (field.count.min===total && field.count.max===total) ? 'everyone' : 'someone';
+      primary = (field.count.min===total && field.count.max===total) ? 'everyone' : 'countRange';
     } else {
       primary = ruleEffect==='forbid' ? 'noone' : 'any';
     }
@@ -8784,7 +8797,7 @@ function renderTargetBubble(container, target, cfg, onChange){
     }
   });
   container.appendChild(el);
-  if(cfg.allowCount && target.primary==='someone'){
+  if(cfg.allowCount && target.primary==='countRange'){
     const total = Math.max(1,state.people.length);
     const cl = (target.count.min===target.count.max) ? `${target.count.min} ${target.count.min===1?'person':'people'}` : `${target.count.min}\u2013${target.count.max} people`;
     const { el: countBubble } = bubbleEl(`for ${cl}`, (arrowEl)=>openCountEditor(arrowEl, target.count, total, onChange));
@@ -8826,27 +8839,40 @@ function openCountEditor(anchorEl, count, total, onChange){
 function timeDraftToField(t){
   if(t.kind==='any') return {mode:'any'};
   if(t.kind==='specific') return {mode:'id', value:t.slotIndex};
+  if(t.kind==='near') return { mode:'nearPosition', position: targetDraftToField(t.nearPosition,'position'), maxGapMinutes: Math.max(SLOT_MINUTES, Number(t.nearGap)||15) };
   return {mode:'range', start:t.start, end:t.end};
 }
 function fieldToTimeDraft(field){
-  if(!field || field.mode==='any') return {kind:'any', slotIndex:0, start:0, end:Math.max(0,getSlots().length-1)};
-  if(field.mode==='id') return {kind:'specific', slotIndex:field.value, start:field.value, end:field.value};
-  if(field.mode==='range') return {kind:'range', slotIndex:field.start, start:field.start, end:field.end};
-  return {kind:'any', slotIndex:0, start:0, end:Math.max(0,getSlots().length-1)};
+  const blank = { kind:'any', slotIndex:0, start:0, end:Math.max(0,getSlots().length-1), nearPosition: blankTarget(), nearGap:15 };
+  if(!field || field.mode==='any') return blank;
+  if(field.mode==='id') return { ...blank, kind:'specific', slotIndex:field.value, start:field.value, end:field.value };
+  if(field.mode==='range') return { ...blank, kind:'range', slotIndex:field.start, start:field.start, end:field.end };
+  if(field.mode==='nearPosition') return { ...blank, kind:'near', nearPosition: fieldToTargetDraft(field.position,'position'), nearGap: field.maxGapMinutes||15 };
+  return blank;
 }
 function renderTimeBubble(container, timeDraft, onChange, opts){
   opts = opts || {};
   const slots = getSlots();
-  const primaryOptions = [{value:'any', label: opts.anyLabel || 'at any time'}, {value:'specific', label:'at a specific time'}, {value:'range', label:'during a range'}];
+  const primaryOptions = [
+    {value:'any', label: opts.anyLabel || 'at any time'},
+    {value:'specific', label:'at a specific time'},
+    {value:'range', label:'during a range'},
+    {value:'near', label:'within X minutes of a position'},
+  ];
   let mainLabel;
   if(timeDraft.kind==='any') mainLabel = opts.anyLabel || 'at any time';
   else if(timeDraft.kind==='specific') mainLabel = slots[timeDraft.slotIndex] ? `at ${slots[timeDraft.slotIndex].label}` : 'at…';
+  else if(timeDraft.kind==='near'){
+    const posLabel = timeDraft.nearPosition.specificId ? positionName(timeDraft.nearPosition.specificId) : 'choose a position';
+    mainLabel = `within ${timeDraft.nearGap} minutes of ${posLabel}`;
+  }
   else mainLabel = (slots[timeDraft.start] && slots[timeDraft.end]!==undefined && slots[timeDraft.end]) ? `from ${slots[timeDraft.start].label} to ${formatTime(slots[timeDraft.end].minutes+SLOT_MINUTES)}` : 'during…';
   const { el } = bubbleEl(mainLabel, (arrowEl)=>{
     openBubbleMenu(arrowEl, primaryOptions, timeDraft.kind, (val)=>{
       timeDraft.kind = val;
       if(val==='specific' && timeDraft.slotIndex===undefined) timeDraft.slotIndex = 0;
       if(val==='range'){ if(timeDraft.start===undefined) timeDraft.start=0; if(timeDraft.end===undefined) timeDraft.end = Math.max(0,slots.length-1); }
+      if(val==='near' && !timeDraft.nearPosition.specificId && state.positions.length){ timeDraft.nearPosition = { primary:'specific', specificId: state.positions[0].id, tagFilter:{required:[],prohibited:[]}, count:{min:1,max:1} }; }
       onChange();
     });
   });
@@ -8858,9 +8884,34 @@ function renderTimeBubble(container, timeDraft, onChange, opts){
       openBubbleMenu(el, options, timeDraft.slotIndex, (val)=>{ timeDraft.slotIndex=Number(val); onChange(); }, {searchable:true});
     } else if(timeDraft.kind==='range'){
       openTimeRangeEditor(el, timeDraft, onChange);
+    } else if(timeDraft.kind==='near'){
+      openNearPositionEditor(el, timeDraft, onChange);
     }
   });
   container.appendChild(el);
+}
+function openNearPositionEditor(anchorEl, timeDraft, onChange){
+  closeFloating();
+  const layer = getFloatingLayer();
+  const pop = document.createElement('div');
+  pop.className = 'db-bubble-menu'; pop.style.padding = '10px'; pop.style.minWidth = '220px';
+  pop.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px;">
+    <label>Within <input type="number" id="near-gap-input" min="${SLOT_MINUTES}" step="${SLOT_MINUTES}" value="${timeDraft.nearGap}" style="width:52px;padding:4px 6px;border:1px solid var(--border-strong);border-radius:5px;"/> minutes of</label>
+    <select id="near-position-select" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:5px;">
+      ${state.positions.map(p=>`<option value="${p.id}" ${timeDraft.nearPosition.specificId===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+    </select>
+  </div>`;
+  layer.appendChild(pop);
+  positionFloating(pop, anchorEl.getBoundingClientRect());
+  const gapInp = pop.querySelector('#near-gap-input'), posSel = pop.querySelector('#near-position-select');
+  const commit = ()=>{
+    timeDraft.nearGap = Math.max(SLOT_MINUTES, Number(gapInp.value)||15);
+    if(posSel.value) timeDraft.nearPosition = { primary:'specific', specificId: posSel.value, tagFilter:{required:[],prohibited:[]}, count:{min:1,max:1} };
+    onChange();
+  };
+  gapInp.addEventListener('change', commit);
+  posSel.addEventListener('change', commit);
+  registerCloser((ev)=>{ if(!pop.contains(ev.target)){ commit(); closeFloating(); } });
 }
 function openTimeRangeEditor(anchorEl, timeDraft, onChange){
   closeFloating();
@@ -8925,15 +8976,15 @@ function modalWord(modal, isNegative){
    predicate options render with an affirmative verb ("No one CAN...", "No one
    SHOULD...") instead of can't/shouldn't, avoiding a double negative. */
 var PREDICATE_DEFS = {
-  assignment:     { dropdownVerb:'be scheduled for a position', restingVerb:'be scheduled for', reachableFrom:{person:['specific','someone','everyone','noone']} },
+  assignment:     { dropdownVerb:'be scheduled for a position', restingVerb:'be scheduled for', reachableFrom:{person:['specific','countRange','everyone','noone']} },
   together:       { dropdownVerb:'always be scheduled together with someone else', restingVerb:'always be scheduled together with', reachableFrom:{person:['specific','noone']} },
   sequence:       { dropdownVerb:'do one position right before or after another', restingVerb:'do', reachableFrom:{person:['specific','noone']} },
   limit:          { dropdownVerb:'have too much of one position', restingVerb:'have more than', reachableFrom:{person:['specific','noone']} },
   crossSchedule:  { dropdownVerb:'repeat the same assignment across schedules', restingVerb:'have the same assignment for more than', reachableFrom:{person:['specific','noone']} },
   swap:           { dropdownVerb:'swap positions with someone else', restingVerb:'swap positions with someone else (X\u2192Y while they go Y\u2192X)', reachableFrom:{person:['noone']} },
-  staggeredStart: { dropdownVerb:'start a position on a repeating cadence', restingVerb:'start', reachableFrom:{person:['specific','someone']} },
+  staggeredStart: { dropdownVerb:'start a position on a repeating cadence', restingVerb:'start', reachableFrom:{person:['specific','countRange']} },
   allowance:      { dropdownVerb:'have unfilled time', restingVerb:'have', reachableFrom:{person:['specific','everyone','noone']} },
-  positionWindow: { dropdownVerb:'only run in a certain time window', restingVerb:'only run', reachableFrom:{position:['specific','any']} },
+  positionWindow: { dropdownVerb:'run', restingVerb:'run', reachableFrom:{position:['specific','any']} },
 };
 function reachablePredicates(subject){
   if(!subject) return [];
@@ -8950,12 +9001,13 @@ function predicateModals(predicateId, subject){
   if(predicateId==='limit' || predicateId==='crossSchedule' || predicateId==='swap') return ['cant','shouldnt'];
   if(predicateId==='staggeredStart') return ['must','should'];
   if(subject.kind==='person' && subject.who==='noone') return ['cant','shouldnt'];
-  if(subject.kind==='person' && subject.who==='someone') return ['must','should'];
+  if(subject.kind==='person' && subject.who==='countRange') return ['must','should'];
   return ['must','cant','should','shouldnt'];
 }
 var SUBJECT_OPTIONS = [
   {value:'person:specific', label:'a specific person'},
   {value:'person:someone', label:'someone'},
+  {value:'person:countRange', label:'# of people'},
   {value:'person:everyone', label:'everyone'},
   {value:'person:noone', label:'no one'},
   {value:'position:specific', label:'a specific position'},
@@ -8963,7 +9015,9 @@ var SUBJECT_OPTIONS = [
 ];
 function subjectCurrentValue(subject){
   if(!subject) return null;
-  return subject.kind==='person' ? 'person:'+subject.who : 'position:'+subject.which;
+  if(subject.kind==='position') return 'position:'+subject.which;
+  if(subject.who==='countRange') return (subject.count.min===1 && subject.count.max===1) ? 'person:someone' : 'person:countRange';
+  return 'person:'+subject.who;
 }
 function isSubjectResolved(subject){
   if(!subject) return false;
@@ -8986,7 +9040,7 @@ function subjectToPersonField(subj){
   const field = { mode:'any' };
   if((subj.tagFilter.required||[]).length) field.requiredTags = subj.tagFilter.required.slice();
   if((subj.tagFilter.prohibited||[]).length) field.prohibitedTags = subj.tagFilter.prohibited.slice();
-  if(subj.who==='someone') field.count = { min:subj.count.min, max:subj.count.max };
+  if(subj.who==='countRange') field.count = { min:subj.count.min, max:subj.count.max };
   if(subj.who==='everyone') field.count = { min:Math.max(1,state.people.length), max:Math.max(1,state.people.length) };
   return field;
 }
@@ -9038,7 +9092,7 @@ function initDraftFromRule(rule){
     return draft;
   }
   if(predicateId==='assignment'){
-    draft.subject = fieldToSubjectDraft(rule.person, rule.effect, ['specific','someone','everyone','noone']);
+    draft.subject = fieldToSubjectDraft(rule.person, rule.effect, ['specific','countRange','everyone','noone']);
     if(!draft.subject) return null;
     draft.modal = strengthEffectToModal(rule.strength, rule.effect);
     draft.position = fieldToTargetDraft(rule.position, 'position');
@@ -9081,7 +9135,7 @@ function initDraftFromRule(rule){
     return draft;
   }
   if(predicateId==='staggeredStart'){
-    draft.subject = fieldToSubjectDraft(rule.person, rule.effect, ['specific','someone']);
+    draft.subject = fieldToSubjectDraft(rule.person, rule.effect, ['specific','countRange']);
     if(!draft.subject) return null;
     draft.modal = strengthEffectToModal(rule.strength, rule.effect);
     draft.position = fieldToTargetDraft(rule.position, 'position');
@@ -9107,7 +9161,7 @@ function getPredicateSteps(draft){
     isComplete(){ return !!draft[key] && (draft[key].primary!=='specific' || !!draft[key].specificId); },
   });
   const mkTimeStep = (opts)=>({
-    ensureInit(){ if(!draft.time) draft.time = { kind:(opts&&opts.defaultKind)||'any', slotIndex:0, start:0, end:Math.max(0,getSlots().length-1) }; },
+    ensureInit(){ if(!draft.time) draft.time = { kind:(opts&&opts.defaultKind)||'any', slotIndex:0, start:0, end:Math.max(0,getSlots().length-1), nearPosition: blankTarget(), nearGap:15 }; },
     render(c,r){ renderTimeBubble(c, draft.time, r, opts); },
     isComplete(){ return true; },
   });
@@ -9213,14 +9267,48 @@ function buildRuleFromDraft(draft){
 }
 
 /* ---- Bubble 1 (subject) ---- */
+function subjectCountLabel(count){
+  if(count.min===1 && count.max===1) return 'someone';
+  return count.min===count.max ? `${count.min} people` : `${count.min} to ${count.max} people`;
+}
+function openSubjectCountPopup(anchorEl, subject, total, onChange){
+  closeFloating();
+  const layer = getFloatingLayer();
+  const pop = document.createElement('div');
+  pop.className = 'db-bubble-menu'; pop.style.padding = '10px'; pop.style.minWidth = '190px';
+  pop.innerHTML = `<div style="display:flex;align-items:center;gap:6px;font-size:12.5px;">
+    <input type="number" id="count-min-input" min="1" max="${total}" value="${subject.count.min}" style="width:44px;padding:4px 6px;border:1px solid var(--border-strong);border-radius:5px;"/>
+    <span>to</span>
+    <input type="number" id="count-max-input" min="1" max="${total}" value="${subject.count.max}" style="width:44px;padding:4px 6px;border:1px solid var(--border-strong);border-radius:5px;"/>
+    <span>people</span>
+  </div>
+  <button type="button" class="btn btn-sm" id="count-all-btn" style="width:100%;margin-top:8px;">All ${total} people</button>`;
+  layer.appendChild(pop);
+  positionFloating(pop, anchorEl.getBoundingClientRect());
+  const minInp = pop.querySelector('#count-min-input'), maxInp = pop.querySelector('#count-max-input');
+  const commit = ()=>{
+    subject.count.min = Math.max(1, Math.min(total, Number(minInp.value)||1));
+    subject.count.max = Math.max(subject.count.min, Math.min(total, Number(maxInp.value)||subject.count.min));
+    subject.who = 'countRange'; // plain number entry always lands here — "someone" and "everyone" are just how it's displayed at 1-1 and N-N respectively
+    onChange();
+  };
+  minInp.addEventListener('change', commit);
+  maxInp.addEventListener('change', commit);
+  pop.querySelector('#count-all-btn').addEventListener('click', ()=>{
+    subject.count.min = total; subject.count.max = total; subject.who = 'everyone';
+    closeFloating(); onChange();
+  });
+  registerCloser((ev)=>{ if(!pop.contains(ev.target)){ commit(); closeFloating(); } });
+}
 function renderSubjectBubble(container, draft, rerender){
   const subject = draft.subject;
   const isUnset = !subject;
   let mainLabel;
-  if(!subject) mainLabel = 'choose who or what';
+  if(!subject) mainLabel = 'Choose beginning of rule';
   else if(subject.kind==='person'){
     if(subject.who==='specific') mainLabel = subject.specificId ? personName(subject.specificId) : 'choose a person';
-    else mainLabel = {someone:'someone', everyone:'everyone', noone:'no one'}[subject.who];
+    else if(subject.who==='countRange') mainLabel = subjectCountLabel(subject.count);
+    else mainLabel = {everyone:'everyone', noone:'no one'}[subject.who];
   } else {
     if(subject.which==='specific') mainLabel = subject.specificId ? positionName(subject.specificId) : 'choose a position';
     else mainLabel = 'positions ' + (tagComboPhrase(subject.tagFilter.required, subject.tagFilter.prohibited) || '\u2026');
@@ -9228,8 +9316,14 @@ function renderSubjectBubble(container, draft, rerender){
   const { el } = bubbleEl(mainLabel, (arrowEl)=>{
     openBubbleMenu(arrowEl, SUBJECT_OPTIONS, subjectCurrentValue(subject), (val)=>{
       const [kind, sub] = val.split(':');
-      if(kind==='person') draft.subject = { kind:'person', who:sub, specificId:null, tagFilter:{required:[],prohibited:[]}, count:{min:1,max:1} };
-      else draft.subject = { kind:'position', which:sub, specificId:null, tagFilter:{required:[],prohibited:[]} };
+      const total = Math.max(1, state.people.length);
+      if(kind==='person'){
+        draft.subject = { kind:'person', who: sub==='countRange' ? 'countRange' : (sub==='someone' ? 'countRange' : sub),
+          specificId:null, tagFilter:{required:[],prohibited:[]},
+          count: sub==='someone' ? {min:1,max:1} : sub==='countRange' ? {min:2,max:2} : {min:total,max:total} };
+      } else {
+        draft.subject = { kind:'position', which:sub, specificId:null, tagFilter:{required:[],prohibited:[]} };
+      }
       draft.predicate = null; draft.modal = null;
       ['position','time','personB','positionA','positionB','order','maxGap','amount','unit','scope','maxRepeat','interval','minutes'].forEach(k=>{ draft[k]=null; });
       rerender();
@@ -9247,17 +9341,15 @@ function renderSubjectBubble(container, draft, rerender){
     if(e.target.classList.contains('db-bubble-arrow') || !subject) return;
     if(subject.kind==='person' && subject.who==='specific'){
       openBubbleMenu(el, state.people.map(p=>({value:p.id,label:p.name})), subject.specificId, (v)=>{ subject.specificId=v; rerender(); }, {searchable:true});
+    } else if(subject.kind==='person' && (subject.who==='countRange' || subject.who==='everyone')){
+      // "someone" / "N people" / "everyone" are all the same underlying count — clicking any of them
+      // opens the same popup, so moving between them is just adjusting a number, not switching bubbles.
+      openSubjectCountPopup(el, subject, Math.max(1,state.people.length), rerender);
     } else if(subject.kind==='position' && subject.which==='specific'){
       openBubbleMenu(el, state.positions.map(p=>({value:p.id,label:p.name})), subject.specificId, (v)=>{ subject.specificId=v; rerender(); }, {searchable:true});
     }
   });
   container.appendChild(el);
-  if(subject && subject.kind==='person' && subject.who==='someone'){
-    const total = Math.max(1,state.people.length);
-    const cl = (subject.count.min===subject.count.max) ? `${subject.count.min} ${subject.count.min===1?'person':'people'}` : `${subject.count.min}\u2013${subject.count.max} people`;
-    const { el: countBubble } = bubbleEl(`for ${cl}`, (arrowEl)=>openCountEditor(arrowEl, subject.count, total, rerender));
-    container.appendChild(countBubble);
-  }
   if(subject && subject.kind==='person' && subject.who!=='specific'){
     renderTagComboFollowup(container, subject.tagFilter, 'person', rerender);
   }
@@ -9419,7 +9511,7 @@ function renderSentenceBuilder(editing){
 
     const preview = document.createElement('div');
     preview.className = 'db-sentence-preview';
-    preview.textContent = built ? ruleLabel(built) : 'Keep choosing to complete this rule.';
+    preview.innerHTML = `<strong>Rule Preview:</strong> ${escapeHtml(built ? ruleLabel(built) : 'Keep choosing to complete this rule.')}`;
     root.appendChild(preview);
 
     renderExclusiveSection(built);

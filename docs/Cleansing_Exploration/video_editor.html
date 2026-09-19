@@ -464,15 +464,39 @@ body {
   overflow: hidden;
 }
 .clip.audio-clip {
-  background: var(--success-color);
+  background: rgba(16, 185, 129, 0.32);
 }
 .clip.selected {
   border: 2px solid yellow;
   box-shadow: 0 0 10px yellow;
 }
+.clip-vis-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.clip-label {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+.clip-label > div:first-child {
+  display: inline-block;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  padding: 0 3px;
+}
 .clip .clip-meta {
   font-size: 9px;
-  color: rgba(0,0,0,0.6);
+  color: rgba(255, 255, 255, 0.85);
+  display: inline-block;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  padding: 0 3px;
+  margin-top: 2px;
 }
 .asset-item {
   padding: 8px 12px;
@@ -921,6 +945,9 @@ Ideal Volume Target
 <div style="margin-left: 20px; display:flex; align-items:center; gap:10px;">
 <p><span>Zoom:</span> <input type="range" id="zoomSlider" min="1" max="100" value="10" oninput="updateZoom(this.value)"></p>
 </div>
+<div style="display:flex; align-items:center; gap:6px;">
+<p><span>Audio view:</span> <select id="audioVisSelect" class="btn" onchange="updateAudioVisMode(this.value)"> <option value="waveform">Waveform</option> <option value="volume">Volume bars</option> <option value="frequency">Frequency (spectrogram)</option> </select></p>
+</div>
 <p><span id="timeline-cursor" style="font-family: monospace; margin-left: auto;">Cursor: 0.00s | Playhead: 0.00s</span></p>
 </div>
 <div id="timelineScroll" class="timeline-scroll" onscroll="syncCursor()" onmousemove="onTimelineHover(event)" onmouseleave="onTimelineLeave()">
@@ -1149,7 +1176,7 @@ async function getFileFromDB(id) {
 let appState = {
   assets: [],                              // {id, name, type, duration, hasAudio}
   timeline: { video: [], audio: [] },
-  settings: { idealVolume: 0.7, zoomLevel: 10 },
+  settings: { idealVolume: 0.7, zoomLevel: 10, audioVisMode: 'waveform' },
   presets: [],                             // {id, name, reviewBeforeApply, steps:[{type, params}]}
   markers: [],                             // {id, time, label}
   playheadTime: 0,
@@ -1177,6 +1204,7 @@ function undo() {
   document.getElementById('zoomSlider').value = appState.settings.zoomLevel;
   document.getElementById('idealVolumeSlider').value = appState.settings.idealVolume;
   document.getElementById('idealVolLabel').innerText = appState.settings.idealVolume.toFixed(2);
+  document.getElementById('audioVisSelect').value = appState.settings.audioVisMode || 'waveform';
 }
 window.addEventListener('keydown', (e) => { if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); } });
 window.addEventListener('click', (e) => { if (!e.target.closest('.asset-item') && !e.target.closest('.context-menu')) closeMenus(); });
@@ -1376,14 +1404,34 @@ function renderTimeline() {
 function createClipUI(clip, type) {
   const div = document.createElement('div');
   div.className = `clip ${type}-clip ${appState.selectedClipId === clip.id ? 'selected' : ''}`;
+  const widthPx = Math.max(4, clipDuration(clip) * appState.settings.zoomLevel);
   div.style.left = (clip.start * appState.settings.zoomLevel) + 'px';
-  div.style.width = Math.max(4, clipDuration(clip) * appState.settings.zoomLevel) + 'px';
+  div.style.width = widthPx + 'px';
   const asset = appState.assets.find(a => a.id == clip.assetId);
   const rateTag = clip.playbackRate !== 1 ? ` ${clip.playbackRate}x` : '';
   const linkTag = clip.linkId ? ' 🔗' : '';
-  div.innerHTML = `<div>${asset ? asset.name : 'Unknown Asset'}${linkTag}</div><div class="clip-meta">${clipDuration(clip).toFixed(1)}s${rateTag}</div>`;
+  if (type === 'audio') {
+    const canvas = document.createElement('canvas');
+    canvas.className = 'clip-vis-canvas';
+    canvas.width = Math.round(widthPx);
+    canvas.height = 52;
+    div.appendChild(canvas);
+    const mode = appState.settings.audioVisMode || 'waveform';
+    computeClipVis(clip, canvas.width, mode).then(result => {
+      if (!canvas.isConnected) return; // clip was re-rendered or removed while this was computing
+      drawClipVis(canvas, result);
+    });
+  }
+  const label = document.createElement('div');
+  label.className = 'clip-label';
+  label.innerHTML = `<div>${asset ? asset.name : 'Unknown Asset'}${linkTag}</div><div class="clip-meta">${clipDuration(clip).toFixed(1)}s${rateTag}</div>`;
+  div.appendChild(label);
   div.onclick = (e) => { e.stopPropagation(); selectClip(clip.id, type); };
   return div;
+}
+function updateAudioVisMode(mode) {
+  appState.settings.audioVisMode = mode;
+  renderTimeline();
 }
 function selectClip(id, type) {
   appState.selectedClipId = id; appState.selectedClipType = type;
@@ -1763,6 +1811,181 @@ async function detectQuietSegments(assetId, sourceIn, sourceOut, thresholdDb, mi
 }
 
 /* =========================================================================
+   CLIP AUDIO VISUALIZATION — waveform / volume-bar / spectrogram overlays
+   drawn on audio-track clips. The whole asset is decoded and cached once
+   (mono-mixed); each clip then slices out just its own [sourceIn, sourceOut]
+   from that cache, so scrubbing/zooming/splitting stays fast after the
+   first decode.
+   ========================================================================= */
+const assetPCMCache = new Map();   // assetId -> Promise<{ data: Float32Array, sampleRate }>
+const visDataCache = new Map();    // "clipId:mode:width" -> analysis result
+
+async function getAssetPCM(assetId) {
+  if (assetPCMCache.has(assetId)) return assetPCMCache.get(assetId);
+  const promise = (async () => {
+    const blob = await getFileFromDB(assetId);
+    const arrayBuffer = await blob.arrayBuffer();
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioCtx();
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+    let data;
+    if (audioBuffer.numberOfChannels > 1) {
+      const chL = audioBuffer.getChannelData(0), chR = audioBuffer.getChannelData(1);
+      data = new Float32Array(chL.length);
+      for (let i = 0; i < chL.length; i++) data[i] = (chL[i] + chR[i]) / 2;
+    } else {
+      data = audioBuffer.getChannelData(0).slice();
+    }
+    const sampleRate = audioBuffer.sampleRate;
+    ctx.close();
+    return { data, sampleRate };
+  })();
+  assetPCMCache.set(assetId, promise);
+  return promise;
+}
+
+/** Minimal in-place iterative radix-2 Cooley-Tukey FFT (power-of-2 sizes only). */
+function fftInPlace(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -2 * Math.PI / len;
+    const wRe = Math.cos(ang), wIm = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let curRe = 1, curIm = 0;
+      const half = len / 2;
+      for (let j = 0; j < half; j++) {
+        const uRe = re[i + j], uIm = im[i + j];
+        const vRe = re[i + j + half] * curRe - im[i + j + half] * curIm;
+        const vIm = re[i + j + half] * curIm + im[i + j + half] * curRe;
+        re[i + j] = uRe + vRe; im[i + j] = uIm + vIm;
+        re[i + j + half] = uRe - vRe; im[i + j + half] = uIm - vIm;
+        const nextRe = curRe * wRe - curIm * wIm;
+        const nextIm = curRe * wIm + curIm * wRe;
+        curRe = nextRe; curIm = nextIm;
+      }
+    }
+  }
+}
+/** Dark-navy → accent-blue → amber heatmap, used for the spectrogram. */
+function heatColor(t) {
+  const stops = [[15, 15, 30], [59, 130, 246], [245, 158, 11]];
+  const seg = t < 0.5 ? 0 : 1;
+  const localT = t < 0.5 ? t / 0.5 : (t - 0.5) / 0.5;
+  const a = stops[seg], b = stops[seg + 1];
+  return [
+    Math.round(a[0] + (b[0] - a[0]) * localT),
+    Math.round(a[1] + (b[1] - a[1]) * localT),
+    Math.round(a[2] + (b[2] - a[2]) * localT)
+  ];
+}
+async function computeClipVis(clip, widthPx, mode) {
+  const key = `${clip.id}:${mode}:${widthPx}`;
+  if (visDataCache.has(key)) return visDataCache.get(key);
+  let pcm;
+  try { pcm = await getAssetPCM(clip.assetId); } catch (e) { return null; } // e.g. a video asset with no audio
+  const { data, sampleRate } = pcm;
+  const startSample = Math.max(0, Math.floor(clip.sourceIn * sampleRate));
+  const endSample = Math.min(data.length, Math.floor(clip.sourceOut * sampleRate));
+  const span = Math.max(1, endSample - startSample);
+  const w = Math.max(1, Math.round(widthPx));
+  let result = null;
+
+  if (mode === 'waveform') {
+    const bars = new Float32Array(w * 2);
+    const samplesPerPx = span / w;
+    for (let x = 0; x < w; x++) {
+      const s0 = startSample + Math.floor(x * samplesPerPx);
+      const s1 = startSample + Math.floor((x + 1) * samplesPerPx);
+      let mn = 0, mx = 0;
+      for (let i = s0; i < Math.min(s1, endSample); i++) { const v = data[i]; if (v < mn) mn = v; if (v > mx) mx = v; }
+      bars[x * 2] = mn; bars[x * 2 + 1] = mx;
+    }
+    result = { type: 'waveform', bars };
+
+  } else if (mode === 'volume') {
+    const barWidthPx = 5, gapPx = 2, step = barWidthPx + gapPx;
+    const barCount = Math.max(1, Math.floor(w / step));
+    const samplesPerBar = span / barCount;
+    const rms = new Float32Array(barCount);
+    for (let b = 0; b < barCount; b++) {
+      const s0 = startSample + Math.floor(b * samplesPerBar), s1 = startSample + Math.floor((b + 1) * samplesPerBar);
+      let sum = 0, count = 0;
+      for (let i = s0; i < Math.min(s1, endSample); i++) { sum += data[i] * data[i]; count++; }
+      rms[b] = count ? Math.sqrt(sum / count) : 0;
+    }
+    result = { type: 'volume', barWidthPx, gapPx, rms };
+
+  } else if (mode === 'frequency') {
+    const fftSize = 256, half = fftSize / 2, freqBins = 32;
+    const cols = Math.max(1, Math.min(w, 400)); // capped independent of on-screen width for performance
+    const edges = [];
+    for (let i = 0; i <= freqBins; i++) edges.push(Math.max(1, Math.round(Math.pow(half, i / freqBins))));
+    const win = new Float32Array(fftSize);
+    for (let i = 0; i < fftSize; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (fftSize - 1)); // Hann window
+    const re = new Float32Array(fftSize), im = new Float32Array(fftSize);
+    const img = new Uint8ClampedArray(cols * freqBins * 4);
+    for (let c = 0; c < cols; c++) {
+      const center = startSample + Math.floor((c + 0.5) / cols * span);
+      for (let i = 0; i < fftSize; i++) {
+        const si = center - fftSize / 2 + i;
+        re[i] = (si >= 0 && si < data.length ? data[si] : 0) * win[i];
+        im[i] = 0;
+      }
+      fftInPlace(re, im);
+      for (let b = 0; b < freqBins; b++) {
+        let sum = 0, cnt = 0;
+        const lo = edges[b], hi = Math.max(lo + 1, edges[b + 1]);
+        for (let k = lo; k < hi && k < half; k++) { sum += Math.hypot(re[k], im[k]); cnt++; }
+        const mag = cnt ? sum / cnt : 0;
+        const db = 20 * Math.log10(mag + 1e-6);
+        const norm = Math.max(0, Math.min(1, (db + 60) / 60)); // ~-60..0dB -> 0..1
+        const row = freqBins - 1 - b; // low frequencies drawn at the bottom
+        const [r, g, bl] = heatColor(norm);
+        const idx = (row * cols + c) * 4;
+        img[idx] = r; img[idx + 1] = g; img[idx + 2] = bl; img[idx + 3] = Math.round(255 * Math.min(1, norm + 0.15));
+      }
+    }
+    result = { type: 'frequency', cols, freqBins, img };
+  }
+  visDataCache.set(key, result);
+  return result;
+}
+function drawClipVis(canvas, result) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  if (!result) return;
+  if (result.type === 'waveform') {
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    const mid = h / 2;
+    for (let x = 0; x < result.bars.length / 2; x++) {
+      const mn = result.bars[x * 2], mx = result.bars[x * 2 + 1];
+      const y0 = mid - mx * mid * 0.9, y1 = mid - mn * mid * 0.9;
+      ctx.fillRect(x, Math.min(y0, y1), 1, Math.max(1, Math.abs(y1 - y0)));
+    }
+  } else if (result.type === 'volume') {
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    const step = result.barWidthPx + result.gapPx;
+    for (let b = 0; b < result.rms.length; b++) {
+      const barH = Math.max(2, Math.min(h, result.rms[b] * h * 1.6));
+      ctx.fillRect(b * step, h - barH, result.barWidthPx, barH);
+    }
+  } else if (result.type === 'frequency') {
+    const off = document.createElement('canvas');
+    off.width = result.cols; off.height = result.freqBins;
+    off.getContext('2d').putImageData(new ImageData(result.img, result.cols, result.freqBins), 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(off, 0, 0, w, h);
+  }
+}
+
+/* =========================================================================
    STEP ENGINE — computes a proposed new clip list + a human diff, per step,
    for ONE original clip. Returns { clips, diffLines }.
    ========================================================================= */
@@ -2047,6 +2270,8 @@ function importWorkspace(event) {
     renderAssets(); renderTimeline(); renderPresetList();
     document.getElementById('idealVolumeSlider').value = appState.settings.idealVolume;
     document.getElementById('idealVolLabel').innerText = appState.settings.idealVolume.toFixed(2);
+    document.getElementById('audioVisSelect').value = appState.settings.audioVisMode || 'waveform';
+    document.getElementById('zoomSlider').value = appState.settings.zoomLevel;
   };
   reader.readAsText(event.target.files[0]);
 }
