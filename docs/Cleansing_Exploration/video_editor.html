@@ -339,6 +339,111 @@ body {
   position: relative;
   background: #121212;
 }
+.time-ruler {
+  height: 22px;
+  position: relative;
+  width: 10000px;
+  border-bottom: 1px solid #333;
+  background: #161616;
+  cursor: pointer;
+  user-select: none;
+}
+.tick {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  background: #444;
+}
+.tick.major {
+  height: 10px;
+  background: #666;
+}
+.tick.minor {
+  height: 5px;
+}
+.tick-label {
+  position: absolute;
+  bottom: 11px;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: var(--text-dim);
+  font-family: monospace;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.track-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  pointer-events: none;
+}
+.marker-flag {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 8px;
+  background: var(--warn-color);
+  clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%);
+  cursor: pointer;
+  transform: translateX(-1px);
+}
+.marker-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(245, 158, 11, 0.35);
+  pointer-events: none;
+}
+.hover-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+  display: none;
+  z-index: 50;
+}
+.hover-time-label {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  font-family: monospace;
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  pointer-events: none;
+  display: none;
+  z-index: 51;
+  white-space: nowrap;
+}
+.playhead-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent-color);
+  pointer-events: none;
+  z-index: 52;
+  display: none;
+}
+.playhead-flag {
+  position: absolute;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 8px solid var(--accent-color);
+  transform: translateX(-5px);
+  z-index: 52;
+  display: none;
+}
 .track {
   height: 80px;
   border-bottom: 1px solid #333;
@@ -802,26 +907,47 @@ Ideal Volume Target
 <div class="timeline-container">
 <div class="timeline-toolbar">
 <button class="btn" onclick="splitClip()">
-✂️ Split
+✂️ Split at Playhead
 </button>
 <button class="btn btn-danger" onclick="deleteClip()">
 🗑️ Delete
 </button>
+<button class="btn" onclick="playFromPlayhead()">
+▶ Play from Playhead
+</button>
+<button class="btn" onclick="addMarkerAtPlayhead()">
+🚩 Add Marker
+</button>
 <div style="margin-left: 20px; display:flex; align-items:center; gap:10px;">
 <p><span>Zoom:</span> <input type="range" id="zoomSlider" min="1" max="100" value="10" oninput="updateZoom(this.value)"></p>
 </div>
-<p><span id="timeline-cursor" style="font-family: monospace; margin-left: auto;">Cursor: 0.00s</span></p>
+<p><span id="timeline-cursor" style="font-family: monospace; margin-left: auto;">Cursor: 0.00s | Playhead: 0.00s</span></p>
 </div>
-<div id="timelineScroll" class="timeline-scroll" onscroll="syncCursor()">
-<div id="video-track" class="track" ondrop="drop(event)" ondragover="allowDrop(event)">
+<div id="timelineScroll" class="timeline-scroll" onscroll="syncCursor()" onmousemove="onTimelineHover(event)" onmouseleave="onTimelineLeave()">
+<div id="timeRuler" class="time-ruler" onclick="onRulerClick(event)">
+
+</div>
+<div id="video-track" class="track" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="onTrackClick(event)">
 <div style="position:absolute; left:0; top:0; font-size: 10px; color: #666;">
 VIDEO TRACK
 </div>
 </div>
-<div id="audio-track" class="track" ondrop="drop(event)" ondragover="allowDrop(event)">
+<div id="audio-track" class="track" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="onTrackClick(event)">
 <div style="position:absolute; left:0; top:0; font-size: 10px; color: #666;">
 AUDIO TRACK
 </div>
+</div>
+<div id="hoverLine" class="hover-line">
+
+</div>
+<div id="hoverTimeLabel" class="hover-time-label">
+
+</div>
+<div id="playheadLine" class="playhead-line">
+
+</div>
+<div id="playheadFlag" class="playhead-flag">
+
 </div>
 </div>
 </div>
@@ -1021,10 +1147,12 @@ async function getFileFromDB(id) {
    duration on the timeline = (sourceOut - sourceIn) / playbackRate
    ========================================================================= */
 let appState = {
-  assets: [],                              // {id, name, type, duration}
+  assets: [],                              // {id, name, type, duration, hasAudio}
   timeline: { video: [], audio: [] },
   settings: { idealVolume: 0.7, zoomLevel: 10 },
   presets: [],                             // {id, name, reviewBeforeApply, steps:[{type, params}]}
+  markers: [],                             // {id, time, label}
+  playheadTime: 0,
   selectedClipId: null,
   selectedClipType: null
 };
@@ -1066,19 +1194,60 @@ async function handleFileUpload(event) {
   for (let file of files) {
     const id = "asset_" + Date.now() + Math.random().toString(36).slice(2);
     await saveFileToDB(id, file);
-    const duration = await probeDuration(file);
-    appState.assets.push({ id, name: file.name, type: file.type.startsWith('video') ? 'video' : 'audio', duration });
+    const type = file.type.startsWith('video') ? 'video' : 'audio';
+    const duration = await probeDuration(file, type);
+    const hasAudio = type === 'video' ? await probeHasAudio(file) : true;
+    appState.assets.push({ id, name: file.name, type, duration, hasAudio });
   }
   renderAssets();
   event.target.value = "";
 }
-function probeDuration(file) {
+function probeDuration(file, type) {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
-    const el = document.createElement(file.type.startsWith('video') ? 'video' : 'audio');
+    const el = document.createElement(type === 'video' ? 'video' : 'audio');
     el.preload = 'metadata';
-    el.onloadedmetadata = () => { const d = isFinite(el.duration) ? el.duration : 5; URL.revokeObjectURL(url); resolve(d); };
-    el.onerror = () => { URL.revokeObjectURL(url); resolve(5); };
+    let settled = false;
+    const finish = (d) => { if (settled) return; settled = true; URL.revokeObjectURL(url); resolve(d); };
+    el.onloadedmetadata = () => {
+      if (isFinite(el.duration) && el.duration > 0) { finish(el.duration); return; }
+      // Some containers report an Infinity duration until the browser is
+      // forced to index the whole file — nudge it with a far-future seek.
+      el.currentTime = 1e10;
+      el.ontimeupdate = () => {
+        el.ontimeupdate = null;
+        const d = isFinite(el.duration) && el.duration > 0 ? el.duration : 5;
+        finish(d);
+      };
+    };
+    el.onerror = () => finish(5);
+    setTimeout(() => finish(isFinite(el.duration) && el.duration > 0 ? el.duration : 5), 6000); // safety timeout
+    el.src = url;
+  });
+}
+/** Detects whether a video file actually has an audio track, so dropping it
+    can auto-populate the audio track too. Uses the browser's own decoder via
+    an HTMLVideoElement (works across Chrome/Firefox/Safari, unlike the
+    non-standard audioTracks API alone). */
+function probeHasAudio(file) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const el = document.createElement('video');
+    el.preload = 'auto';
+    el.muted = true;
+    const cleanup = (result) => { URL.revokeObjectURL(url); resolve(result); };
+    el.onloadeddata = () => {
+      const has = !!(el.mozHasAudio || (el.webkitAudioDecodedByteCount > 0) || (el.audioTracks && el.audioTracks.length > 0));
+      // Fallback for browsers that don't expose any of the above until playback starts.
+      if (has) return cleanup(true);
+      el.currentTime = Math.min(0.5, (el.duration || 1) / 2);
+    };
+    el.onseeked = () => {
+      const has = !!(el.mozHasAudio || (el.webkitAudioDecodedByteCount > 0) || (el.audioTracks && el.audioTracks.length > 0));
+      cleanup(has);
+    };
+    el.onerror = () => cleanup(false);
+    setTimeout(() => cleanup(false), 4000); // safety timeout
     el.src = url;
   });
 }
@@ -1178,16 +1347,18 @@ async function drop(ev) {
   const trackId = ev.currentTarget.id;
   const rect = ev.currentTarget.getBoundingClientRect();
   const offsetX = ev.clientX - rect.left + document.getElementById('timelineScroll').scrollLeft;
-  const clip = {
-    id: Date.now() + Math.random(),
-    assetId: assetId,
-    start: Math.max(0, offsetX / appState.settings.zoomLevel),
-    sourceIn: 0,
-    sourceOut: Math.min(asset.duration || 5, 5),
-    playbackRate: 1,
-    volume: 1.0
-  };
-  if (trackId === 'video-track') appState.timeline.video.push(clip); else appState.timeline.audio.push(clip);
+  const start = Math.max(0, offsetX / appState.settings.zoomLevel);
+  const sourceOut = asset.duration || 5;
+  const linkId = Date.now() + Math.random();
+  const makeClip = () => ({ id: Date.now() + Math.random(), assetId, start, sourceIn: 0, sourceOut, playbackRate: 1, volume: 1.0, linkId });
+  if (trackId === 'video-track') {
+    appState.timeline.video.push(makeClip());
+    // Video files that carry their own audio get a matching clip auto-added
+    // to the audio track, in sync, so you don't have to drag it twice.
+    if (asset.type === 'video' && asset.hasAudio) appState.timeline.audio.push(makeClip());
+  } else {
+    appState.timeline.audio.push(makeClip());
+  }
   renderTimeline();
 }
 function renderTimeline() {
@@ -1198,6 +1369,9 @@ function renderTimeline() {
   appState.timeline.video.sort((a, b) => a.start - b.start).forEach(clip => vTrack.appendChild(createClipUI(clip, 'video')));
   appState.timeline.audio.sort((a, b) => a.start - b.start).forEach(clip => aTrack.appendChild(createClipUI(clip, 'audio')));
   updateSelectionLabel();
+  renderRuler();
+  renderMarkers();
+  updatePlayheadUI();
 }
 function createClipUI(clip, type) {
   const div = document.createElement('div');
@@ -1206,7 +1380,8 @@ function createClipUI(clip, type) {
   div.style.width = Math.max(4, clipDuration(clip) * appState.settings.zoomLevel) + 'px';
   const asset = appState.assets.find(a => a.id == clip.assetId);
   const rateTag = clip.playbackRate !== 1 ? ` ${clip.playbackRate}x` : '';
-  div.innerHTML = `<div>${asset ? asset.name : 'Unknown Asset'}</div><div class="clip-meta">${clipDuration(clip).toFixed(1)}s${rateTag}</div>`;
+  const linkTag = clip.linkId ? ' 🔗' : '';
+  div.innerHTML = `<div>${asset ? asset.name : 'Unknown Asset'}${linkTag}</div><div class="clip-meta">${clipDuration(clip).toFixed(1)}s${rateTag}</div>`;
   div.onclick = (e) => { e.stopPropagation(); selectClip(clip.id, type); };
   return div;
 }
@@ -1242,14 +1417,20 @@ function applyVolumeChange() {
   clip.volume = Math.max(0, clip.volume);
   renderTimeline();
 }
+/** Splits the selected clip at the playhead if the playhead falls inside it,
+    otherwise falls back to a plain midpoint split. */
 function splitClip() {
   const clip = getSelectedClip();
   if (!clip) return;
   saveState();
   const track = appState.selectedClipType === 'video' ? appState.timeline.video : appState.timeline.audio;
-  const splitAtSource = clip.sourceIn + (clipDuration(clip) * clip.playbackRate) / 2; // midpoint in source time
-  const newClip = { ...clip, id: Date.now() + Math.random(), sourceIn: splitAtSource, start: clip.start + clipDuration(clip) / 2 };
+  const clipStart = clip.start, clipEnd = clip.start + clipDuration(clip);
+  const playheadInside = appState.playheadTime > clipStart + 0.01 && appState.playheadTime < clipEnd - 0.01;
+  const splitAtTimeline = playheadInside ? appState.playheadTime : clip.start + clipDuration(clip) / 2;
+  const splitAtSource = clip.sourceIn + (splitAtTimeline - clip.start) * clip.playbackRate;
+  const newClip = { ...clip, id: Date.now() + Math.random(), sourceIn: splitAtSource, start: splitAtTimeline, linkId: undefined };
   clip.sourceOut = splitAtSource;
+  clip.linkId = undefined; // splitting breaks the auto-link; the two halves are edited independently from here
   track.push(newClip);
   renderTimeline();
 }
@@ -1263,8 +1444,194 @@ function deleteClip() {
   renderTimeline();
 }
 function syncCursor() {
+  renderRuler(); // keep tick density/labels correct as zoom/content change; cheap relative to scroll frequency
   const scrollLeft = document.getElementById('timelineScroll').scrollLeft;
-  document.getElementById('timeline-cursor').innerText = `Cursor: ${(scrollLeft / appState.settings.zoomLevel).toFixed(2)}s`;
+  document.getElementById('timeline-cursor').innerText = `Cursor: ${(scrollLeft / appState.settings.zoomLevel).toFixed(2)}s | Playhead: ${appState.playheadTime.toFixed(2)}s`;
+}
+
+/* =========================================================================
+   RULER, HOVER LINE, PLAYHEAD, MARKERS
+   ========================================================================= */
+function timelineContentEndSeconds() {
+  const all = appState.timeline.video.concat(appState.timeline.audio);
+  const maxEnd = all.reduce((m, c) => Math.max(m, c.start + clipDuration(c)), 0);
+  return Math.max(30, maxEnd + 20); // always render a little past the last clip
+}
+function renderRuler() {
+  const ruler = document.getElementById('timeRuler');
+  const vTrack = document.getElementById('video-track');
+  const aTrack = document.getElementById('audio-track');
+  if (!ruler) return;
+  ruler.querySelectorAll('.tick, .tick-label').forEach(n => n.remove());
+  [vTrack, aTrack].forEach(t => t && t.querySelectorAll('.track-tick').forEach(n => n.remove()));
+  const zoom = appState.settings.zoomLevel;
+  const endSeconds = timelineContentEndSeconds();
+  // pick a "nice" interval so labeled ticks stay at least ~55px apart, and a matching minor step
+  const niceSteps = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
+  let major = niceSteps.find(s => s * zoom >= 55) || niceSteps[niceSteps.length - 1];
+  const minor = major / 5;
+  const stepCount = Math.ceil(endSeconds / minor);
+  const rulerFrag = document.createDocumentFragment();
+  const trackFrag = () => document.createDocumentFragment();
+  const vFrag = trackFrag(), aFrag = trackFrag();
+  for (let i = 0; i <= stepCount; i++) {
+    const t = i * minor;
+    const isMajor = i % 5 === 0;
+    const left = (t * zoom) + 'px';
+    const tick = document.createElement('div');
+    tick.className = `tick ${isMajor ? 'major' : 'minor'}`;
+    tick.style.left = left;
+    rulerFrag.appendChild(tick);
+    if (isMajor) {
+      const label = document.createElement('div');
+      label.className = 'tick-label';
+      label.style.left = left;
+      label.innerText = fmtRulerTime(t);
+      rulerFrag.appendChild(label);
+      // Only major ticks get carried into the track rows themselves, to stay subtle.
+      [vFrag, aFrag].forEach(frag => {
+        const line = document.createElement('div');
+        line.className = 'track-tick major';
+        line.style.left = left;
+        frag.appendChild(line);
+      });
+    }
+  }
+  ruler.appendChild(rulerFrag);
+  if (vTrack) vTrack.insertBefore(vFrag, vTrack.firstChild);
+  if (aTrack) aTrack.insertBefore(aFrag, aTrack.firstChild);
+  const contentWidth = Math.max(10000, (endSeconds + 30) * zoom) + 'px';
+  ruler.style.width = contentWidth;
+  if (vTrack) vTrack.style.width = contentWidth;
+  if (aTrack) aTrack.style.width = contentWidth;
+}
+function fmtRulerTime(t) {
+  const m = Math.floor(t / 60), s = Math.round(t % 60);
+  return m > 0 ? `${m}:${String(s).padStart(2, '0')}` : `${s}s`;
+}
+function xToTime(clientX) {
+  const scroll = document.getElementById('timelineScroll');
+  const rect = scroll.getBoundingClientRect();
+  const x = clientX - rect.left + scroll.scrollLeft;
+  return Math.max(0, x / appState.settings.zoomLevel);
+}
+function onTimelineHover(ev) {
+  const t = xToTime(ev.clientX);
+  const hoverLine = document.getElementById('hoverLine');
+  const hoverLabel = document.getElementById('hoverTimeLabel');
+  hoverLine.style.left = (t * appState.settings.zoomLevel) + 'px';
+  hoverLine.style.display = 'block';
+  hoverLabel.style.left = (t * appState.settings.zoomLevel) + 'px';
+  hoverLabel.innerText = t.toFixed(2) + 's';
+  hoverLabel.style.display = 'block';
+}
+function onTimelineLeave() {
+  document.getElementById('hoverLine').style.display = 'none';
+  document.getElementById('hoverTimeLabel').style.display = 'none';
+}
+/** Vertical wheel over the tracks zooms (instead of bubbling up and scrolling
+    the whole page); a genuinely horizontal gesture (trackpad swipe) still
+    pans the timeline left/right as normal. */
+function onTimelineWheel(ev) {
+  if (Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) return; // let horizontal pan through untouched
+  ev.preventDefault();
+  const scroll = document.getElementById('timelineScroll');
+  const rect = scroll.getBoundingClientRect();
+  const cursorX = ev.clientX - rect.left;
+  const t = xToTime(ev.clientX);
+  const oldZoom = appState.settings.zoomLevel;
+  const factor = ev.deltaY < 0 ? 1.15 : 1 / 1.15;
+  const newZoom = Math.min(100, Math.max(1, Math.round(oldZoom * factor)));
+  if (newZoom === oldZoom) return;
+  appState.settings.zoomLevel = newZoom;
+  document.getElementById('zoomSlider').value = newZoom;
+  renderTimeline();
+  scroll.scrollLeft = Math.max(0, t * newZoom - cursorX);
+}
+document.getElementById('timelineScroll').addEventListener('wheel', onTimelineWheel, { passive: false });
+function setPlayhead(t) {
+  appState.playheadTime = Math.max(0, t);
+  updatePlayheadUI();
+  document.getElementById('timeline-cursor').innerText = `Cursor: ${(document.getElementById('timelineScroll').scrollLeft / appState.settings.zoomLevel).toFixed(2)}s | Playhead: ${appState.playheadTime.toFixed(2)}s`;
+}
+function updatePlayheadUI() {
+  const zoom = appState.settings.zoomLevel;
+  const x = appState.playheadTime * zoom;
+  const line = document.getElementById('playheadLine');
+  const flag = document.getElementById('playheadFlag');
+  if (!line || !flag) return;
+  line.style.left = x + 'px'; line.style.display = 'block';
+  flag.style.left = x + 'px'; flag.style.display = 'block';
+}
+function onRulerClick(ev) { setPlayhead(xToTime(ev.clientX)); }
+/** Clicking empty track space (not a clip) moves the playhead there and, if
+    a clip covers that point, selects it and previews from that offset. */
+function onTrackClick(ev) {
+  const t = xToTime(ev.clientX);
+  setPlayhead(t);
+  const type = ev.currentTarget.id === 'video-track' ? 'video' : 'audio';
+  const track = appState.timeline[type];
+  const hit = track.find(c => t >= c.start && t <= c.start + clipDuration(c));
+  if (hit) {
+    appState.selectedClipId = hit.id; appState.selectedClipType = type;
+    renderTimeline();
+    previewClipFrom(hit, hit.sourceIn + (t - hit.start) * hit.playbackRate);
+    updateScopeHint();
+  }
+}
+/** Plays whatever is under the current playhead, on whichever track has
+    something there (video preferred). */
+function playFromPlayhead() {
+  const t = appState.playheadTime;
+  const vHit = appState.timeline.video.find(c => t >= c.start && t <= c.start + clipDuration(c));
+  const aHit = appState.timeline.audio.find(c => t >= c.start && t <= c.start + clipDuration(c));
+  const hit = vHit || aHit;
+  if (!hit) { alert('Nothing on the timeline at the playhead.'); return; }
+  previewClipFrom(hit, hit.sourceIn + (t - hit.start) * hit.playbackRate);
+}
+async function previewClipFrom(clip, sourceStartTime) {
+  clearTrimStop();
+  const asset = appState.assets.find(a => a.id === clip.assetId);
+  const blob = await getFileFromDB(clip.assetId);
+  if (!blob) return;
+  player.src = URL.createObjectURL(blob);
+  player.playbackRate = clip.playbackRate || 1;
+  document.getElementById('clip-context-label').innerText = `${asset ? asset.name : 'clip'}  [from ${sourceStartTime.toFixed(2)}s]`;
+  player.load();
+  player.onloadedmetadata = () => { player.currentTime = sourceStartTime; player.play().catch(() => {}); };
+  trimStopHandler = () => { if (player.currentTime >= clip.sourceOut) player.pause(); };
+  player.addEventListener('timeupdate', trimStopHandler);
+}
+function addMarkerAtPlayhead() {
+  const label = prompt('Marker label (optional):', '');
+  if (label === null) return; // cancelled
+  appState.markers.push({ id: Date.now() + Math.random(), time: appState.playheadTime, label: label || fmtRulerTime(appState.playheadTime) });
+  renderMarkers();
+}
+function renderMarkers() {
+  const ruler = document.getElementById('timeRuler');
+  const vTrack = document.getElementById('video-track');
+  const aTrack = document.getElementById('audio-track');
+  if (!ruler) return;
+  ruler.querySelectorAll('.marker-flag').forEach(n => n.remove());
+  [vTrack, aTrack].forEach(t => t && t.querySelectorAll('.marker-line').forEach(n => n.remove()));
+  const zoom = appState.settings.zoomLevel;
+  appState.markers.forEach(marker => {
+    const flag = document.createElement('div');
+    flag.className = 'marker-flag';
+    flag.style.left = (marker.time * zoom) + 'px';
+    flag.title = `${marker.label} (${marker.time.toFixed(2)}s) — click to jump, right-click to delete`;
+    flag.onclick = (e) => { e.stopPropagation(); setPlayhead(marker.time); };
+    flag.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); if (confirm(`Delete marker "${marker.label}"?`)) { appState.markers = appState.markers.filter(m => m.id !== marker.id); renderMarkers(); } };
+    ruler.appendChild(flag);
+    [vTrack, aTrack].forEach(t => {
+      if (!t) return;
+      const line = document.createElement('div');
+      line.className = 'marker-line';
+      line.style.left = (marker.time * zoom) + 'px';
+      t.appendChild(line);
+    });
+  });
 }
 
 /* =========================================================================
@@ -1676,7 +2043,7 @@ function importWorkspace(event) {
   const reader = new FileReader();
   reader.onload = (e) => {
     const loaded = JSON.parse(e.target.result);
-    appState = Object.assign({ presets: [], selectedClipId: null, selectedClipType: null }, loaded);
+    appState = Object.assign({ presets: [], markers: [], playheadTime: 0, selectedClipId: null, selectedClipType: null }, loaded);
     renderAssets(); renderTimeline(); renderPresetList();
     document.getElementById('idealVolumeSlider').value = appState.settings.idealVolume;
     document.getElementById('idealVolLabel').innerText = appState.settings.idealVolume.toFixed(2);
