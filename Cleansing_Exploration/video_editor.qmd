@@ -1,12 +1,10 @@
 ---
 format:
   html:
-    self-contained: true
+    embed-resources: false
     page-layout: full
     title-block-banner: false
-    toc: true
-    toc-depth: 3
-    toc-location: body
+    toc: false
     number-sections: false
     html-math-method: katex
     code-fold: true
@@ -18,10 +16,1658 @@ format:
         toggle: true
         caption: See code
     theme: dark
-execute: 
+execute:
   warning: false
-    
 ---
 
-<style> :root { --bg-dark: #0f0f0f; --bg-panel: #1a1a1a; --bg-accent: #2a2a2a; --text-main: #efefef; --accent-color: #3b82f6; --danger-color: #ef4444; --success-color: #10b981; --resizer-color: #3b82f6; } body { background-color: var(--bg-dark); color: var(--text-main); font-family: 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; } /* Top Menu Bar */ .menu-bar { height: 40px; background: #000; display: flex; align-items: center; padding: 0 15px; gap: 20px; border-bottom: 1px solid var(--bg-accent); flex-shrink: 0; z-index: 100; } .dropdown { position: relative; display: inline-block; } .dropbtn { background: none; color: white; border: none; cursor: pointer; font-size: 0.9rem; padding: 5px 10px; } .dropdown-content { display: none; position: absolute; background-color: var(--bg-panel); min-width: 160px; box-shadow: 0px 8px 16px rgba(0,0,0,0.5); z-index: 1001; border: 1px solid var(--bg-accent); } .dropdown-content button { color: white; padding: 10px; text-align: left; border: none; background: none; width: 100%; cursor: pointer; } .dropdown-content button:hover { background-color: var(--bg-accent); } .dropdown:hover .dropdown-content { display: block; } /* EXPLICIT GRID LAYOUT */ .editor-grid { display: grid; flex: 1; /* Columns: Asset | Resizer | Preview | Resizer | Rules */ grid-template-columns: 260px 4px 1fr 4px 300px; /* Rows: Top Area | Resizer | Timeline */ grid-template-rows: 1fr 4px 300px; overflow: hidden; } .assets-panel { grid-area: 1 / 1 / 2 / 2; } .resizer-left { grid-area: 1 / 2 / 3 / 3; } .preview-area { grid-area: 1 / 3 / 2 / 4; } .resizer-right { grid-area: 1 / 4 / 3 / 5; } .rules-panel { grid-area: 1 / 5 / 2 / 6; } .resizer-bottom { grid-area: 2 / 1 / 3 / 6; } .timeline-container { grid-area: 3 / 1 / 4 / 6; } .panel { background-color: var(--bg-panel); display: flex; flex-direction: column; overflow: hidden; } .panel-content { flex: 1; overflow-y: auto; padding: 10px; } /* Resizer Visuals */ .resizer-v, .resizer-h { background: transparent; z-index: 10; } .resizer-v { cursor: col-resize; } .resizer-h { cursor: row-resize; } .resizer-v:hover, .resizer-h:hover { background: var(--resizer-color) !important; } /* Center Preview Area */ .preview-area { background-color: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; overflow: hidden; position: relative; } .video-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; padding: 0; margin: 0; box-sizing: border-box; } #main-video-player { width: 100%; height: 100%; object-fit: contain; } /* Timeline */ .timeline-container { background-color: var(--bg-panel); display: flex; flex-direction: column; overflow: hidden; } .timeline-toolbar { height: 40px; background: var(--bg-accent); display: flex; align-items: center; padding: 0 15px; gap: 10px; font-size: 0.8rem; flex-shrink: 0; } .timeline-scroll { flex: 1; overflow: auto; position: relative; background: #121212; } .track { height: 80px; border-bottom: 1px solid #333; position: relative; width: 10000px; } .clip { position: absolute; height: 60px; top: 10px; background: var(--accent-color); border: 1px solid #fff; border-radius: 4px; cursor: pointer; font-size: 11px; padding: 4px; box-sizing: border-box; overflow: hidden; } .clip.audio-clip { background: var(--success-color); } .clip.selected { border: 2px solid yellow; box-shadow: 0 0 10px yellow; } .asset-item { padding: 8px 12px; margin: 5px; background: var(--bg-accent); cursor: pointer; border-radius: 4px; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .asset-item:hover { background: #333; } .context-menu { display: none; position: fixed; background: var(--bg-panel); border: 1px solid var(--bg-accent); box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 2000; min-width: 140px; } .context-menu button { background: none; color: white; border: none; width: 100%; text-align: left; padding: 8px 12px; cursor: pointer; } .context-menu button:hover { background: var(--bg-accent); } .btn { background: var(--bg-accent); color: white; border: 1px solid #444; padding: 4px 10px; cursor: pointer; border-radius: 4px; font-size: 0.8rem; } .collapsible-btn { background: var(--bg-accent); border: none; color: white; width: 100%; text-align: left; padding: 10px; cursor: pointer; font-weight: bold; } .hidden { display: none; } </style><div class="menu-bar"> <span style="font-weight: bold; color: var(--accent-color);">WEB-CUT PRO</span> <div class="dropdown"> <button class="dropbtn">File ▾</button> <div class="dropdown-content"> <button onclick="exportWorkspace()">Save Workspace</button> <button onclick="document.getElementById('importWorkspaceBtn').click()">Load Workspace</button> <button onclick="clearWorkspace()" style="color: var(--danger-color);">Clear Workspace</button> </div> </div> <input type="file" id="importWorkspaceBtn" class="hidden" onchange="importWorkspace(event)"> <button class="btn" onclick="undo()">Undo (Ctrl+Z)</button> <button class="btn" style="background: var(--success-color); margin-left: auto;" onclick="renderFinalVideo()">🚀 Export Video</button> </div><div class="editor-grid" id="editorGrid"> <div class="panel assets-panel"> <button class="collapsible-btn" onclick="togglePanel('leftPanelContent')">📁 Assets</button> <div id="leftPanelContent" class="panel-content"> <input type="file" id="fileInput" multiple accept="video/*,audio/*" style="display:none" onchange="handleFileUpload(event)"> <button class="btn" style="width:100%" onclick="document.getElementById('fileInput').click()">+ Import Media</button> <div id="assetList" style="margin-top: 15px;"></div> </div> </div> <div class="resizer-v resizer-left" id="resizerLeft"></div> <div class="preview-area"> <div class="video-container"> <video id="main-video-player" controls></video> </div> <div id="playback-info" style="position:absolute; bottom:10px; right:10px; font-family: monospace; background:rgba(0,0,0,0.5); padding:2px 5px;">00:00:00 / 00:00:00</div> </div> <div class="resizer-v resizer-right" id="resizerRight"></div> <div class="panel rules-panel"> <button class="collapsible-btn" onclick="togglePanel('rightPanelContent')">⚙️ Rules & Edits</button> <div id="rightPanelContent" class="panel-content"> <div style="margin-bottom: 20px;"> <h4 style="font-size: 0.9rem; color:white;">Quick Edits</h4> <button class="btn" style="width:100%; margin-bottom:5px; text-align:left;" onclick="runQuickEdit('removeSilence')">✂️ Auto-Remove Silence</button> <button class="btn" style="width:100%; margin-bottom:5px; text-align:left;" onclick="runQuickEdit('normalizeAudio')">🔊 Auto-Normalize</button> <button class="btn" style="width:100%; margin-bottom:5px; text-align:left;" onclick="runQuickEdit('wordReplace')">🔤 Replace Word (AI)</button> </div> <hr style="border-color: var(--bg-accent)"> <div style="margin-top: 20px;"> <h4 style="font-size: 0.9rem; color:white;">Audio Scaling</h4> <label style="font-size: 0.75rem;">Mode:</label> <select id="volMode" class="btn" style="width:100%; margin-bottom: 10px;"> <option value="fixed">Fixed Offset</option> <option value="proportional">Proportional to Ideal</option> </select> <label style="font-size: 0.75rem;">Intensity:</label> <input type="range" id="volValue" min="-1" max="1" step="0.01" value="0" style="width:100%"> <button class="btn" style="width:100%; margin-top:10px;" onclick="applyVolumeChange()">Apply to Selected</button> </div> </div> </div> <div class="resizer-h resizer-bottom" id="resizerBottom"></div> <div class="timeline-container"> <div class="timeline-toolbar"> <button class="btn" onclick="splitClip()">✂️ Split</button> <button class="btn" style="color:var(--danger-color)" onclick="deleteClip()">🗑️ Delete</button> <div style="margin-left: 20px; display:flex; align-items:center; gap:10px;"> <span>Zoom:</span> <input type="range" id="zoomSlider" min="1" max="100" value="10" oninput="updateZoom(this.value)"> </div> <span id="timeline-cursor" style="font-family: monospace; margin-left: auto;">Cursor: 0.00s</span> </div> <div class="timeline-scroll" id="timelineScroll" onscroll="syncCursor()"> <div class="track" id="video-track" ondrop="drop(event)" ondragover="allowDrop(event)"> <div style="position:absolute; left:0; top:0; font-size: 10px; color: #666;">VIDEO TRACK</div> </div> <div class="track" id="audio-track" ondrop="drop(event)" ondragover="allowDrop(event)"> <div style="position:absolute; left:0; top:0; font-size: 10px; color: #666;">AUDIO TRACK</div> </div> </div> </div> </div><div id="assetCtxMenu" class="context-menu"> <button onclick="showDeleteOptions()">Delete</button> </div> <div id="deleteOptionsMenu" class="context-menu"> <button onclick="deleteAsset('list')">Delete from Asset list</button> <button id="btnDeleteWorkspace" onclick="deleteAsset('workspace')">Delete from Workspace</button> <button onclick="closeMenus()">Cancel</button> </div><script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script><script> /** RESIZING LOGIC **/ const grid = document.getElementById('editorGrid'); let isResizingLeft = false, isResizingRight = false, isResizingBottom = false; document.getElementById('resizerLeft').addEventListener('mousedown', (e) => { isResizingLeft = true; e.preventDefault(); }); document.getElementById('resizerRight').addEventListener('mousedown', (e) => { isResizingRight = true; e.preventDefault(); }); document.getElementById('resizerBottom').addEventListener('mousedown', (e) => { isResizingBottom = true; e.preventDefault(); }); window.addEventListener('mousemove', (e) => { const gridRect = grid.getBoundingClientRect(); if (isResizingLeft) { const newWidth = e.clientX - gridRect.left; if (newWidth > 100 && newWidth < 600) { grid.style.gridTemplateColumns = `${newWidth}px 4px 1fr 4px 300px`; } } else if (isResizingRight) { const rightPanelWidth = gridRect.right - e.clientX; if (rightPanelWidth > 100 && rightPanelWidth < 600) { grid.style.gridTemplateColumns = `260px 4px 1fr 4px ${rightPanelWidth}px`; } } else if (isResizingBottom) { const topHeight = e.clientY - gridRect.top; if (topHeight > 100 && topHeight < window.innerHeight - 100) { grid.style.gridTemplateRows = `${topHeight}px 4px 1fr`; } } }); window.addEventListener('mouseup', () => { isResizingLeft = isResizingRight = isResizingBottom = false; }); /** DATABASE & STATE **/ const DB_NAME = "WebCutProDB"; const STORE_NAME = "assets"; let db; async function initDB() { return new Promise((resolve, reject) => { const request = indexedDB.open(DB_NAME, 1); request.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME); request.onsuccess = (e) => { db = e.target.result; resolve(); }; request.onerror = (e) => reject(e); }); } async function saveFileToDB(id, blob) { const tx = db.transaction(STORE_NAME, "readwrite"); tx.objectStore(STORE_NAME).put(blob, id); return new Promise(res => tx.oncomplete = res); } let appState = { assets: [], timeline: { video: [], audio: [] }, settings: { idealVolume: 0.7, zoomLevel: 10 }, selectedClipId: null, selectedClipType: null }; let historyStack = []; function saveState() { const snapshot = { timeline: JSON.parse(JSON.stringify(appState.timeline)), settings: JSON.parse(JSON.stringify(appState.settings)) }; historyStack.push(JSON.stringify(snapshot)); if (historyStack.length > 50) historyStack.shift(); } function undo() { if (historyStack.length === 0) return; const state = JSON.parse(historyStack.pop()); appState.timeline = state.timeline; appState.settings = state.settings; renderTimeline(); document.getElementById('zoomSlider').value = appState.settings.zoomLevel; } window.addEventListener('keydown', (e) => { if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); } }); window.addEventListener('click', (e) => { if (!e.target.closest('.asset-item') && !e.target.closest('.context-menu')) closeMenus(); }); /** ASSET MGMT **/ let activeAssetId = null; async function handleFileUpload(event) { const files = event.target.files; for (let file of files) { const id = "asset_" + Date.now() + Math.random(); await saveFileToDB(id, file); appState.assets.push({ id: id, name: file.name, type: file.type.startsWith('video') ? 'video' : 'audio' }); } renderAssets(); } function renderAssets() { const list = document.getElementById('assetList'); list.innerHTML = ''; for (let asset of appState.assets) { const div = document.createElement('div'); div.className = 'asset-item'; div.innerText = asset.name; div.draggable = true; div.ondragstart = (e) => e.dataTransfer.setData("assetId", asset.id); div.onclick = (e) => openAssetMenu(e, asset.id); list.appendChild(div); } } function openAssetMenu(e, id) { e.stopPropagation(); activeAssetId = id; const menu = document.getElementById('assetCtxMenu'); menu.style.display = 'block'; menu.style.left = e.pageX + 'px'; menu.style.top = e.pageY + 'px'; } function showDeleteOptions() { const isUsed = appState.timeline.video.concat(appState.timeline.audio).some(c => c.assetId === activeAssetId); document.getElementById('btnDeleteWorkspace').style.display = isUsed ? 'block' : 'none'; closeMenus(); const menu = document.getElementById('deleteOptionsMenu'); menu.style.display = 'block'; menu.style.left = document.getElementById('assetCtxMenu').style.left; menu.style.top = document.getElementById('assetCtxMenu').style.top; } async function deleteAsset(mode) { if (!activeAssetId) return; if (mode === 'list') appState.assets = appState.assets.filter(a => a.id !== activeAssetId); else if (mode === 'workspace') { appState.assets = appState.assets.filter(a => a.id !== activeAssetId); appState.timeline.video = appState.timeline.video.filter(c => c.assetId !== activeAssetId); appState.timeline.audio = appState.timeline.audio.filter(c => c.assetId !== activeAssetId); saveState(); } const tx = db.transaction(STORE_NAME, "readwrite"); tx.objectStore(STORE_NAME).delete(activeAssetId); renderAssets(); renderTimeline(); closeMenus(); } function closeMenus() { document.getElementById('assetCtxMenu').style.display = 'none'; document.getElementById('deleteOptionsMenu').style.display = 'none'; } /** TIMELINE **/ function allowDrop(ev) { ev.preventDefault(); } async function drop(ev) { ev.preventDefault(); saveState(); const assetId = ev.dataTransfer.getData("assetId"); const trackId = ev.currentTarget.id; const rect = ev.currentTarget.getBoundingClientRect(); const offsetX = ev.clientX - rect.left + document.getElementById('timelineScroll').scrollLeft; const clip = { id: Date.now(), assetId: assetId, start: offsetX / appState.settings.zoomLevel, duration: 5, volume: 1.0 }; if (trackId === 'video-track') appState.timeline.video.push(clip); else appState.timeline.audio.push(clip); renderTimeline(); } function renderTimeline() { const vTrack = document.getElementById('video-track'); const aTrack = document.getElementById('audio-track'); vTrack.querySelectorAll('.clip').forEach(n => n.remove()); aTrack.querySelectorAll('.clip').forEach(n => n.remove()); appState.timeline.video.forEach(clip => vTrack.appendChild(createClipUI(clip, 'video'))); appState.timeline.audio.forEach(clip => aTrack.appendChild(createClipUI(clip, 'audio'))); } function createClipUI(clip, type) { const div = document.createElement('div'); div.className = `clip ${type}-clip ${appState.selectedClipId === clip.id ? 'selected' : ''}`; div.style.left = (clip.start * appState.settings.zoomLevel) + 'px'; div.style.width = (clip.duration * appState.settings.zoomLevel) + 'px'; const asset = appState.assets.find(a => a.id == clip.assetId); div.innerText = asset ? asset.name : 'Unknown Asset'; div.onclick = (e) => { e.stopPropagation(); selectClip(clip.id, type); }; return div; } function selectClip(id, type) { appState.selectedClipId = id; appState.selectedClipType = type; renderTimeline(); } function updateZoom(val) { appState.settings.zoomLevel = parseInt(val); renderTimeline(); } function applyVolumeChange() { if (!appState.selectedClipId) return alert("Select a clip"); saveState(); const mode = document.getElementById('volMode').value; const val = parseFloat(document.getElementById('volValue').value); const track = appState.selectedClipType === 'video' ? appState.timeline.video : appState.timeline.audio; const clip = track.find(c => c.id === appState.selectedClipId); if (mode === 'fixed') clip.volume += val; else clip.volume += (appState.settings.idealVolume - clip.volume) * Math.abs(val); renderTimeline(); } async function runQuickEdit(type) { saveState(); if (type === 'removeSilence') alert("Analyzing audio... removing gaps > 30s."); else if (type === 'normalizeAudio') appState.timeline.audio.forEach(c => c.volume += (appState.settings.idealVolume - c.volume) * 0.5); else if (type === 'wordReplace') { const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)(); recognition.onresult = (e) => alert(`Detected: ${e.results[0][0].transcript}. Replacing...`); recognition.start(); alert("Listening... play audio now."); } renderTimeline(); } function splitClip() { if (!appState.selectedClipId) return; saveState(); const track = appState.selectedClipType === 'video' ? appState.timeline.video : appState.timeline.audio; const clip = track.find(c => c.id === appState.selectedClipId); const splitTime = 2; const newClip = { ...clip, id: Date.now(), start: clip.start + splitTime, duration: clip.duration - splitTime }; clip.duration = splitTime; track.push(newClip); renderTimeline(); } function deleteClip() { if (!appState.selectedClipId) return; saveState(); const type = appState.selectedClipType; appState.timeline[type] = appState.timeline[type].filter(c => c.id !== appState.selectedClipId); appState.selectedClipId = null; renderTimeline(); } function exportWorkspace() { const blob = new Blob([JSON.stringify(appState)], {type: 'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'workspace.json'; a.click(); } function importWorkspace(event) { const reader = new FileReader(); reader.onload = (e) => { appState = JSON.parse(e.target.result); renderAssets(); renderTimeline(); }; reader.readAsText(event.target.files[0]); } async function clearWorkspace() { if (confirm("Clear all cached files and project?")) { const tx = db.transaction(STORE_NAME, "readwrite"); tx.objectStore(STORE_NAME).clear(); location.reload(); } } async function renderFinalVideo() { alert("Rendering started... (Requires COOP/COEP headers to run FFmpeg.wasm)."); } function togglePanel(id) { document.getElementById(id).classList.toggle('hidden'); } function syncCursor() { const scrollLeft = document.getElementById('timelineScroll').scrollLeft; document.getElementById('timeline-cursor').innerText = `Cursor: ${(scrollLeft / appState.settings.zoomLevel).toFixed(2)}s`; } window.onload = async () => { await initDB(); renderAssets(); renderTimeline(); }; </script>
 
+<!--
+DEPLOYMENT NOTE (GitHub Pages):
+This page's real export step needs SharedArrayBuffer, which requires the
+page to be "cross-origin isolated." GitHub Pages doesn't let you set the
+response headers that normally provide that, so this page loads
+coi-serviceworker.js to get the same effect client-side.
+
+That file MUST be published as its own file, next to this page's rendered
+HTML, in the same directory (it cannot be inlined or served from a CDN).
+That's also why "embed-resources" is off above — self-contained HTML would
+try to inline everything, which breaks the service worker's same-origin
+requirement.
+-->
+
+<style>
+:root {
+  --bg-dark: #0f0f0f;
+  --bg-panel: #1a1a1a;
+  --bg-accent: #2a2a2a;
+  --bg-accent-2: #333;
+  --text-main: #efefef;
+  --text-dim: #9a9a9a;
+  --accent-color: #3b82f6;
+  --danger-color: #ef4444;
+  --success-color: #10b981;
+  --warn-color: #f59e0b;
+  --resizer-color: #3b82f6;
+}
+html {
+  height: 100%;
+}
+body {
+  --nav-safety-buffer: 72px;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  min-height: calc(100vh - var(--nav-safety-buffer));
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.menu-bar {
+  height: 40px;
+  background: #000;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  gap: 20px;
+  border-bottom: 1px solid var(--bg-accent);
+  flex-shrink: 0;
+  z-index: 100;
+}
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+.dropbtn {
+  background: none;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 5px 10px;
+}
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: var(--bg-panel);
+  min-width: 180px;
+  box-shadow: 0px 8px 16px rgba(0,0,0,0.5);
+  z-index: 1001;
+  border: 1px solid var(--bg-accent);
+}
+.dropdown-content button {
+  color: white;
+  padding: 10px;
+  text-align: left;
+  border: none;
+  background: none;
+  width: 100%;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.dropdown-content button:hover {
+  background-color: var(--bg-accent);
+}
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+.editor-grid {
+  display: grid;
+  flex: 1;
+  min-height: 560px;
+  grid-template-columns: 260px 4px 1fr 4px 340px;
+  grid-template-rows: 1fr 4px 300px;
+  overflow: hidden;
+}
+.assets-panel {
+  grid-area: 1 / 1 / 2 / 2;
+}
+.resizer-left {
+  grid-area: 1 / 2 / 3 / 3;
+}
+.preview-area {
+  grid-area: 1 / 3 / 2 / 4;
+}
+.resizer-right {
+  grid-area: 1 / 4 / 3 / 5;
+}
+.rules-panel {
+  grid-area: 1 / 5 / 2 / 6;
+}
+.resizer-bottom {
+  grid-area: 2 / 1 / 3 / 6;
+}
+.timeline-container {
+  grid-area: 3 / 1 / 4 / 6;
+}
+.panel {
+  background-color: var(--bg-panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+.resizer-v, .resizer-h {
+  background: transparent;
+  z-index: 10;
+}
+.resizer-v {
+  cursor: col-resize;
+}
+.resizer-h {
+  cursor: row-resize;
+}
+.resizer-v:hover, .resizer-h:hover {
+  background: var(--resizer-color) !important;
+}
+.preview-area {
+  background-color: #000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+}
+.video-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+#main-video-player {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+#playback-info {
+  position:absolute;
+  bottom:10px;
+  right:10px;
+  font-family: monospace;
+  background:rgba(0,0,0,0.6);
+  padding:2px 6px;
+  border-radius: 3px;
+  font-size: 0.75rem;
+}
+#clip-context-label {
+  position:absolute;
+  top:10px;
+  left:10px;
+  font-family: monospace;
+  background:rgba(0,0,0,0.6);
+  padding:2px 6px;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+.timeline-container {
+  background-color: var(--bg-panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.timeline-toolbar {
+  height: 40px;
+  background: var(--bg-accent);
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  gap: 10px;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+.timeline-scroll {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  background: #121212;
+}
+.track {
+  height: 80px;
+  border-bottom: 1px solid #333;
+  position: relative;
+  width: 10000px;
+}
+.clip {
+  position: absolute;
+  height: 60px;
+  top: 10px;
+  background: var(--accent-color);
+  border: 1px solid #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 4px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.clip.audio-clip {
+  background: var(--success-color);
+}
+.clip.selected {
+  border: 2px solid yellow;
+  box-shadow: 0 0 10px yellow;
+}
+.clip .clip-meta {
+  font-size: 9px;
+  color: rgba(0,0,0,0.6);
+}
+.asset-item {
+  padding: 8px 12px;
+  margin: 5px;
+  background: var(--bg-accent);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.asset-item:hover {
+  background: #333;
+}
+.context-menu {
+  display: none;
+  position: fixed;
+  background: var(--bg-panel);
+  border: 1px solid var(--bg-accent);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  z-index: 2000;
+  min-width: 160px;
+}
+.context-menu button {
+  background: none;
+  color: white;
+  border: none;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.context-menu button:hover {
+  background: var(--bg-accent);
+}
+.btn {
+  background: var(--bg-accent);
+  color: white;
+  border: 1px solid #444;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+.btn:hover {
+  background: var(--bg-accent-2);
+}
+.btn.btn-block {
+  width: 100%;
+  text-align: left;
+  margin-bottom: 6px;
+}
+.btn.btn-primary {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+}
+.btn.btn-danger {
+  color: var(--danger-color);
+}
+.btn.btn-success {
+  background: var(--success-color);
+  border-color: var(--success-color);
+  color: #06281c;
+  font-weight: 600;
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.collapsible-btn {
+  background: var(--bg-accent);
+  border: none;
+  color: white;
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  cursor: pointer;
+  font-weight: bold;
+}
+.hidden {
+  display: none !important;
+}
+.tab-row {
+  display: flex;
+  border-bottom: 1px solid var(--bg-accent);
+  flex-shrink: 0;
+}
+.tab-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  padding: 8px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  border-bottom: 2px solid transparent;
+}
+.tab-btn.active {
+  color: white;
+  border-bottom-color: var(--accent-color);
+}
+.tab-panel {
+  display: none;
+}
+.tab-panel.active {
+  display: block;
+}
+.field {
+  margin-bottom: 10px;
+}
+.field label {
+  display:block;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-bottom: 3px;
+}
+.field input[type="text"], .field input[type="number"], .field select {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-dark);
+  color: white;
+  border: 1px solid var(--bg-accent-2);
+  border-radius: 4px;
+  padding: 5px 6px;
+  font-size: 0.8rem;
+}
+.field .hint {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.field-row input[type="checkbox"] {
+  width: auto;
+}
+.field-inline-pair {
+  display: flex;
+  gap: 8px;
+}
+.field-inline-pair .field {
+  flex: 1;
+}
+.scope-box {
+  background: var(--bg-accent);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 12px;
+}
+.section-title {
+  font-size: 0.85rem;
+  font-weight: bold;
+  margin: 4px 0 8px;
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+}
+.chip {
+  display:inline-block;
+  background: var(--bg-accent-2);
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+}
+.preset-card, .step-card {
+  background: var(--bg-accent);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+.preset-card .preset-head {
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  margin-bottom: 4px;
+}
+.preset-card .preset-steps {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.preset-card .preset-actions {
+  display:flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.step-card {
+  border-left: 3px solid var(--accent-color);
+}
+.step-card .step-head {
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.modal-overlay {
+  display:none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 3000;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open {
+  display: flex;
+}
+.modal-box {
+  background: var(--bg-panel);
+  border: 1px solid var(--bg-accent-2);
+  border-radius: 8px;
+  width: 420px;
+  max-width: 92vw;
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+}
+.modal-box.wide {
+  width: 520px;
+}
+.modal-title {
+  font-size: 1rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+}
+.modal-actions {
+  display:flex;
+  justify-content:flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+.diff-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+}
+.diff-list li {
+  padding: 6px 8px;
+  background: var(--bg-accent);
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+.diff-list li.diff-cut {
+  border-left: 3px solid var(--danger-color);
+}
+.diff-list li.diff-speed {
+  border-left: 3px solid var(--accent-color);
+}
+.diff-list li.diff-volume {
+  border-left: 3px solid var(--success-color);
+}
+.empty-note {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  padding: 6px 2px;
+}
+.progress-track {
+  background: var(--bg-dark);
+  border-radius: 6px;
+  height: 14px;
+  overflow: hidden;
+  margin: 10px 0 6px;
+}
+.progress-fill {
+  background: var(--accent-color);
+  height: 100%;
+  width: 0%;
+  transition: width 0.2s;
+}
+.export-log {
+  font-family: monospace;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  max-height: 140px;
+  overflow-y: auto;
+  background: var(--bg-dark);
+  border-radius: 4px;
+  padding: 6px;
+  margin-top: 8px;
+  white-space: pre-wrap;
+}
+</style>
+
+<div class="menu-bar">
+<span style="font-weight: bold; color: var(--accent-color);">WEB-CUT PRO</span>
+<div class="dropdown">
+<button class="dropbtn">File ▾</button>
+<div class="dropdown-content">
+<button onclick="exportWorkspace()">Save Workspace</button>
+<button onclick="document.getElementById('importWorkspaceBtn').click()">Load Workspace</button>
+<button onclick="clearWorkspace()" style="color: var(--danger-color);">Clear Workspace</button>
+</div>
+</div>
+<input type="file" id="importWorkspaceBtn" class="hidden" onchange="importWorkspace(event)">
+<button class="btn" onclick="undo()">Undo (Ctrl+Z)</button>
+<span style="color: var(--text-dim); font-size: 0.75rem;" id="selection-label">No clip selected</span>
+<button class="btn" style="background: var(--success-color); margin-left: auto;" onclick="openExportModal()">🚀 Export Video</button>
+</div>
+<div class="editor-grid" id="editorGrid">
+<div class="panel assets-panel">
+<button class="collapsible-btn" onclick="togglePanel('leftPanelContent')">📁 Assets</button>
+<div id="leftPanelContent" class="panel-content">
+<input type="file" id="fileInput" multiple accept="video/*,audio/*" style="display:none" onchange="handleFileUpload(event)">
+<button class="btn btn-block" onclick="document.getElementById('fileInput').click()">+ Import Media</button>
+<p class="empty-note">Click an asset to preview it. Right-click for options. Drag onto a track below.</p>
+<div id="assetList" style="margin-top: 10px;"></div>
+</div>
+</div>
+<div class="resizer-v resizer-left" id="resizerLeft"></div>
+<div class="preview-area">
+<div id="clip-context-label"></div>
+<div class="video-container">
+<video id="main-video-player" controls></video>
+</div>
+<div id="playback-info">00:00.0 / 00:00.0</div>
+</div>
+<div class="resizer-v resizer-right" id="resizerRight"></div>
+<div class="panel rules-panel">
+<button class="collapsible-btn" onclick="togglePanel('rightPanelContent')">⚙️ Rules &amp; Edits</button>
+<div id="rightPanelContent" class="panel-content">
+<div class="scope-box">
+<div class="section-title" style="margin-bottom:6px;">Apply Quick Edits &amp; Presets to</div>
+<div class="field" style="margin-bottom:6px;">
+<select id="scopeSelect" onchange="onScopeChange()">
+<option value="clip">Selected clip only</option>
+<option value="range">A time range (on selected clip's track)</option>
+<option value="track">Whole track (selected clip's track)</option>
+<option value="project">Whole project (both tracks)</option>
+</select>
+</div>
+<div class="field-inline-pair hidden" id="scopeRangeInputs">
+<div class="field"><label>Range start (s)</label><input type="number" id="scopeRangeStart" value="0" step="0.5"></div>
+<div class="field"><label>Range end (s)</label><input type="number" id="scopeRangeEnd" value="10" step="0.5"></div>
+</div>
+<p class="empty-note" id="scopeHint">Runs on just the clip selected on the timeline.</p>
+</div>
+<div class="tab-row">
+<button class="tab-btn active" data-tab="tab-quick" onclick="switchTab('tab-quick')">Quick Actions</button>
+<button class="tab-btn" data-tab="tab-presets" onclick="switchTab('tab-presets')">Presets</button>
+<button class="tab-btn" data-tab="tab-manual" onclick="switchTab('tab-manual')">Manual</button>
+</div>
+<div id="tab-quick" class="tab-panel active" style="padding-top: 10px;">
+<p class="empty-note">Each opens a parameter dialog first.</p>
+<button class="btn btn-block" onclick="openQuickActionModal('removeSilence')">✂️ Remove Quiet Parts</button>
+<button class="btn btn-block" onclick="openQuickActionModal('speedUp')">⏩ Speed Up</button>
+<button class="btn btn-block" onclick="openQuickActionModal('normalizeAudio')">🔊 Normalize Volume</button>
+</div>
+<div id="tab-presets" class="tab-panel" style="padding-top: 10px;">
+<div class="section-title">
+Saved Presets
+<button class="btn" onclick="openPresetBuilder()">+ New Preset</button>
+</div>
+<div id="presetList"></div>
+</div>
+<div id="tab-manual" class="tab-panel" style="padding-top: 10px;">
+<div class="section-title">Manual Volume</div>
+<div class="field">
+<label>Mode</label>
+<select id="volMode">
+<option value="fixed">Fixed offset</option>
+<option value="proportional">Proportional to ideal level</option>
+</select>
+</div>
+<div class="field">
+<label>Intensity (<span id="volValueLabel">0.00</span>)</label>
+<input type="range" id="volValue" min="-1" max="1" step="0.01" value="0" oninput="document.getElementById('volValueLabel').innerText = this.value">
+</div>
+<button class="btn btn-block btn-primary" onclick="applyVolumeChange()">Apply to Selected Clip</button>
+<hr style="border-color: var(--bg-accent); margin: 14px 0;">
+<div class="section-title">Ideal Volume Target</div>
+<div class="field">
+<label>Used by "Proportional" mode and Normalize (0–1, <span id="idealVolLabel">0.70</span>)</label>
+<input type="range" id="idealVolumeSlider" min="0" max="1" step="0.01" value="0.7" oninput="updateIdealVolume(this.value)">
+</div>
+</div>
+</div>
+</div>
+<div class="resizer-h resizer-bottom" id="resizerBottom"></div>
+<div class="timeline-container">
+<div class="timeline-toolbar">
+<button class="btn" onclick="splitClip()">✂️ Split</button>
+<button class="btn btn-danger" onclick="deleteClip()">🗑️ Delete</button>
+<div style="margin-left: 20px; display:flex; align-items:center; gap:10px;">
+<span>Zoom:</span>
+<input type="range" id="zoomSlider" min="1" max="100" value="10" oninput="updateZoom(this.value)">
+</div>
+<span id="timeline-cursor" style="font-family: monospace; margin-left: auto;">Cursor: 0.00s</span>
+</div>
+<div class="timeline-scroll" id="timelineScroll" onscroll="syncCursor()">
+<div class="track" id="video-track" ondrop="drop(event)" ondragover="allowDrop(event)">
+<div style="position:absolute; left:0; top:0; font-size: 10px; color: #666;">VIDEO TRACK</div>
+</div>
+<div class="track" id="audio-track" ondrop="drop(event)" ondragover="allowDrop(event)">
+<div style="position:absolute; left:0; top:0; font-size: 10px; color: #666;">AUDIO TRACK</div>
+</div>
+</div>
+</div>
+</div>
+<div id="assetCtxMenu" class="context-menu">
+<button onclick="showDeleteOptions()">Delete</button>
+</div>
+<div id="deleteOptionsMenu" class="context-menu">
+<button onclick="deleteAsset('list')">Delete from Asset list</button>
+<button id="btnDeleteWorkspace" onclick="deleteAsset('workspace')">Delete from Workspace</button>
+<button onclick="closeMenus()">Cancel</button>
+</div>
+<!-- Generic parameter modal, used for single quick actions AND for adding a step to a preset -->
+<div class="modal-overlay" id="paramModal">
+<div class="modal-box">
+<div class="modal-title"><span id="paramModalTitle">Step</span><button class="btn" onclick="closeModal('paramModal')">✕</button></div>
+<div id="paramModalBody"></div>
+<div class="field-row" id="paramModalReviewRow" style="margin-top: 6px;">
+<input type="checkbox" id="paramModalReview" checked>
+<label for="paramModalReview" style="margin:0;">Review proposed changes before applying</label>
+</div>
+<div class="modal-actions">
+<button class="btn" onclick="closeModal('paramModal')">Cancel</button>
+<button class="btn btn-primary" id="paramModalPrimaryBtn">Run</button>
+</div>
+</div>
+</div>
+<!-- Preset builder modal -->
+<div class="modal-overlay" id="presetBuilderModal">
+<div class="modal-box wide">
+<div class="modal-title"><span>Build Preset</span><button class="btn" onclick="closeModal('presetBuilderModal')">✕</button></div>
+<div class="field">
+<label>Preset name</label>
+<input type="text" id="presetNameInput" placeholder="e.g. Podcast Tightener">
+</div>
+<div class="section-title">
+Steps (run in order)
+<select id="addStepSelect">
+<option value="">+ Add step…</option>
+<option value="removeSilence">Remove Quiet Parts</option>
+<option value="speedUp">Speed Up</option>
+<option value="normalizeAudio">Normalize Volume</option>
+</select>
+</div>
+<div id="presetStepsContainer"></div>
+<p class="empty-note" id="presetStepsEmptyNote">No steps yet — add one above.</p>
+<div class="field-row" style="margin-top: 10px;">
+<input type="checkbox" id="presetReviewCheckbox" checked>
+<label for="presetReviewCheckbox" style="margin:0;">Review proposed changes before applying each run</label>
+</div>
+<div class="modal-actions">
+<button class="btn" onclick="closeModal('presetBuilderModal')">Cancel</button>
+<button class="btn btn-primary" onclick="savePreset()">Save Preset</button>
+</div>
+</div>
+</div>
+<!-- Review / diff modal shown before committing changes -->
+<div class="modal-overlay" id="reviewModal">
+<div class="modal-box">
+<div class="modal-title"><span>Review Changes</span><button class="btn" onclick="closeModal('reviewModal')">✕</button></div>
+<ul class="diff-list" id="reviewDiffList"></ul>
+<div class="modal-actions">
+<button class="btn" onclick="closeModal('reviewModal')">Cancel</button>
+<button class="btn btn-success" id="reviewApplyBtn">Apply Changes</button>
+</div>
+</div>
+</div>
+<!-- Export modal -->
+<div class="modal-overlay" id="exportModal">
+<div class="modal-box">
+<div class="modal-title"><span>Export Video</span><button class="btn" onclick="closeModal('exportModal')">✕</button></div>
+<div id="exportPreflight"></div>
+<div class="field hidden" id="exportAudioModeField">
+<label>Both tracks have audio — how should they combine?</label>
+<select id="exportAudioMode">
+<option value="replace">Replace video's audio with the audio track</option>
+<option value="mix">Mix both together</option>
+</select>
+</div>
+<div id="exportRunning" class="hidden">
+<p class="empty-note" id="exportStatusLine">Loading FFmpeg…</p>
+<div class="progress-track"><div class="progress-fill" id="exportProgressFill"></div></div>
+<div class="export-log" id="exportLog"></div>
+</div>
+<div id="exportDone" class="hidden">
+<p class="empty-note">Done. Your file was built entirely in your browser.</p>
+<a id="exportDownloadLink" class="btn btn-success btn-block" download="export.mp4">⬇️ Download</a>
+</div>
+<div class="modal-actions">
+<button class="btn" onclick="closeModal('exportModal')">Close</button>
+<button class="btn btn-primary" id="exportStartBtn" onclick="startExport()">Start Export</button>
+</div>
+</div>
+</div>
+<!--
+Must be its own file, same origin, not a CDN — see the deployment note near
+the top of this document. This registers itself as a service worker that
+adds COOP/COEP headers so the page can become cross-origin isolated on
+GitHub Pages (needed for SharedArrayBuffer / ffmpeg.wasm below).
+-->
+
+<script src="coi-serviceworker.js"></script>
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+<script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+<script>
+/* =========================================================================
+   RESIZING LOGIC
+   ========================================================================= */
+const grid = document.getElementById('editorGrid');
+let isResizingLeft = false, isResizingRight = false, isResizingBottom = false;
+document.getElementById('resizerLeft').addEventListener('mousedown', (e) => { isResizingLeft = true; e.preventDefault(); });
+document.getElementById('resizerRight').addEventListener('mousedown', (e) => { isResizingRight = true; e.preventDefault(); });
+document.getElementById('resizerBottom').addEventListener('mousedown', (e) => { isResizingBottom = true; e.preventDefault(); });
+window.addEventListener('mousemove', (e) => {
+  const gridRect = grid.getBoundingClientRect();
+  if (isResizingLeft) {
+    const newWidth = e.clientX - gridRect.left;
+    if (newWidth > 100 && newWidth < 600) grid.style.gridTemplateColumns = `${newWidth}px 4px 1fr 4px 340px`;
+  } else if (isResizingRight) {
+    const rightPanelWidth = gridRect.right - e.clientX;
+    if (rightPanelWidth > 260 && rightPanelWidth < 640) grid.style.gridTemplateColumns = `260px 4px 1fr 4px ${rightPanelWidth}px`;
+  } else if (isResizingBottom) {
+    const topHeight = e.clientY - gridRect.top;
+    if (topHeight > 100 && topHeight < window.innerHeight - 100) grid.style.gridTemplateRows = `${topHeight}px 4px 1fr`;
+  }
+});
+window.addEventListener('mouseup', () => { isResizingLeft = isResizingRight = isResizingBottom = false; });
+
+/* =========================================================================
+   DATABASE
+   ========================================================================= */
+const DB_NAME = "WebCutProDB";
+const STORE_NAME = "assets";
+let db;
+async function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME);
+    request.onsuccess = (e) => { db = e.target.result; resolve(); };
+    request.onerror = (e) => reject(e);
+  });
+}
+async function saveFileToDB(id, blob) {
+  const tx = db.transaction(STORE_NAME, "readwrite");
+  tx.objectStore(STORE_NAME).put(blob, id);
+  return new Promise(res => tx.oncomplete = res);
+}
+async function getFileFromDB(id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const req = tx.objectStore(STORE_NAME).get(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (e) => reject(e);
+  });
+}
+
+/* =========================================================================
+   STATE
+   clip = { id, assetId, start, sourceIn, sourceOut, playbackRate, volume }
+   duration on the timeline = (sourceOut - sourceIn) / playbackRate
+   ========================================================================= */
+let appState = {
+  assets: [],                              // {id, name, type, duration}
+  timeline: { video: [], audio: [] },
+  settings: { idealVolume: 0.7, zoomLevel: 10 },
+  presets: [],                             // {id, name, reviewBeforeApply, steps:[{type, params}]}
+  selectedClipId: null,
+  selectedClipType: null
+};
+let historyStack = [];
+
+function clipDuration(clip) { return Math.max(0, (clip.sourceOut - clip.sourceIn) / clip.playbackRate); }
+
+function snapshot() {
+  return { timeline: appState.timeline, settings: appState.settings, presets: appState.presets };
+}
+function saveState() {
+  historyStack.push(JSON.stringify(snapshot()));
+  if (historyStack.length > 50) historyStack.shift();
+}
+function undo() {
+  if (historyStack.length === 0) return;
+  const state = JSON.parse(historyStack.pop());
+  appState.timeline = state.timeline;
+  appState.settings = state.settings;
+  appState.presets = state.presets || appState.presets;
+  renderTimeline(); renderPresetList();
+  document.getElementById('zoomSlider').value = appState.settings.zoomLevel;
+  document.getElementById('idealVolumeSlider').value = appState.settings.idealVolume;
+  document.getElementById('idealVolLabel').innerText = appState.settings.idealVolume.toFixed(2);
+}
+window.addEventListener('keydown', (e) => { if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); } });
+window.addEventListener('click', (e) => { if (!e.target.closest('.asset-item') && !e.target.closest('.context-menu')) closeMenus(); });
+
+function updateIdealVolume(v) {
+  appState.settings.idealVolume = parseFloat(v);
+  document.getElementById('idealVolLabel').innerText = parseFloat(v).toFixed(2);
+}
+
+/* =========================================================================
+   ASSET MANAGEMENT
+   ========================================================================= */
+async function handleFileUpload(event) {
+  const files = event.target.files;
+  for (let file of files) {
+    const id = "asset_" + Date.now() + Math.random().toString(36).slice(2);
+    await saveFileToDB(id, file);
+    const duration = await probeDuration(file);
+    appState.assets.push({ id, name: file.name, type: file.type.startsWith('video') ? 'video' : 'audio', duration });
+  }
+  renderAssets();
+  event.target.value = "";
+}
+function probeDuration(file) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const el = document.createElement(file.type.startsWith('video') ? 'video' : 'audio');
+    el.preload = 'metadata';
+    el.onloadedmetadata = () => { const d = isFinite(el.duration) ? el.duration : 5; URL.revokeObjectURL(url); resolve(d); };
+    el.onerror = () => { URL.revokeObjectURL(url); resolve(5); };
+    el.src = url;
+  });
+}
+function renderAssets() {
+  const list = document.getElementById('assetList');
+  list.innerHTML = '';
+  for (let asset of appState.assets) {
+    const div = document.createElement('div');
+    div.className = 'asset-item';
+    div.innerText = `${asset.name}  (${asset.duration ? asset.duration.toFixed(1) + 's' : '?'})`;
+    div.draggable = true;
+    div.ondragstart = (e) => e.dataTransfer.setData("assetId", asset.id);
+    div.onclick = () => previewAsset(asset.id);
+    div.oncontextmenu = (e) => { e.preventDefault(); openAssetMenu(e, asset.id); };
+    list.appendChild(div);
+  }
+}
+let activeAssetId = null;
+function openAssetMenu(e, id) {
+  e.stopPropagation();
+  activeAssetId = id;
+  const menu = document.getElementById('assetCtxMenu');
+  menu.style.display = 'block'; menu.style.left = e.pageX + 'px'; menu.style.top = e.pageY + 'px';
+}
+function showDeleteOptions() {
+  const isUsed = appState.timeline.video.concat(appState.timeline.audio).some(c => c.assetId === activeAssetId);
+  document.getElementById('btnDeleteWorkspace').style.display = isUsed ? 'block' : 'none';
+  closeMenus();
+  const menu = document.getElementById('deleteOptionsMenu');
+  menu.style.display = 'block'; menu.style.left = document.getElementById('assetCtxMenu').style.left; menu.style.top = document.getElementById('assetCtxMenu').style.top;
+}
+async function deleteAsset(mode) {
+  if (!activeAssetId) return;
+  if (mode === 'list') {
+    appState.assets = appState.assets.filter(a => a.id !== activeAssetId);
+  } else if (mode === 'workspace') {
+    saveState();
+    appState.assets = appState.assets.filter(a => a.id !== activeAssetId);
+    appState.timeline.video = appState.timeline.video.filter(c => c.assetId !== activeAssetId);
+    appState.timeline.audio = appState.timeline.audio.filter(c => c.assetId !== activeAssetId);
+  }
+  const tx = db.transaction(STORE_NAME, "readwrite");
+  tx.objectStore(STORE_NAME).delete(activeAssetId);
+  renderAssets(); renderTimeline(); closeMenus();
+}
+function closeMenus() {
+  document.getElementById('assetCtxMenu').style.display = 'none';
+  document.getElementById('deleteOptionsMenu').style.display = 'none';
+}
+
+/* =========================================================================
+   PREVIEW PLAYER
+   ========================================================================= */
+const player = document.getElementById('main-video-player');
+let trimStopHandler = null;
+function clearTrimStop() {
+  if (trimStopHandler) { player.removeEventListener('timeupdate', trimStopHandler); trimStopHandler = null; }
+}
+async function previewAsset(assetId) {
+  clearTrimStop();
+  const asset = appState.assets.find(a => a.id === assetId);
+  const blob = await getFileFromDB(assetId);
+  if (!blob) return;
+  player.src = URL.createObjectURL(blob);
+  player.playbackRate = 1;
+  document.getElementById('clip-context-label').innerText = asset ? asset.name : '';
+  player.load(); player.play().catch(() => {});
+}
+async function previewClip(clip) {
+  clearTrimStop();
+  const asset = appState.assets.find(a => a.id === clip.assetId);
+  const blob = await getFileFromDB(clip.assetId);
+  if (!blob) return;
+  player.src = URL.createObjectURL(blob);
+  player.playbackRate = clip.playbackRate || 1;
+  document.getElementById('clip-context-label').innerText = `${asset ? asset.name : 'clip'}  [${clip.sourceIn.toFixed(2)}s – ${clip.sourceOut.toFixed(2)}s @ ${clip.playbackRate}x]`;
+  player.load();
+  player.onloadedmetadata = () => { player.currentTime = clip.sourceIn; player.play().catch(() => {}); };
+  trimStopHandler = () => { if (player.currentTime >= clip.sourceOut) player.pause(); };
+  player.addEventListener('timeupdate', trimStopHandler);
+}
+player.addEventListener('timeupdate', () => {
+  document.getElementById('playback-info').innerText = `${fmtTime(player.currentTime)} / ${fmtTime(player.duration || 0)}`;
+});
+function fmtTime(s) { if (!isFinite(s)) return '00:00.0'; const m = Math.floor(s / 60); const sec = (s % 60).toFixed(1).padStart(4, '0'); return `${String(m).padStart(2,'0')}:${sec}`; }
+
+/* =========================================================================
+   TIMELINE
+   ========================================================================= */
+function allowDrop(ev) { ev.preventDefault(); }
+async function drop(ev) {
+  ev.preventDefault();
+  saveState();
+  const assetId = ev.dataTransfer.getData("assetId");
+  const asset = appState.assets.find(a => a.id === assetId);
+  if (!asset) return;
+  const trackId = ev.currentTarget.id;
+  const rect = ev.currentTarget.getBoundingClientRect();
+  const offsetX = ev.clientX - rect.left + document.getElementById('timelineScroll').scrollLeft;
+  const clip = {
+    id: Date.now() + Math.random(),
+    assetId: assetId,
+    start: Math.max(0, offsetX / appState.settings.zoomLevel),
+    sourceIn: 0,
+    sourceOut: Math.min(asset.duration || 5, 5),
+    playbackRate: 1,
+    volume: 1.0
+  };
+  if (trackId === 'video-track') appState.timeline.video.push(clip); else appState.timeline.audio.push(clip);
+  renderTimeline();
+}
+function renderTimeline() {
+  const vTrack = document.getElementById('video-track');
+  const aTrack = document.getElementById('audio-track');
+  vTrack.querySelectorAll('.clip').forEach(n => n.remove());
+  aTrack.querySelectorAll('.clip').forEach(n => n.remove());
+  appState.timeline.video.sort((a, b) => a.start - b.start).forEach(clip => vTrack.appendChild(createClipUI(clip, 'video')));
+  appState.timeline.audio.sort((a, b) => a.start - b.start).forEach(clip => aTrack.appendChild(createClipUI(clip, 'audio')));
+  updateSelectionLabel();
+}
+function createClipUI(clip, type) {
+  const div = document.createElement('div');
+  div.className = `clip ${type}-clip ${appState.selectedClipId === clip.id ? 'selected' : ''}`;
+  div.style.left = (clip.start * appState.settings.zoomLevel) + 'px';
+  div.style.width = Math.max(4, clipDuration(clip) * appState.settings.zoomLevel) + 'px';
+  const asset = appState.assets.find(a => a.id == clip.assetId);
+  const rateTag = clip.playbackRate !== 1 ? ` ${clip.playbackRate}x` : '';
+  div.innerHTML = `<div>${asset ? asset.name : 'Unknown Asset'}</div><div class="clip-meta">${clipDuration(clip).toFixed(1)}s${rateTag}</div>`;
+  div.onclick = (e) => { e.stopPropagation(); selectClip(clip.id, type); };
+  return div;
+}
+function selectClip(id, type) {
+  appState.selectedClipId = id; appState.selectedClipType = type;
+  renderTimeline();
+  const track = type === 'video' ? appState.timeline.video : appState.timeline.audio;
+  const clip = track.find(c => c.id === id);
+  if (clip) previewClip(clip);
+  updateScopeHint();
+}
+function getSelectedClip() {
+  if (!appState.selectedClipId) return null;
+  const track = appState.selectedClipType === 'video' ? appState.timeline.video : appState.timeline.audio;
+  return track.find(c => c.id === appState.selectedClipId) || null;
+}
+function updateSelectionLabel() {
+  const clip = getSelectedClip();
+  const label = document.getElementById('selection-label');
+  if (!clip) { label.innerText = 'No clip selected'; return; }
+  const asset = appState.assets.find(a => a.id === clip.assetId);
+  label.innerText = `Selected: ${asset ? asset.name : 'clip'} (${clipDuration(clip).toFixed(1)}s)`;
+}
+function updateZoom(val) { appState.settings.zoomLevel = parseInt(val); renderTimeline(); }
+function applyVolumeChange() {
+  const clip = getSelectedClip();
+  if (!clip) return alert("Select a clip first.");
+  saveState();
+  const mode = document.getElementById('volMode').value;
+  const val = parseFloat(document.getElementById('volValue').value);
+  if (mode === 'fixed') clip.volume += val;
+  else clip.volume += (appState.settings.idealVolume - clip.volume) * Math.abs(val);
+  clip.volume = Math.max(0, clip.volume);
+  renderTimeline();
+}
+function splitClip() {
+  const clip = getSelectedClip();
+  if (!clip) return;
+  saveState();
+  const track = appState.selectedClipType === 'video' ? appState.timeline.video : appState.timeline.audio;
+  const splitAtSource = clip.sourceIn + (clipDuration(clip) * clip.playbackRate) / 2; // midpoint in source time
+  const newClip = { ...clip, id: Date.now() + Math.random(), sourceIn: splitAtSource, start: clip.start + clipDuration(clip) / 2 };
+  clip.sourceOut = splitAtSource;
+  track.push(newClip);
+  renderTimeline();
+}
+function deleteClip() {
+  const clip = getSelectedClip();
+  if (!clip) return;
+  saveState();
+  const type = appState.selectedClipType;
+  appState.timeline[type] = appState.timeline[type].filter(c => c.id !== clip.id);
+  appState.selectedClipId = null;
+  renderTimeline();
+}
+function syncCursor() {
+  const scrollLeft = document.getElementById('timelineScroll').scrollLeft;
+  document.getElementById('timeline-cursor').innerText = `Cursor: ${(scrollLeft / appState.settings.zoomLevel).toFixed(2)}s`;
+}
+
+/* =========================================================================
+   SCOPE SELECTOR — decides which clips a Quick Edit / Preset run applies to
+   ========================================================================= */
+function onScopeChange() {
+  const scope = document.getElementById('scopeSelect').value;
+  document.getElementById('scopeRangeInputs').classList.toggle('hidden', scope !== 'range');
+  updateScopeHint();
+}
+function updateScopeHint() {
+  const scope = document.getElementById('scopeSelect').value;
+  const hints = {
+    clip: 'Runs on just the clip selected on the timeline.',
+    range: "Runs on every clip that overlaps the range below, on the selected clip's track. Those clips are re-packed back-to-back afterward.",
+    track: "Runs on every clip on the selected clip's track. The whole track is re-packed back-to-back afterward.",
+    project: 'Runs on every clip on both tracks. Both tracks are re-packed back-to-back afterward.'
+  };
+  document.getElementById('scopeHint').innerText = hints[scope];
+}
+/** Returns { video: [clips...], audio: [clips...] } for the current scope. */
+function getScopeClips() {
+  const scope = document.getElementById('scopeSelect').value;
+  const selType = appState.selectedClipType;
+  if (scope === 'clip') {
+    const c = getSelectedClip();
+    if (!c) return null;
+    return selType === 'video' ? { video: [c], audio: [] } : { video: [], audio: [c] };
+  }
+  if (scope === 'project') {
+    return { video: appState.timeline.video.slice(), audio: appState.timeline.audio.slice() };
+  }
+  // 'range' and 'track' both operate on the selected clip's track
+  if (!selType) return null;
+  const track = selType === 'video' ? appState.timeline.video : appState.timeline.audio;
+  let clips = track.slice();
+  if (scope === 'range') {
+    const rStart = parseFloat(document.getElementById('scopeRangeStart').value) || 0;
+    const rEnd = parseFloat(document.getElementById('scopeRangeEnd').value) || 0;
+    clips = clips.filter(c => c.start < rEnd && (c.start + clipDuration(c)) > rStart);
+  }
+  return selType === 'video' ? { video: clips, audio: [] } : { video: [], audio: clips };
+}
+
+/* =========================================================================
+   STEP LIBRARY — schema + defaults for each Quick Edit step type
+   ========================================================================= */
+const STEP_LIBRARY = {
+  removeSilence: {
+    label: 'Remove Quiet Parts',
+    fields: [
+      { key: 'thresholdDb', label: 'Quiet threshold (dB, lower = stricter)', type: 'number', step: 1, default: -40 },
+      { key: 'minSilenceLen', label: 'Ignore quiet spans shorter than (s) — e.g. a 1s "um"', type: 'number', step: 0.1, default: 1.0 },
+      { key: 'maxQuietRemaining', label: 'Keep up to this much quiet per cut (s)', type: 'number', step: 0.1, default: 0.4 }
+    ]
+  },
+  speedUp: {
+    label: 'Speed Up',
+    fields: [
+      { key: 'rate', label: 'Playback rate multiplier', type: 'number', step: 0.05, default: 1.3, min: 0.1 }
+    ]
+  },
+  normalizeAudio: {
+    label: 'Normalize Volume',
+    fields: [
+      { key: 'targetLevel', label: 'Target level (0–1)', type: 'number', step: 0.05, default: 0.7, min: 0, max: 1 },
+      { key: 'mode', label: 'Mode', type: 'select', options: ['proportional', 'fixed'], default: 'proportional' },
+      { key: 'intensity', label: 'Intensity (0–1, how far to move toward target)', type: 'number', step: 0.05, default: 0.6, min: 0, max: 1 }
+    ]
+  }
+};
+function defaultParamsFor(type) {
+  const out = {};
+  STEP_LIBRARY[type].fields.forEach(f => out[f.key] = f.default);
+  return out;
+}
+function renderParamFields(type, params, container) {
+  container.innerHTML = '';
+  STEP_LIBRARY[type].fields.forEach(f => {
+    const wrap = document.createElement('div'); wrap.className = 'field';
+    const label = document.createElement('label'); label.innerText = f.label; wrap.appendChild(label);
+    let input;
+    if (f.type === 'select') {
+      input = document.createElement('select');
+      f.options.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.innerText = o; if (params[f.key] === o) opt.selected = true; input.appendChild(opt); });
+    } else {
+      input = document.createElement('input'); input.type = 'number'; input.step = f.step || 'any';
+      if (f.min !== undefined) input.min = f.min; if (f.max !== undefined) input.max = f.max;
+      input.value = params[f.key];
+    }
+    input.dataset.key = f.key;
+    input.oninput = () => { params[f.key] = f.type === 'select' ? input.value : parseFloat(input.value); };
+    wrap.appendChild(input);
+    container.appendChild(wrap);
+  });
+}
+
+/* =========================================================================
+   SILENCE DETECTION — real analysis of the source audio via Web Audio API
+   ========================================================================= */
+async function detectQuietSegments(assetId, sourceIn, sourceOut, thresholdDb, minSilenceLen) {
+  const blob = await getFileFromDB(assetId);
+  const arrayBuffer = await blob.arrayBuffer();
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AudioCtx();
+  let audioBuffer;
+  try { audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0)); }
+  finally { /* ctx closed below */ }
+  const data = audioBuffer.getChannelData(0);
+  const sampleRate = audioBuffer.sampleRate;
+  const windowSize = Math.max(1, Math.floor(sampleRate * 0.05)); // 50ms windows
+  const startSample = Math.max(0, Math.floor(sourceIn * sampleRate));
+  const endSample = Math.min(data.length, Math.floor(sourceOut * sampleRate));
+  const thresholdAmp = Math.pow(10, thresholdDb / 20);
+  const segments = [];
+  let curStart = null;
+  for (let i = startSample; i < endSample; i += windowSize) {
+    const upper = Math.min(i + windowSize, endSample);
+    let sum = 0;
+    for (let j = i; j < upper; j++) sum += data[j] * data[j];
+    const rms = Math.sqrt(sum / Math.max(1, upper - i));
+    const t = i / sampleRate;
+    if (rms < thresholdAmp) { if (curStart === null) curStart = t; }
+    else { if (curStart !== null) { segments.push({ start: curStart, end: t }); curStart = null; } }
+  }
+  if (curStart !== null) segments.push({ start: curStart, end: endSample / sampleRate });
+  ctx.close();
+  return segments.filter(s => (s.end - s.start) >= minSilenceLen);
+}
+
+/* =========================================================================
+   STEP ENGINE — computes a proposed new clip list + a human diff, per step,
+   for ONE original clip. Returns { clips, diffLines }.
+   ========================================================================= */
+async function computeRemoveSilenceOne(clip, params) {
+  const quiet = await detectQuietSegments(clip.assetId, clip.sourceIn, clip.sourceOut, params.thresholdDb, params.minSilenceLen);
+  const cuts = [];
+  for (const seg of quiet) {
+    const segLen = seg.end - seg.start;
+    if (segLen > params.maxQuietRemaining) {
+      const pad = params.maxQuietRemaining / 2;
+      cuts.push({ start: seg.start + pad, end: seg.end - pad });
+    }
+  }
+  if (cuts.length === 0) return { clips: [clip], diffLines: [] };
+  let cursor = clip.sourceIn;
+  const keepRanges = [];
+  for (const cut of cuts) {
+    if (cut.start > cursor) keepRanges.push({ start: cursor, end: cut.start });
+    cursor = Math.max(cursor, cut.end);
+  }
+  if (cursor < clip.sourceOut) keepRanges.push({ start: cursor, end: clip.sourceOut });
+  const outClips = [];
+  let runningStart = clip.start;
+  for (const range of keepRanges) {
+    const dur = (range.end - range.start) / clip.playbackRate;
+    if (dur <= 0.01) continue;
+    outClips.push({ ...clip, id: Date.now() + Math.random(), sourceIn: range.start, sourceOut: range.end, start: runningStart });
+    runningStart += dur;
+  }
+  const totalCutTime = cuts.reduce((s, c) => s + (c.end - c.start), 0);
+  const diffLines = totalCutTime > 0 ? [{ type: 'cut', text: `Removed ${cuts.length} quiet segment${cuts.length > 1 ? 's' : ''} totaling ${totalCutTime.toFixed(1)}s of silence` }] : [];
+  return { clips: outClips, diffLines };
+}
+function computeSpeedUpOne(clip, params) {
+  const oldDur = clipDuration(clip);
+  const newClip = { ...clip, playbackRate: clip.playbackRate * params.rate };
+  const saved = oldDur - clipDuration(newClip);
+  const diffLines = saved !== 0 ? [{ type: 'speed', text: `Sped up by ${params.rate}x, saving ${saved.toFixed(1)}s` }] : [];
+  return { clips: [newClip], diffLines };
+}
+function computeNormalizeOne(clip, params) {
+  const oldVol = clip.volume;
+  let newVol = params.mode === 'fixed' ? params.targetLevel : clip.volume + (params.targetLevel - clip.volume) * params.intensity;
+  newVol = Math.max(0, newVol);
+  const diffLines = Math.abs(newVol - oldVol) > 0.001 ? [{ type: 'volume', text: `Adjusted volume from ${oldVol.toFixed(2)} to ${newVol.toFixed(2)}` }] : [];
+  return { clips: [{ ...clip, volume: newVol }], diffLines };
+}
+async function runStepOne(type, clip, params) {
+  if (type === 'removeSilence') return await computeRemoveSilenceOne(clip, params);
+  if (type === 'speedUp') return computeSpeedUpOne(clip, params);
+  if (type === 'normalizeAudio') return computeNormalizeOne(clip, params);
+  return { clips: [clip], diffLines: [] };
+}
+/** Runs a full step chain against one original clip. */
+async function computeChainForOneClip(clip, steps) {
+  let current = [clip];
+  let diffLines = [];
+  for (const step of steps) {
+    let nextAll = [];
+    for (const c of current) {
+      const result = await runStepOne(step.type, c, step.params);
+      nextAll = nextAll.concat(result.clips);
+      diffLines = diffLines.concat(result.diffLines);
+    }
+    current = nextAll;
+  }
+  return { originalClip: clip, newClips: current, diffLines };
+}
+/** Runs a full step chain against every clip in the current scope. */
+async function computeChainForScope(steps) {
+  const scopeClips = getScopeClips();
+  if (!scopeClips || (scopeClips.video.length === 0 && scopeClips.audio.length === 0)) return null;
+  const perTrackLabel = (t) => t === 'video' ? 'video track' : 'audio track';
+  const results = { video: [], audio: [] };
+  let diffLines = [];
+  for (const trackName of ['video', 'audio']) {
+    for (const clip of scopeClips[trackName]) {
+      const r = await computeChainForOneClip(clip, steps);
+      results[trackName].push(r);
+      r.diffLines.forEach(d => diffLines.push({ ...d, text: scopeClips.video.length + scopeClips.audio.length > 1 ? `[${perTrackLabel(trackName)}] ${d.text}` : d.text }));
+    }
+  }
+  if (diffLines.length === 0) diffLines = [];
+  return { scope: document.getElementById('scopeSelect').value, results, diffLines };
+}
+/** Commits a computeChainForScope() result into appState.timeline. */
+function commitScopeResult(chainResult) {
+  saveState();
+  for (const trackName of ['video', 'audio']) {
+    const perClipResults = chainResult.results[trackName];
+    if (perClipResults.length === 0) continue;
+    const track = appState.timeline[trackName];
+    if (chainResult.scope === 'clip' && perClipResults.length === 1) {
+      // preserve gaps elsewhere: ripple only what's after the edited clip
+      appState.timeline[trackName] = ripplePack(track, perClipResults[0].originalClip.id, perClipResults[0].newClips);
+    } else {
+      // multi-clip scope: rebuild this track in original order, substituting
+      // processed clips, then tight-pack sequentially.
+      const replacements = new Map(perClipResults.map(r => [r.originalClip.id, r.newClips]));
+      const rebuilt = [];
+      track.slice().sort((a, b) => a.start - b.start).forEach(c => {
+        if (replacements.has(c.id)) rebuilt.push(...replacements.get(c.id));
+        else rebuilt.push(c);
+      });
+      let cursor = 0;
+      rebuilt.forEach(c => { c.start = cursor; cursor += clipDuration(c); });
+      appState.timeline[trackName] = rebuilt;
+    }
+  }
+  appState.selectedClipId = null;
+  renderTimeline();
+}
+
+/* Repack a track after ONE clip was replaced by newClips, rippling later
+   clips left/right to close or open the resulting gap. */
+function ripplePack(track, anchorId, newClips) {
+  const idx = track.findIndex(c => c.id === anchorId);
+  if (idx === -1) return track.concat(newClips);
+  const before = track.slice(0, idx);
+  const after = track.slice(idx + 1);
+  const oldClip = track[idx];
+  const oldEnd = oldClip.start + clipDuration(oldClip);
+  const newEnd = newClips.length ? newClips[newClips.length - 1].start + clipDuration(newClips[newClips.length - 1]) : oldClip.start;
+  const delta = newEnd - oldEnd;
+  const shiftedAfter = after.map(c => ({ ...c, start: Math.max(0, c.start + delta) }));
+  return [...before, ...newClips, ...shiftedAfter];
+}
+
+/* =========================================================================
+   QUICK ACTION MODAL (single-step, ad hoc, respects the scope selector)
+   ========================================================================= */
+function openQuickActionModal(type) {
+  if (!getScopeClips()) { alert('Select a clip on the timeline first (the scope is based on its track).'); return; }
+  const params = defaultParamsFor(type);
+  document.getElementById('paramModalTitle').innerText = STEP_LIBRARY[type].label;
+  renderParamFields(type, params, document.getElementById('paramModalBody'));
+  const primaryBtn = document.getElementById('paramModalPrimaryBtn');
+  primaryBtn.innerText = 'Run';
+  primaryBtn.onclick = async () => {
+    primaryBtn.disabled = true; primaryBtn.innerText = 'Analyzing…';
+    const result = await computeChainForScope([{ type, params }]);
+    primaryBtn.disabled = false; primaryBtn.innerText = 'Run';
+    closeModal('paramModal');
+    if (!result) return;
+    if (document.getElementById('paramModalReview').checked) openReviewModal(result);
+    else commitScopeResult(result);
+  };
+  openModal('paramModal');
+}
+
+/* =========================================================================
+   PRESET BUILDER
+   ========================================================================= */
+let presetBuilderSteps = []; // [{type, params}]
+function openPresetBuilder(existingPreset) {
+  presetBuilderSteps = existingPreset ? JSON.parse(JSON.stringify(existingPreset.steps)) : [];
+  document.getElementById('presetNameInput').value = existingPreset ? existingPreset.name : '';
+  document.getElementById('presetReviewCheckbox').checked = existingPreset ? existingPreset.reviewBeforeApply : true;
+  document.getElementById('presetBuilderModal').dataset.editingId = existingPreset ? existingPreset.id : '';
+  renderPresetBuilderSteps();
+  document.getElementById('addStepSelect').value = '';
+  openModal('presetBuilderModal');
+}
+document.getElementById('addStepSelect').addEventListener('change', (e) => {
+  const type = e.target.value;
+  if (!type) return;
+  presetBuilderSteps.push({ type, params: defaultParamsFor(type) });
+  e.target.value = '';
+  renderPresetBuilderSteps();
+});
+function renderPresetBuilderSteps() {
+  const container = document.getElementById('presetStepsContainer');
+  container.innerHTML = '';
+  document.getElementById('presetStepsEmptyNote').classList.toggle('hidden', presetBuilderSteps.length > 0);
+  presetBuilderSteps.forEach((step, i) => {
+    const card = document.createElement('div'); card.className = 'step-card';
+    const head = document.createElement('div'); head.className = 'step-head';
+    head.innerHTML = `<span>${i + 1}. ${STEP_LIBRARY[step.type].label}</span>`;
+    const removeBtn = document.createElement('button'); removeBtn.className = 'btn btn-danger'; removeBtn.innerText = 'Remove';
+    removeBtn.onclick = () => { presetBuilderSteps.splice(i, 1); renderPresetBuilderSteps(); };
+    head.appendChild(removeBtn);
+    card.appendChild(head);
+    const fieldsDiv = document.createElement('div');
+    renderParamFields(step.type, step.params, fieldsDiv);
+    card.appendChild(fieldsDiv);
+    container.appendChild(card);
+  });
+}
+function savePreset() {
+  const name = document.getElementById('presetNameInput').value.trim();
+  if (!name) return alert('Give the preset a name.');
+  if (presetBuilderSteps.length === 0) return alert('Add at least one step.');
+  saveState();
+  const editingId = document.getElementById('presetBuilderModal').dataset.editingId;
+  const preset = {
+    id: editingId || (Date.now() + Math.random()),
+    name,
+    reviewBeforeApply: document.getElementById('presetReviewCheckbox').checked,
+    steps: JSON.parse(JSON.stringify(presetBuilderSteps))
+  };
+  if (editingId) {
+    const idx = appState.presets.findIndex(p => String(p.id) === String(editingId));
+    if (idx !== -1) appState.presets[idx] = preset;
+  } else {
+    appState.presets.push(preset);
+  }
+  closeModal('presetBuilderModal');
+  renderPresetList();
+}
+function renderPresetList() {
+  const list = document.getElementById('presetList');
+  list.innerHTML = '';
+  if (appState.presets.length === 0) { list.innerHTML = '<p class="empty-note">No presets yet. Build one with "+ New Preset".</p>'; return; }
+  appState.presets.forEach(preset => {
+    const card = document.createElement('div'); card.className = 'preset-card';
+    const head = document.createElement('div'); head.className = 'preset-head';
+    head.innerHTML = `<strong>${preset.name}</strong> <span class="chip">${preset.reviewBeforeApply ? 'review on' : 'auto-apply'}</span>`;
+    card.appendChild(head);
+    const stepsLine = document.createElement('div'); stepsLine.className = 'preset-steps';
+    stepsLine.innerText = preset.steps.map(s => STEP_LIBRARY[s.type].label).join(' → ');
+    card.appendChild(stepsLine);
+    const actions = document.createElement('div'); actions.className = 'preset-actions';
+    const runBtn = document.createElement('button'); runBtn.className = 'btn btn-primary'; runBtn.innerText = 'Run';
+    runBtn.onclick = () => runPreset(preset);
+    const editBtn = document.createElement('button'); editBtn.className = 'btn'; editBtn.innerText = 'Edit';
+    editBtn.onclick = () => openPresetBuilder(preset);
+    const delBtn = document.createElement('button'); delBtn.className = 'btn btn-danger'; delBtn.innerText = 'Delete';
+    delBtn.onclick = () => { saveState(); appState.presets = appState.presets.filter(p => p.id !== preset.id); renderPresetList(); };
+    actions.appendChild(runBtn); actions.appendChild(editBtn); actions.appendChild(delBtn);
+    card.appendChild(actions);
+    list.appendChild(card);
+  });
+}
+async function runPreset(preset) {
+  if (!getScopeClips()) { alert('Select a clip on the timeline first (the scope is based on its track).'); return; }
+  const result = await computeChainForScope(preset.steps);
+  if (!result) return;
+  if (preset.reviewBeforeApply) openReviewModal(result);
+  else commitScopeResult(result);
+}
+
+/* =========================================================================
+   REVIEW MODAL
+   ========================================================================= */
+function openReviewModal(result) {
+  const list = document.getElementById('reviewDiffList');
+  list.innerHTML = '';
+  if (result.diffLines.length === 0) {
+    list.innerHTML = '<li>No changes were needed — nothing met the thresholds you set.</li>';
+  } else {
+    result.diffLines.forEach(d => { const li = document.createElement('li'); li.className = `diff-${d.type}`; li.innerText = d.text; list.appendChild(li); });
+  }
+  const applyBtn = document.getElementById('reviewApplyBtn');
+  applyBtn.onclick = () => { closeModal('reviewModal'); commitScopeResult(result); };
+  openModal('reviewModal');
+}
+
+/* =========================================================================
+   MODAL + TAB HELPERS
+   ========================================================================= */
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === tabId));
+}
+function togglePanel(id) { document.getElementById(id).classList.toggle('hidden'); }
+
+/* =========================================================================
+   WORKSPACE IMPORT / EXPORT
+   ========================================================================= */
+function exportWorkspace() {
+  const blob = new Blob([JSON.stringify(appState)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'workspace.json'; a.click();
+}
+function importWorkspace(event) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const loaded = JSON.parse(e.target.result);
+    appState = Object.assign({ presets: [], selectedClipId: null, selectedClipType: null }, loaded);
+    renderAssets(); renderTimeline(); renderPresetList();
+    document.getElementById('idealVolumeSlider').value = appState.settings.idealVolume;
+    document.getElementById('idealVolLabel').innerText = appState.settings.idealVolume.toFixed(2);
+  };
+  reader.readAsText(event.target.files[0]);
+}
+async function clearWorkspace() {
+  if (confirm("Clear all cached files and project?")) {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    tx.objectStore(STORE_NAME).clear();
+    location.reload();
+  }
+}
+
+/* =========================================================================
+   EXPORT — real rendering via ffmpeg.wasm, entirely client-side.
+   Video-track clips keep their own embedded audio (speed/volume applied
+   together with the video). If the audio track has any clips, its mixed-
+   down audio REPLACES the video track's audio in the final file — the
+   common case of a separate narration/music track. With no audio-track
+   clips, the video track's own processed audio is used as-is.
+   ========================================================================= */
+let ffmpegInstance = null;
+let writtenAssetIds = new Set();
+
+async function getFFmpeg(onLog) {
+  if (ffmpegInstance) return ffmpegInstance;
+  const { FFmpeg } = FFmpegWASM;
+  const ffmpeg = new FFmpeg();
+  ffmpeg.on('log', ({ message }) => onLog && onLog(message));
+  const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd';
+  const { toBlobURL } = FFmpegUtil;
+  await ffmpeg.load({
+    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
+  });
+  ffmpegInstance = ffmpeg;
+  writtenAssetIds = new Set();
+  return ffmpeg;
+}
+async function ensureAssetWritten(ffmpeg, assetId) {
+  const fileName = `src_${assetId}`;
+  if (writtenAssetIds.has(assetId)) return fileName;
+  const blob = await getFileFromDB(assetId);
+  const { fetchFile } = FFmpegUtil;
+  await ffmpeg.writeFile(fileName, await fetchFile(blob));
+  writtenAssetIds.add(assetId);
+  return fileName;
+}
+/** atempo only accepts 0.5–2.0; chain it to cover any speed multiplier. */
+function atempoChain(rate) {
+  let r = rate > 0 ? rate : 1;
+  const filters = [];
+  while (r > 2.0) { filters.push('atempo=2.0'); r /= 2.0; }
+  while (r < 0.5) { filters.push('atempo=0.5'); r /= 0.5; }
+  filters.push(`atempo=${r.toFixed(4)}`);
+  return filters.join(',');
+}
+async function renderClipSegment(ffmpeg, clip, index, kind, outLog) {
+  const srcFile = await ensureAssetWritten(ffmpeg, clip.assetId);
+  const outName = `${kind}seg_${index}.${kind === 'video' ? 'mp4' : 'm4a'}`;
+  const dur = clip.sourceOut - clip.sourceIn;
+  const args = ['-ss', String(clip.sourceIn), '-i', srcFile, '-t', String(dur)];
+  const af = `${atempoChain(clip.playbackRate)},volume=${clip.volume}`;
+  if (kind === 'video') {
+    const vf = clip.playbackRate !== 1 ? `setpts=PTS/${clip.playbackRate}` : null;
+    if (vf) args.push('-vf', vf);
+    args.push('-af', af, '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23', '-r', '30', '-c:a', 'aac', outName);
+  } else {
+    args.push('-vn', '-af', af, '-c:a', 'aac', outName);
+  }
+  outLog(`Rendering ${kind} segment ${index + 1}…`);
+  await ffmpeg.exec(args);
+  return outName;
+}
+async function concatSegments(ffmpeg, segmentNames, listFileName, outName, outLog) {
+  if (segmentNames.length === 1) return segmentNames[0];
+  const list = segmentNames.map(n => `file '${n}'`).join('\n');
+  await ffmpeg.writeFile(listFileName, list);
+  outLog(`Concatenating ${segmentNames.length} segments…`);
+  await ffmpeg.exec(['-f', 'concat', '-safe', '0', '-i', listFileName, '-c', 'copy', outName]);
+  return outName;
+}
+function preflightExport() {
+  const hasVideo = appState.timeline.video.length > 0;
+  const hasAudio = appState.timeline.audio.length > 0;
+  const box = document.getElementById('exportPreflight');
+  const isolated = window.crossOriginIsolated;
+  let notes = '';
+  if (!isolated) {
+    notes += `<p class="empty-note" style="color: var(--warn-color);">This page isn't cross-origin isolated yet, so export can't run. If you just loaded this page for the first time, coi-serviceworker.js should reload it once automatically — try again after that reload. If it still says this, make sure coi-serviceworker.js is published next to this page's HTML on GitHub Pages.</p>`;
+  }
+  if (!hasVideo && !hasAudio) notes += '<p class="empty-note">Add at least one clip to a track first.</p>';
+  else notes += `<p class="empty-note">Will render ${appState.timeline.video.length} video-track clip(s)${hasAudio ? ` and ${appState.timeline.audio.length} audio-track clip(s) (used as the final audio)` : ''}.</p>`;
+  box.innerHTML = notes;
+  document.getElementById('exportAudioModeField').classList.toggle('hidden', !(hasVideo && hasAudio));
+  document.getElementById('exportStartBtn').disabled = !isolated || (!hasVideo && !hasAudio);
+}
+function openExportModal() {
+  document.getElementById('exportRunning').classList.add('hidden');
+  document.getElementById('exportDone').classList.add('hidden');
+  document.getElementById('exportLog').innerText = '';
+  document.getElementById('exportProgressFill').style.width = '0%';
+  preflightExport();
+  openModal('exportModal');
+}
+async function startExport() {
+  document.getElementById('exportStartBtn').disabled = true;
+  document.getElementById('exportPreflight').classList.add('hidden');
+  document.getElementById('exportRunning').classList.remove('hidden');
+  const statusLine = document.getElementById('exportStatusLine');
+  const logBox = document.getElementById('exportLog');
+  const fill = document.getElementById('exportProgressFill');
+  const log = (msg) => { logBox.innerText += msg + '\n'; logBox.scrollTop = logBox.scrollHeight; };
+
+  try {
+    statusLine.innerText = 'Loading FFmpeg (first time only, ~30MB)…';
+    const ffmpeg = await getFFmpeg(log);
+    ffmpeg.on('progress', ({ progress }) => { fill.style.width = `${Math.min(100, Math.max(0, progress * 100))}%`; });
+
+    const videoClips = appState.timeline.video.slice().sort((a, b) => a.start - b.start);
+    const audioClips = appState.timeline.audio.slice().sort((a, b) => a.start - b.start);
+
+    statusLine.innerText = 'Rendering clips…';
+    const videoSegNames = [];
+    for (let i = 0; i < videoClips.length; i++) videoSegNames.push(await renderClipSegment(ffmpeg, videoClips[i], i, 'video', log));
+    const audioSegNames = [];
+    for (let i = 0; i < audioClips.length; i++) audioSegNames.push(await renderClipSegment(ffmpeg, audioClips[i], i, 'audio', log));
+
+    let finalName;
+    if (videoSegNames.length > 0) {
+      statusLine.innerText = 'Assembling video track…';
+      const videoTrackOut = await concatSegments(ffmpeg, videoSegNames, 'vlist.txt', 'video_track.mp4', log);
+      if (audioSegNames.length > 0) {
+        statusLine.innerText = 'Assembling audio track…';
+        const audioTrackOut = await concatSegments(ffmpeg, audioSegNames, 'alist.txt', 'audio_track.m4a', log);
+        const audioMode = document.getElementById('exportAudioMode').value;
+        if (audioMode === 'mix') {
+          statusLine.innerText = 'Mixing video audio with the audio track…';
+          await ffmpeg.exec(['-i', videoTrackOut, '-i', audioTrackOut, '-filter_complex', '[0:a][1:a]amix=inputs=2:duration=longest:dropout_transition=0[aout]', '-map', '0:v:0', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-shortest', 'final.mp4']);
+        } else {
+          statusLine.innerText = "Muxing video with the audio track (replacing video's own audio)…";
+          await ffmpeg.exec(['-i', videoTrackOut, '-i', audioTrackOut, '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy', '-c:a', 'aac', '-shortest', 'final.mp4']);
+        }
+        finalName = 'final.mp4';
+      } else {
+        finalName = videoTrackOut === 'video_track.mp4' ? videoTrackOut : (await ffmpeg.exec(['-i', videoTrackOut, '-c', 'copy', 'final.mp4']), 'final.mp4');
+      }
+    } else {
+      // audio-only project
+      statusLine.innerText = 'Assembling audio…';
+      finalName = await concatSegments(ffmpeg, audioSegNames, 'alist.txt', 'final.m4a', log);
+    }
+
+    statusLine.innerText = 'Reading result…';
+    const data = await ffmpeg.readFile(finalName);
+    const mime = finalName.endsWith('.m4a') ? 'audio/mp4' : 'video/mp4';
+    const blob = new Blob([data.buffer], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const link = document.getElementById('exportDownloadLink');
+    link.href = url;
+    link.download = finalName.endsWith('.m4a') ? 'export.m4a' : 'export.mp4';
+
+    document.getElementById('exportRunning').classList.add('hidden');
+    document.getElementById('exportDone').classList.remove('hidden');
+  } catch (err) {
+    console.error(err);
+    statusLine.innerText = 'Export failed — see the log below.';
+    log(String(err && err.message ? err.message : err));
+  } finally {
+    document.getElementById('exportStartBtn').disabled = false;
+  }
+}
+
+/* =========================================================================
+   INIT
+   ========================================================================= */
+window.onload = async () => {
+  await initDB();
+  renderAssets(); renderTimeline(); renderPresetList();
+  updateScopeHint();
+};
+</script>
