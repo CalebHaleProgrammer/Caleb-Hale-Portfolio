@@ -59,8 +59,9 @@ body {
   font-family: 'Segoe UI', Roboto, sans-serif;
   margin: 0;
   padding: 0;
+  padding-top: var(--nav-safety-buffer);
   box-sizing: border-box;
-  min-height: calc(100vh - var(--nav-safety-buffer));
+  height: 100vh;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -185,6 +186,37 @@ body {
   padding: 0;
   margin: 0;
   box-sizing: border-box;
+  position: relative;
+}
+.title-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 6;
+}
+.title-overlay span {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px 10px;
+  border-radius: 3px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+}
+.blackout-overlay {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 7;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+.blackout-overlay.active { display: flex; }
 }
 #main-video-player {
   width: 100%;
@@ -200,6 +232,23 @@ body {
   padding:2px 6px;
   border-radius: 3px;
   font-size: 0.75rem;
+}
+.vu-meter {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 34px;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: linear-gradient(to right, var(--success-color) 0%, var(--success-color) 65%, var(--warn-color) 85%, var(--danger-color) 100%);
+}
+.vu-meter-mask {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.78);
+  transition: width 0.05s linear;
 }
 #clip-context-label {
   position:absolute;
@@ -339,6 +388,17 @@ body {
   z-index: 52;
   display: none;
 }
+.playback-position-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--danger-color);
+  pointer-events: none;
+  z-index: 53;
+  display: none;
+  box-shadow: 0 0 4px var(--danger-color);
+}
 .track {
   height: 80px;
   border-bottom: 1px solid #333;
@@ -349,10 +409,10 @@ body {
   position: absolute;
   height: 60px;
   top: 10px;
-  background: var(--accent-color);
+  background: rgba(59, 130, 246, 0.28);
   border: 1px solid #fff;
   border-radius: 4px;
-  cursor: pointer;
+  cursor: grab;
   font-size: 11px;
   padding: 4px;
   box-sizing: border-box;
@@ -365,6 +425,16 @@ body {
   border: 2px solid yellow;
   box-shadow: 0 0 10px yellow;
 }
+.clip .clip-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+  z-index: 2;
+}
+.clip .clip-edge.left { left: 0; }
+.clip .clip-edge.right { right: 0; }
 .clip-vis-canvas {
   position: absolute;
   left: 0;
@@ -394,15 +464,33 @@ body {
   margin-top: 2px;
 }
 .asset-item {
-  padding: 8px 12px;
+  padding: 6px 10px;
   margin: 5px;
   background: var(--bg-accent);
   cursor: pointer;
   border-radius: 4px;
   font-size: 0.8rem;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.asset-thumb {
+  width: 40px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  background-color: #000;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+.asset-name {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .asset-item:hover {
   background: #333;
@@ -718,8 +806,11 @@ body {
 <div id="clip-context-label"></div>
 <div class="video-container">
 <video id="main-video-player" controls></video>
+<div class="title-overlay" id="titleOverlay"></div>
+<div class="blackout-overlay" id="blackoutOverlay"><span id="blackoutLabel"></span></div>
 </div>
 <div id="playback-info">00:00.0 / 00:00.0</div>
+<div class="vu-meter"><div class="vu-meter-mask" id="vuMeterMask"></div></div>
 </div>
 <div class="resizer-v resizer-right" id="resizerRight"></div>
 <div class="panel rules-panel">
@@ -745,6 +836,7 @@ body {
 <button class="tab-btn active" data-tab="tab-quick" onclick="switchTab('tab-quick')">Quick Actions</button>
 <button class="tab-btn" data-tab="tab-presets" onclick="switchTab('tab-presets')">Presets</button>
 <button class="tab-btn" data-tab="tab-manual" onclick="switchTab('tab-manual')">Manual</button>
+<button class="tab-btn" data-tab="tab-titles" onclick="switchTab('tab-titles')">Titles</button>
 </div>
 <div id="tab-quick" class="tab-panel active" style="padding-top: 10px;">
 <p class="empty-note">Each opens a parameter dialog first.</p>
@@ -779,6 +871,68 @@ Saved Presets
 <label>Used by "Proportional" mode and Normalize (0–1, <span id="idealVolLabel">0.70</span>)</label>
 <input type="range" id="idealVolumeSlider" min="0" max="1" step="0.01" value="0.7" oninput="updateIdealVolume(this.value)">
 </div>
+<hr style="border-color: var(--bg-accent); margin: 14px 0;">
+<div id="colorSection" class="hidden">
+<div class="section-title">Color Correction <span class="chip">selected video clip</span></div>
+<p class="empty-note">Live-previewed here (CSS approximation); baked in properly with ffmpeg's <code>eq</code> filter at export.</p>
+<div class="field">
+<label>Brightness (<span id="brightnessLabel">0.00</span>)</label>
+<input type="range" id="brightnessSlider" min="-1" max="1" step="0.01" value="0" oninput="updateClipColor('brightness', this.value, 'brightnessLabel')">
+</div>
+<div class="field">
+<label>Contrast (<span id="contrastLabel">1.00</span>)</label>
+<input type="range" id="contrastSlider" min="0" max="2" step="0.01" value="1" oninput="updateClipColor('contrast', this.value, 'contrastLabel')">
+</div>
+<div class="field">
+<label>Saturation (<span id="saturationLabel">1.00</span>)</label>
+<input type="range" id="saturationSlider" min="0" max="3" step="0.01" value="1" oninput="updateClipColor('saturation', this.value, 'saturationLabel')">
+</div>
+<hr style="border-color: var(--bg-accent); margin: 14px 0;">
+<div class="section-title">Chroma Key <span class="chip">export only, no live preview</span></div>
+<div class="field-row" style="margin-bottom: 10px;">
+<input type="checkbox" id="chromaEnabled" onchange="updateChromaKey()">
+<label for="chromaEnabled" style="margin:0;">Enable (removes the color below)</label>
+</div>
+<div class="field-inline-pair">
+<div class="field"><label>Key color</label><input type="color" id="chromaColor" value="#00ff00" onchange="updateChromaKey()" style="height:28px; padding:2px;"></div>
+<div class="field"><label>Similarity (<span id="chromaSimLabel">0.20</span>)</label><input type="range" id="chromaSimilarity" min="0.01" max="1" step="0.01" value="0.2" oninput="updateChromaKey()"></div>
+</div>
+<div class="field"><label>Edge blend (<span id="chromaBlendLabel">0.10</span>)</label><input type="range" id="chromaBlend" min="0" max="1" step="0.01" value="0.1" oninput="updateChromaKey()"></div>
+</div>
+<div id="audioFxSection" class="hidden">
+<div class="section-title">Noise Reduction <span class="chip">selected audio clip · export only</span></div>
+<div class="field">
+<label>Strength (<span id="denoiseLabel">off</span>)</label>
+<input type="range" id="denoiseSlider" min="0" max="30" step="1" value="0" oninput="updateDenoise(this.value)">
+</div>
+<div class="section-title">Fades <span class="chip">export only</span></div>
+<div class="field-inline-pair">
+<div class="field"><label>Fade in (s)</label><input type="number" id="fadeInInput" min="0" step="0.1" value="0" onchange="updateFade('fadeInSec', this.value)"></div>
+<div class="field"><label>Fade out (s)</label><input type="number" id="fadeOutInput" min="0" step="0.1" value="0" onchange="updateFade('fadeOutSec', this.value)"></div>
+</div>
+</div>
+</div>
+<div id="tab-titles" class="tab-panel" style="padding-top: 10px;">
+<p class="empty-note">Timed in project seconds. Live-previewed during timeline playback (click a track or use ▶ Play from Playhead); burned in at export with ffmpeg's <code>drawtext</code>. Assumes the video track has no gaps.</p>
+<div class="field"><label>Text</label><input type="text" id="titleTextInput" placeholder="Chapter 1"></div>
+<div class="field-inline-pair">
+<div class="field"><label>Start (s)</label><input type="number" id="titleStartInput" step="0.1" value="0"></div>
+<div class="field"><label>End (s)</label><input type="number" id="titleEndInput" step="0.1" value="3"></div>
+</div>
+<div class="field-inline-pair">
+<div class="field"><label>Position</label>
+<select id="titlePositionInput">
+<option value="bottom">Bottom</option>
+<option value="center">Center</option>
+<option value="top">Top</option>
+</select>
+</div>
+<div class="field"><label>Size</label><input type="number" id="titleSizeInput" value="36" step="2"></div>
+</div>
+<div class="field"><label>Color</label><input type="color" id="titleColorInput" value="#ffffff" style="height:28px; padding:2px;"></div>
+<button class="btn btn-block btn-primary" onclick="addTitle()">+ Add Title</button>
+<hr style="border-color: var(--bg-accent); margin: 14px 0;">
+<div id="titleList"></div>
 </div>
 </div>
 </div>
@@ -789,6 +943,7 @@ Saved Presets
 <button class="btn btn-danger" onclick="deleteClip()">🗑️ Delete</button>
 <button class="btn" onclick="playFromPlayhead()">▶ Play from Playhead</button>
 <button class="btn" onclick="addMarkerAtPlayhead()">🚩 Add Marker</button>
+<button class="btn" onclick="copyChapterList()">📋 Copy Chapters</button>
 <div style="margin-left: 20px; display:flex; align-items:center; gap:10px;">
 <span>Zoom:</span>
 <input type="range" id="zoomSlider" min="1" max="100" value="10" oninput="updateZoom(this.value)">
@@ -815,6 +970,7 @@ Saved Presets
 <div class="hover-time-label" id="hoverTimeLabel"></div>
 <div class="playhead-line" id="playheadLine"></div>
 <div class="playhead-flag" id="playheadFlag"></div>
+<div class="playback-position-line" id="playbackPositionLine"></div>
 </div>
 </div>
 </div>
@@ -883,7 +1039,7 @@ Steps (run in order)
 </div>
 <!-- Export modal -->
 <div class="modal-overlay" id="exportModal">
-<div class="modal-box">
+<div class="modal-box wide">
 <div class="modal-title"><span>Export Video</span><button class="btn" onclick="closeModal('exportModal')">✕</button></div>
 <div id="exportPreflight"></div>
 <div class="field hidden" id="exportAudioModeField">
@@ -892,6 +1048,14 @@ Steps (run in order)
 <option value="replace">Replace video's audio with the audio track</option>
 <option value="mix">Mix both together</option>
 </select>
+</div>
+<div class="field-row" style="margin-bottom: 6px;">
+<input type="checkbox" id="loudnormEnabled">
+<label for="loudnormEnabled" style="margin:0;">Normalize final loudness (ffmpeg <code>loudnorm</code>)</label>
+</div>
+<div class="field-inline-pair">
+<div class="field"><label>Target (LUFS)</label><input type="number" id="loudnormTarget" value="-16" step="1" max="-5" min="-40"></div>
+<div class="field"><p class="empty-note" style="margin-top:22px;">Single-pass (faster, slightly less precise than a full two-pass measure).</p></div>
 </div>
 <div id="exportRunning" class="hidden">
 <p class="empty-note" id="exportStatusLine">Loading FFmpeg…</p>
@@ -947,11 +1111,17 @@ window.addEventListener('mouseup', () => { isResizingLeft = isResizingRight = is
    ========================================================================= */
 const DB_NAME = "WebCutProDB";
 const STORE_NAME = "assets";
+const META_STORE = "meta"; // autosaved project state (appState), separate from the media blobs
+const DB_VERSION = 2;
 let db;
 async function initDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME);
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      if (!database.objectStoreNames.contains(STORE_NAME)) database.createObjectStore(STORE_NAME);
+      if (!database.objectStoreNames.contains(META_STORE)) database.createObjectStore(META_STORE);
+    };
     request.onsuccess = (e) => { db = e.target.result; resolve(); };
     request.onerror = (e) => reject(e);
   });
@@ -969,6 +1139,32 @@ async function getFileFromDB(id) {
     req.onerror = (e) => reject(e);
   });
 }
+async function saveMeta(key, value) {
+  return new Promise((resolve) => {
+    const tx = db.transaction(META_STORE, "readwrite");
+    tx.objectStore(META_STORE).put(value, key);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => resolve(false);
+  });
+}
+async function loadMeta(key) {
+  return new Promise((resolve) => {
+    const tx = db.transaction(META_STORE, "readonly");
+    const req = tx.objectStore(META_STORE).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => resolve(undefined);
+  });
+}
+/** Debounced autosave: the actual media files are already durable in
+    IndexedDB the moment they're imported; this just persists the project
+    structure (timeline, presets, markers…) so a refresh doesn't lose edits. */
+let autosaveTimer = null;
+function scheduleAutosave() {
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    saveMeta('appState', JSON.parse(JSON.stringify(appState))).catch(() => {});
+  }, 1000);
+}
 
 /* =========================================================================
    STATE
@@ -981,6 +1177,7 @@ let appState = {
   settings: { idealVolume: 0.7, zoomLevel: 10, audioVisMode: 'waveform' },
   presets: [],                             // {id, name, reviewBeforeApply, steps:[{type, params}]}
   markers: [],                             // {id, time, label}
+  titles: [],                               // {id, text, start, end, position, fontSize, color}
   playheadTime: 0,
   selectedClipId: null,
   selectedClipType: null
@@ -1009,11 +1206,110 @@ function undo() {
   document.getElementById('audioVisSelect').value = appState.settings.audioVisMode || 'waveform';
 }
 window.addEventListener('keydown', (e) => { if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); } });
+/** Keyboard shortcuts. Ignored while typing in any input/select/textarea
+    (including inside the modals) so they never hijack normal typing. */
+window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const tag = document.activeElement && document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  switch (e.key) {
+    case ' ':
+      e.preventDefault();
+      if (player.paused) player.play().catch(() => {}); else player.pause();
+      break;
+    case 's': case 'S':
+      splitClip();
+      break;
+    case 'm': case 'M':
+      addMarkerAtPlayhead();
+      break;
+    case 'Delete': case 'Backspace':
+      e.preventDefault();
+      deleteClip();
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      setPlayhead(Math.max(0, appState.playheadTime - (e.shiftKey ? 1 : 0.1)));
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      setPlayhead(appState.playheadTime + (e.shiftKey ? 1 : 0.1));
+      break;
+    // Simplified J/K/L: real NLE shuttle uses variable reverse-speed playback,
+    // which browsers don't support reliably — this is a step-back / pause / play instead.
+    case 'j': case 'J':
+      player.pause(); player.currentTime = Math.max(0, player.currentTime - 0.5);
+      break;
+    case 'k': case 'K':
+      player.pause();
+      break;
+    case 'l': case 'L':
+      player.play().catch(() => {});
+      break;
+  }
+});
 window.addEventListener('click', (e) => { if (!e.target.closest('.asset-item') && !e.target.closest('.context-menu')) closeMenus(); });
 
 function updateIdealVolume(v) {
   appState.settings.idealVolume = parseFloat(v);
   document.getElementById('idealVolLabel').innerText = parseFloat(v).toFixed(2);
+}
+/** Populates the Manual tab's per-clip sections (color/chroma key for video,
+    denoise/fades for audio) from whichever clip is now selected, and shows
+    only the section relevant to that clip's track. */
+function syncManualPanel() {
+  const clip = getSelectedClip();
+  const isVideo = appState.selectedClipType === 'video';
+  document.getElementById('colorSection').classList.toggle('hidden', !(clip && isVideo));
+  document.getElementById('audioFxSection').classList.toggle('hidden', !(clip && !isVideo));
+  if (!clip) return;
+  if (isVideo) {
+    document.getElementById('brightnessSlider').value = clip.brightness ?? 0;
+    document.getElementById('brightnessLabel').innerText = (clip.brightness ?? 0).toFixed(2);
+    document.getElementById('contrastSlider').value = clip.contrast ?? 1;
+    document.getElementById('contrastLabel').innerText = (clip.contrast ?? 1).toFixed(2);
+    document.getElementById('saturationSlider').value = clip.saturation ?? 1;
+    document.getElementById('saturationLabel').innerText = (clip.saturation ?? 1).toFixed(2);
+    document.getElementById('chromaEnabled').checked = !!clip.chromaKeyEnabled;
+    document.getElementById('chromaColor').value = clip.chromaKeyColor || '#00ff00';
+    document.getElementById('chromaSimilarity').value = clip.chromaKeySimilarity ?? 0.2;
+    document.getElementById('chromaSimLabel').innerText = (clip.chromaKeySimilarity ?? 0.2).toFixed(2);
+    document.getElementById('chromaBlend').value = clip.chromaKeyBlend ?? 0.1;
+    document.getElementById('chromaBlendLabel').innerText = (clip.chromaKeyBlend ?? 0.1).toFixed(2);
+  } else {
+    document.getElementById('denoiseSlider').value = clip.denoiseStrength ?? 0;
+    document.getElementById('denoiseLabel').innerText = clip.denoiseStrength ? String(clip.denoiseStrength) : 'off';
+    document.getElementById('fadeInInput').value = clip.fadeInSec ?? 0;
+    document.getElementById('fadeOutInput').value = clip.fadeOutSec ?? 0;
+  }
+}
+function updateClipColor(field, value, labelId) {
+  const clip = getSelectedClip();
+  if (!clip) return;
+  clip[field] = parseFloat(value);
+  document.getElementById(labelId).innerText = parseFloat(value).toFixed(2);
+  if (currentPreviewClip === clip) applyClipFilterPreview(clip);
+}
+function updateChromaKey() {
+  const clip = getSelectedClip();
+  if (!clip) return;
+  clip.chromaKeyEnabled = document.getElementById('chromaEnabled').checked;
+  clip.chromaKeyColor = document.getElementById('chromaColor').value;
+  clip.chromaKeySimilarity = parseFloat(document.getElementById('chromaSimilarity').value);
+  clip.chromaKeyBlend = parseFloat(document.getElementById('chromaBlend').value);
+  document.getElementById('chromaSimLabel').innerText = clip.chromaKeySimilarity.toFixed(2);
+  document.getElementById('chromaBlendLabel').innerText = clip.chromaKeyBlend.toFixed(2);
+}
+function updateDenoise(value) {
+  const clip = getSelectedClip();
+  if (!clip) return;
+  clip.denoiseStrength = parseInt(value);
+  document.getElementById('denoiseLabel').innerText = clip.denoiseStrength ? String(clip.denoiseStrength) : 'off';
+}
+function updateFade(field, value) {
+  const clip = getSelectedClip();
+  if (!clip) return;
+  clip[field] = Math.max(0, parseFloat(value) || 0);
 }
 
 /* =========================================================================
@@ -1087,12 +1383,24 @@ function renderAssets() {
   for (let asset of appState.assets) {
     const div = document.createElement('div');
     div.className = 'asset-item';
-    div.innerText = `${asset.name}  (${asset.duration ? asset.duration.toFixed(1) + 's' : '?'})`;
     div.draggable = true;
     div.ondragstart = (e) => e.dataTransfer.setData("assetId", asset.id);
     div.onclick = () => previewAsset(asset.id);
     div.oncontextmenu = (e) => { e.preventDefault(); openAssetMenu(e, asset.id); };
+    const thumb = document.createElement('div');
+    thumb.className = 'asset-thumb';
+    thumb.innerText = asset.type === 'video' ? '🎬' : '🎵';
+    div.appendChild(thumb);
+    const label = document.createElement('span');
+    label.className = 'asset-name';
+    label.innerText = `${asset.name}  (${asset.duration ? asset.duration.toFixed(1) + 's' : '?'})`;
+    div.appendChild(label);
     list.appendChild(div);
+    if (asset.type === 'video') {
+      getAssetThumbnail(asset).then(dataUrl => {
+        if (dataUrl && thumb.isConnected) { thumb.style.backgroundImage = `url(${dataUrl})`; thumb.innerText = ''; }
+      });
+    }
   }
 }
 let activeAssetId = null;
@@ -1133,26 +1441,52 @@ function closeMenus() {
    ========================================================================= */
 const player = document.getElementById('main-video-player');
 let trimStopHandler = null;
+let currentPreviewClip = null; // the timeline clip (if any) currently loaded in the player
 function clearTrimStop() {
   if (trimStopHandler) { player.removeEventListener('timeupdate', trimStopHandler); trimStopHandler = null; }
 }
+function applyClipFilterPreview(clip) {
+  if (!clip || clip.brightness === undefined) { player.style.filter = ''; return; }
+  // Rough CSS approximation of the ffmpeg `eq` filter baked in at export time.
+  const b = 100 + (clip.brightness || 0) * 100;
+  const c = (clip.contrast === undefined ? 1 : clip.contrast) * 100;
+  const s = (clip.saturation === undefined ? 1 : clip.saturation) * 100;
+  player.style.filter = `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
+}
+/** Covers the video display with black — used for audio-only clips (which
+    have nothing visual to show) and while the playhead is auto-searching
+    forward through an empty stretch of timeline. */
+function setBlackout(active, label) {
+  const overlay = document.getElementById('blackoutOverlay');
+  if (!overlay) return;
+  overlay.classList.toggle('active', !!active);
+  document.getElementById('blackoutLabel').innerText = active ? (label || '') : '';
+}
 async function previewAsset(assetId) {
   clearTrimStop();
+  currentPreviewClip = null;
+  updatePlaybackPositionLine();
   const asset = appState.assets.find(a => a.id === assetId);
   const blob = await getFileFromDB(assetId);
   if (!blob) return;
   player.src = URL.createObjectURL(blob);
   player.playbackRate = 1;
+  player.style.filter = '';
+  setBlackout(asset && asset.type === 'audio');
   document.getElementById('clip-context-label').innerText = asset ? asset.name : '';
   player.load(); player.play().catch(() => {});
 }
 async function previewClip(clip) {
   clearTrimStop();
+  currentPreviewClip = clip;
   const asset = appState.assets.find(a => a.id === clip.assetId);
   const blob = await getFileFromDB(clip.assetId);
   if (!blob) return;
   player.src = URL.createObjectURL(blob);
   player.playbackRate = clip.playbackRate || 1;
+  const isVideo = asset && asset.type === 'video';
+  applyClipFilterPreview(isVideo ? clip : null);
+  setBlackout(!isVideo, 'Audio only');
   document.getElementById('clip-context-label').innerText = `${asset ? asset.name : 'clip'}  [${clip.sourceIn.toFixed(2)}s – ${clip.sourceOut.toFixed(2)}s @ ${clip.playbackRate}x]`;
   player.load();
   player.onloadedmetadata = () => { player.currentTime = clip.sourceIn; player.play().catch(() => {}); };
@@ -1161,8 +1495,58 @@ async function previewClip(clip) {
 }
 player.addEventListener('timeupdate', () => {
   document.getElementById('playback-info').innerText = `${fmtTime(player.currentTime)} / ${fmtTime(player.duration || 0)}`;
+  updatePlaybackPositionLine();
 });
+/** Moves the red "now playing" line on the tracks to match wherever the
+    preview player currently is, mapped back from source time to timeline
+    time. Only shown while a timeline clip (not a raw asset preview) is loaded. */
+function updatePlaybackPositionLine() {
+  const line = document.getElementById('playbackPositionLine');
+  if (!line) return;
+  if (!currentPreviewClip) { line.style.display = 'none'; updateTitleOverlay(-1); return; }
+  const clip = currentPreviewClip;
+  const t = clip.start + (player.currentTime - clip.sourceIn) / clip.playbackRate;
+  if (t < clip.start - 0.05 || t > clip.start + clipDuration(clip) + 0.05) { line.style.display = 'none'; updateTitleOverlay(-1); return; }
+  line.style.left = (Math.max(0, t) * appState.settings.zoomLevel) + 'px';
+  line.style.display = 'block';
+  updateTitleOverlay(t);
+}
 function fmtTime(s) { if (!isFinite(s)) return '00:00.0'; const m = Math.floor(s / 60); const sec = (s % 60).toFixed(1).padStart(4, '0'); return `${String(m).padStart(2,'0')}:${sec}`; }
+
+/* =========================================================================
+   LIVE VU METER — taps the preview player's own audio via an AnalyserNode.
+   createMediaElementSource can only be called once per <video> element ever,
+   so this is set up lazily on first playback and then just reused; the
+   element keeps outputting sound because the analyser is chained through to
+   the AudioContext's destination rather than replacing the normal output.
+   ========================================================================= */
+let vuAudioCtx = null, vuAnalyser = null, vuDataArray = null;
+function ensureVUMeter() {
+  if (vuAudioCtx) { vuAudioCtx.resume().catch(() => {}); return; }
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    vuAudioCtx = new AudioCtx();
+    const source = vuAudioCtx.createMediaElementSource(player);
+    vuAnalyser = vuAudioCtx.createAnalyser();
+    vuAnalyser.fftSize = 512;
+    source.connect(vuAnalyser);
+    vuAnalyser.connect(vuAudioCtx.destination);
+    vuDataArray = new Uint8Array(vuAnalyser.frequencyBinCount);
+    requestAnimationFrame(drawVUMeter);
+  } catch (e) { console.warn('VU meter unavailable:', e); }
+}
+function drawVUMeter() {
+  requestAnimationFrame(drawVUMeter);
+  const mask = document.getElementById('vuMeterMask');
+  if (!vuAnalyser || !mask) return;
+  vuAnalyser.getByteTimeDomainData(vuDataArray);
+  let sum = 0;
+  for (let i = 0; i < vuDataArray.length; i++) { const v = (vuDataArray[i] - 128) / 128; sum += v * v; }
+  const rms = Math.sqrt(sum / vuDataArray.length);
+  const pct = Math.min(100, rms * 220); // scaled up so normal speech/music reads clearly, not just peaks
+  mask.style.width = (100 - pct) + '%';
+}
+player.addEventListener('play', ensureVUMeter);
 
 /* =========================================================================
    TIMELINE
@@ -1180,7 +1564,13 @@ async function drop(ev) {
   const start = Math.max(0, offsetX / appState.settings.zoomLevel);
   const sourceOut = asset.duration || 5;
   const linkId = Date.now() + Math.random();
-  const makeClip = () => ({ id: Date.now() + Math.random(), assetId, start, sourceIn: 0, sourceOut, playbackRate: 1, volume: 1.0, linkId });
+  const makeClip = () => ({
+    id: Date.now() + Math.random(), assetId, start, sourceIn: 0, sourceOut, playbackRate: 1, volume: 1.0, linkId,
+    brightness: 0, contrast: 1, saturation: 1,              // color correction (video), maps to ffmpeg's eq filter
+    chromaKeyEnabled: false, chromaKeyColor: '#00ff00', chromaKeySimilarity: 0.2, chromaKeyBlend: 0.1, // colorkey (video)
+    denoiseStrength: 0,                                      // 0 = off; maps to ffmpeg's afftdn (audio)
+    fadeInSec: 0, fadeOutSec: 0                               // maps to ffmpeg's afade (audio)
+  });
   if (trackId === 'video-track') {
     appState.timeline.video.push(makeClip());
     // Video files that carry their own audio get a matching clip auto-added
@@ -1202,10 +1592,12 @@ function renderTimeline() {
   renderRuler();
   renderMarkers();
   updatePlayheadUI();
+  scheduleAutosave();
 }
 function createClipUI(clip, type) {
   const div = document.createElement('div');
   div.className = `clip ${type}-clip ${appState.selectedClipId === clip.id ? 'selected' : ''}`;
+  div.dataset.clipId = clip.id;
   const widthPx = Math.max(4, clipDuration(clip) * appState.settings.zoomLevel);
   div.style.left = (clip.start * appState.settings.zoomLevel) + 'px';
   div.style.width = widthPx + 'px';
@@ -1223,25 +1615,46 @@ function createClipUI(clip, type) {
       if (!canvas.isConnected) return; // clip was re-rendered or removed while this was computing
       drawClipVis(canvas, result);
     });
+  } else if (type === 'video') {
+    const canvas = document.createElement('canvas');
+    canvas.className = 'clip-vis-canvas';
+    canvas.width = Math.round(widthPx);
+    canvas.height = 52;
+    div.appendChild(canvas);
+    computeVideoFilmstrip(clip, canvas.width).then(result => {
+      if (!canvas.isConnected || !result) return;
+      canvas.getContext('2d').drawImage(result.canvas, 0, 0, canvas.width, canvas.height);
+    });
   }
   const label = document.createElement('div');
   label.className = 'clip-label';
   label.innerHTML = `<div>${asset ? asset.name : 'Unknown Asset'}${linkTag}</div><div class="clip-meta">${clipDuration(clip).toFixed(1)}s${rateTag}</div>`;
   div.appendChild(label);
-  div.onclick = (e) => { e.stopPropagation(); selectClip(clip.id, type); };
+  const edgeL = document.createElement('div'); edgeL.className = 'clip-edge left';
+  const edgeR = document.createElement('div'); edgeR.className = 'clip-edge right';
+  div.appendChild(edgeL); div.appendChild(edgeR);
+  attachClipDragHandlers(div, edgeL, edgeR, clip, type);
   return div;
+}
+/** Selects a clip without tearing down and rebuilding the timeline DOM, so a
+    drag in progress (which holds a direct reference to its clip's <div>)
+    keeps working, and plain clicking stays cheap. */
+function selectClip(id, type) {
+  document.querySelectorAll('.clip.selected').forEach(el => el.classList.remove('selected'));
+  appState.selectedClipId = id; appState.selectedClipType = type;
+  const track = type === 'video' ? appState.timeline.video : appState.timeline.audio;
+  const clip = track.find(c => c.id === id);
+  const el = document.querySelector(`.clip[data-clip-id="${id}"]`);
+  if (el) el.classList.add('selected');
+  updateSelectionLabel();
+  if (clip) previewClip(clip);
+  updateScopeHint();
+  syncManualPanel();
 }
 function updateAudioVisMode(mode) {
   appState.settings.audioVisMode = mode;
+  visDataCache.clear();
   renderTimeline();
-}
-function selectClip(id, type) {
-  appState.selectedClipId = id; appState.selectedClipType = type;
-  renderTimeline();
-  const track = type === 'video' ? appState.timeline.video : appState.timeline.audio;
-  const clip = track.find(c => c.id === id);
-  if (clip) previewClip(clip);
-  updateScopeHint();
 }
 function getSelectedClip() {
   if (!appState.selectedClipId) return null;
@@ -1293,6 +1706,94 @@ function deleteClip() {
   appState.selectedClipId = null;
   renderTimeline();
 }
+
+/* =========================================================================
+   DRAG-TO-MOVE / DRAG-TO-TRIM, with snapping to other clip edges, markers,
+   the playhead, and 0. Dragging updates the clip's own <div> directly (cheap)
+   and only triggers a full renderTimeline() — which recomputes waveforms,
+   filmstrips, the ruler, etc. — once, on mouseup.
+   ========================================================================= */
+function getSnapTargets(excludeClipId, type) {
+  const track = type === 'video' ? appState.timeline.video : appState.timeline.audio;
+  const targets = [0, appState.playheadTime];
+  track.forEach(c => { if (c.id !== excludeClipId) { targets.push(c.start); targets.push(c.start + clipDuration(c)); } });
+  appState.markers.forEach(m => targets.push(m.time));
+  return targets;
+}
+function attachClipDragHandlers(div, edgeL, edgeR, clip, type) {
+  const startDrag = (mode) => (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const zoom = appState.settings.zoomLevel;
+    const startClientX = e.clientX;
+    const orig = { start: clip.start, sourceIn: clip.sourceIn, sourceOut: clip.sourceOut };
+    const asset = appState.assets.find(a => a.id === clip.assetId);
+    const maxSourceOut = asset && asset.duration ? asset.duration : Infinity;
+    const snapThresholdT = 8 / zoom;
+    let dragged = false;
+
+    function onMove(ev) {
+      const deltaPx = ev.clientX - startClientX;
+      if (!dragged) {
+        if (Math.abs(deltaPx) <= 2) return; // ignore tiny jitter so plain clicks still just select
+        dragged = true;
+        saveState(); // snapshot the pre-drag state once, right before the first real mutation
+      }
+      const deltaT = deltaPx / zoom;
+      const targets = ev.shiftKey ? [] : getSnapTargets(clip.id, type); // hold Shift to disable snapping
+
+      if (mode === 'move') {
+        let newStart = Math.max(0, orig.start + deltaT);
+        const dur = clipDuration(clip);
+        let bestDelta = null, bestDist = snapThresholdT;
+        targets.forEach(t => {
+          const dEdgeStart = t - newStart, dEdgeEnd = t - (newStart + dur);
+          if (Math.abs(dEdgeStart) < bestDist) { bestDist = Math.abs(dEdgeStart); bestDelta = dEdgeStart; }
+          if (Math.abs(dEdgeEnd) < bestDist) { bestDist = Math.abs(dEdgeEnd); bestDelta = dEdgeEnd; }
+        });
+        if (bestDelta !== null) newStart += bestDelta;
+        clip.start = Math.max(0, newStart);
+      } else if (mode === 'trim-start') {
+        let newStart = orig.start + deltaT;
+        let best = null, bestDist = snapThresholdT;
+        targets.forEach(t => { const d = Math.abs(newStart - t); if (d < bestDist) { bestDist = d; best = t; } });
+        if (best !== null) newStart = best;
+        const maxStart = orig.start + (orig.sourceOut - orig.sourceIn) / clip.playbackRate - 0.1 / clip.playbackRate;
+        newStart = Math.max(0, Math.min(newStart, maxStart));
+        const startDelta = newStart - orig.start;
+        clip.start = newStart;
+        clip.sourceIn = Math.max(0, orig.sourceIn + startDelta * clip.playbackRate);
+      } else if (mode === 'trim-end') {
+        let newEnd = orig.start + (orig.sourceOut - orig.sourceIn) / clip.playbackRate + deltaT;
+        let best = null, bestDist = snapThresholdT;
+        targets.forEach(t => { const d = Math.abs(newEnd - t); if (d < bestDist) { bestDist = d; best = t; } });
+        if (best !== null) newEnd = best;
+        const minEnd = clip.start + 0.1;
+        newEnd = Math.max(minEnd, newEnd);
+        const newDurSource = (newEnd - clip.start) * clip.playbackRate;
+        clip.sourceOut = Math.max(clip.sourceIn + 0.1, Math.min(maxSourceOut, clip.sourceIn + newDurSource));
+      }
+      // cheap live visual feedback — no recompute of waveforms/filmstrips mid-drag
+      div.style.left = (clip.start * zoom) + 'px';
+      div.style.width = Math.max(4, clipDuration(clip) * zoom) + 'px';
+      const metaEl = div.querySelector('.clip-meta');
+      if (metaEl) metaEl.textContent = `${clipDuration(clip).toFixed(1)}s${clip.playbackRate !== 1 ? ' ' + clip.playbackRate + 'x' : ''}`;
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      selectClip(clip.id, type); // cheap: just updates the highlighted class + preview
+      if (dragged) renderTimeline(); // commit: recompute ruler/waveforms/filmstrips once
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+  div.addEventListener('mousedown', startDrag('move'));
+  edgeL.addEventListener('mousedown', startDrag('trim-start'));
+  edgeR.addEventListener('mousedown', startDrag('trim-end'));
+  div.addEventListener('click', (e) => e.stopPropagation());
+}
+
 function syncCursor() {
   renderRuler(); // keep tick density/labels correct as zoom/content change; cheap relative to scroll frequency
   const scrollLeft = document.getElementById('timelineScroll').scrollLeft;
@@ -1399,7 +1900,12 @@ function onTimelineWheel(ev) {
   scroll.scrollLeft = Math.max(0, t * newZoom - cursorX);
 }
 document.getElementById('timelineScroll').addEventListener('wheel', onTimelineWheel, { passive: false });
+let playheadScanRAF = null;
+function stopPlayheadScan() {
+  if (playheadScanRAF) { cancelAnimationFrame(playheadScanRAF); playheadScanRAF = null; setBlackout(false); }
+}
 function setPlayhead(t) {
+  stopPlayheadScan();
   appState.playheadTime = Math.max(0, t);
   updatePlayheadUI();
   document.getElementById('timeline-cursor').innerText = `Cursor: ${(document.getElementById('timelineScroll').scrollLeft / appState.settings.zoomLevel).toFixed(2)}s | Playhead: ${appState.playheadTime.toFixed(2)}s`;
@@ -1431,21 +1937,70 @@ function onTrackClick(ev) {
 }
 /** Plays whatever is under the current playhead, on whichever track has
     something there (video preferred). */
+function findClipAt(track, t) {
+  return track.find(c => t >= c.start && t <= c.start + clipDuration(c));
+}
 function playFromPlayhead() {
+  stopPlayheadScan();
   const t = appState.playheadTime;
-  const vHit = appState.timeline.video.find(c => t >= c.start && t <= c.start + clipDuration(c));
-  const aHit = appState.timeline.audio.find(c => t >= c.start && t <= c.start + clipDuration(c));
-  const hit = vHit || aHit;
-  if (!hit) { alert('Nothing on the timeline at the playhead.'); return; }
-  previewClipFrom(hit, hit.sourceIn + (t - hit.start) * hit.playbackRate);
+  const vHit = findClipAt(appState.timeline.video, t);
+  if (vHit) { previewClipFrom(vHit, vHit.sourceIn + (t - vHit.start) * vHit.playbackRate); return; }
+  const aHit = findClipAt(appState.timeline.audio, t);
+  if (aHit) { previewClipFrom(aHit, aHit.sourceIn + (t - aHit.start) * aHit.playbackRate); return; }
+  scanForwardForContent();
+}
+/** Nothing under the playhead: stop and silence whatever was playing, show
+    black, then advance the playhead forward in real time (smoothly,
+    auto-scrolling the view to keep it visible) until ANY clip — video or
+    audio — turns up, or the ruler's tick range runs out. */
+function scanForwardForContent() {
+  clearTrimStop();
+  currentPreviewClip = null;
+  player.pause();
+  player.removeAttribute('src');
+  player.load();
+  setBlackout(true, 'Searching…');
+  updatePlaybackPositionLine();
+  const endLimit = timelineContentEndSeconds();
+  const scrollEl = document.getElementById('timelineScroll');
+  let lastTs = null;
+  function step(ts) {
+    if (lastTs === null) lastTs = ts;
+    const dt = (ts - lastTs) / 1000;
+    lastTs = ts;
+    appState.playheadTime = Math.min(endLimit, appState.playheadTime + dt);
+    updatePlayheadUI();
+    document.getElementById('timeline-cursor').innerText = `Cursor: ${(scrollEl.scrollLeft / appState.settings.zoomLevel).toFixed(2)}s | Playhead: ${appState.playheadTime.toFixed(2)}s`;
+    const px = appState.playheadTime * appState.settings.zoomLevel;
+    if (px > scrollEl.scrollLeft + scrollEl.clientWidth - 60) scrollEl.scrollLeft = px - scrollEl.clientWidth * 0.4;
+    const vHit = findClipAt(appState.timeline.video, appState.playheadTime);
+    const aHit = !vHit ? findClipAt(appState.timeline.audio, appState.playheadTime) : null;
+    const hit = vHit || aHit;
+    if (hit) {
+      playheadScanRAF = null;
+      previewClipFrom(hit, hit.sourceIn + (appState.playheadTime - hit.start) * hit.playbackRate);
+      return;
+    }
+    if (appState.playheadTime >= endLimit) {
+      playheadScanRAF = null;
+      setBlackout(true, 'Nothing found on the rest of the track.');
+      return;
+    }
+    playheadScanRAF = requestAnimationFrame(step);
+  }
+  playheadScanRAF = requestAnimationFrame(step);
 }
 async function previewClipFrom(clip, sourceStartTime) {
   clearTrimStop();
+  currentPreviewClip = clip;
   const asset = appState.assets.find(a => a.id === clip.assetId);
   const blob = await getFileFromDB(clip.assetId);
   if (!blob) return;
   player.src = URL.createObjectURL(blob);
   player.playbackRate = clip.playbackRate || 1;
+  const isVideo = asset && asset.type === 'video';
+  applyClipFilterPreview(isVideo ? clip : null);
+  setBlackout(!isVideo, 'Audio only');
   document.getElementById('clip-context-label').innerText = `${asset ? asset.name : 'clip'}  [from ${sourceStartTime.toFixed(2)}s]`;
   player.load();
   player.onloadedmetadata = () => { player.currentTime = sourceStartTime; player.play().catch(() => {}); };
@@ -1458,6 +2013,74 @@ function addMarkerAtPlayhead() {
   appState.markers.push({ id: Date.now() + Math.random(), time: appState.playheadTime, label: label || fmtRulerTime(appState.playheadTime) });
   renderMarkers();
 }
+function fmtChapterTime(t) {
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = Math.floor(t % 60);
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
+}
+/** Formats markers as a YouTube-style chapter list and copies it to the
+    clipboard. YouTube requires the first line to start at 0:00 to recognize
+    chapters at all — if your first marker isn't there, add one before using this. */
+function copyChapterList() {
+  if (appState.markers.length === 0) { alert('No markers yet — add some with 🚩 Add Marker.'); return; }
+  const sorted = appState.markers.slice().sort((a, b) => a.time - b.time);
+  const text = sorted.map(m => `${fmtChapterTime(m.time)} ${m.label}`).join('\n');
+  const done = () => alert('Chapter list copied to clipboard:\n\n' + text);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => prompt('Copy this chapter list:', text));
+  } else {
+    prompt('Copy this chapter list:', text);
+  }
+}
+
+/* =========================================================================
+   TITLES — timed text overlays, live-previewed here and burned in with
+   ffmpeg's drawtext at export (see applyTitlesPass).
+   ========================================================================= */
+function addTitle() {
+  const text = document.getElementById('titleTextInput').value.trim();
+  if (!text) { alert('Enter some text first.'); return; }
+  const start = parseFloat(document.getElementById('titleStartInput').value) || 0;
+  const end = parseFloat(document.getElementById('titleEndInput').value) || (start + 3);
+  if (end <= start) { alert('End must be after start.'); return; }
+  appState.titles.push({
+    id: Date.now() + Math.random(), text, start, end,
+    position: document.getElementById('titlePositionInput').value,
+    fontSize: parseInt(document.getElementById('titleSizeInput').value) || 36,
+    color: document.getElementById('titleColorInput').value
+  });
+  document.getElementById('titleTextInput').value = '';
+  renderTitleList();
+}
+function deleteTitle(id) {
+  appState.titles = appState.titles.filter(t => t.id !== id);
+  renderTitleList();
+}
+function renderTitleList() {
+  const list = document.getElementById('titleList');
+  if (!list) return;
+  list.innerHTML = '';
+  if (appState.titles.length === 0) { list.innerHTML = '<p class="empty-note">No titles yet.</p>'; return; }
+  appState.titles.slice().sort((a, b) => a.start - b.start).forEach(t => {
+    const card = document.createElement('div'); card.className = 'preset-card';
+    card.innerHTML = `<div class="preset-head"><strong>${t.text}</strong><span class="chip">${t.start.toFixed(1)}s–${t.end.toFixed(1)}s · ${t.position}</span></div>`;
+    const delBtn = document.createElement('button'); delBtn.className = 'btn btn-danger'; delBtn.innerText = 'Delete';
+    delBtn.onclick = () => deleteTitle(t.id);
+    card.appendChild(delBtn);
+    list.appendChild(card);
+  });
+}
+/** Shows whichever title (if any) covers the given TIMELINE second, matching
+    what applyTitlesPass will burn in at export (same gaps-not-modeled caveat). */
+function updateTitleOverlay(timelineSeconds) {
+  const overlay = document.getElementById('titleOverlay');
+  if (!overlay) return;
+  const active = appState.titles.find(t => timelineSeconds >= t.start && timelineSeconds <= t.end);
+  if (!active) { overlay.innerHTML = ''; return; }
+  const topStyle = active.position === 'top' ? 'top: 6%;' : active.position === 'bottom' ? 'bottom: 6%;' : 'top: 46%;';
+  overlay.style.cssText = topStyle;
+  overlay.innerHTML = `<span style="font-size:${Math.max(12, (active.fontSize || 36) * 0.5)}px; color:${active.color || '#fff'};">${active.text.replace(/</g, '&lt;')}</span>`;
+}
+
 function renderMarkers() {
   const ruler = document.getElementById('timeRuler');
   const vTrack = document.getElementById('video-track');
@@ -1788,6 +2411,74 @@ function drawClipVis(canvas, result) {
 }
 
 /* =========================================================================
+   VIDEO THUMBNAILS — a filmstrip of sampled frames per video clip, plus a
+   single poster frame per video asset for the left-hand asset list. Both
+   share the same "seek a hidden <video>, draw it to a canvas" technique.
+   ========================================================================= */
+function seekTo(vid, t) {
+  return new Promise((resolve) => {
+    const onSeeked = () => { vid.removeEventListener('seeked', onSeeked); resolve(); };
+    vid.addEventListener('seeked', onSeeked);
+    vid.currentTime = Math.max(0, t);
+  });
+}
+async function loadHiddenVideo(assetId) {
+  const blob = await getFileFromDB(assetId);
+  if (!blob) return null;
+  const url = URL.createObjectURL(blob);
+  const vid = document.createElement('video');
+  vid.muted = true; vid.preload = 'auto';
+  await new Promise((resolve, reject) => { vid.onloadeddata = resolve; vid.onerror = reject; vid.src = url; });
+  return { vid, url };
+}
+const videoThumbCache = new Map(); // "clipId:width" -> Promise<{canvas}>
+async function computeVideoFilmstrip(clip, widthPx) {
+  const key = `${clip.id}:${widthPx}`;
+  if (videoThumbCache.has(key)) return videoThumbCache.get(key);
+  const promise = (async () => {
+    const asset = appState.assets.find(a => a.id === clip.assetId);
+    if (!asset || asset.type !== 'video') return null;
+    const loaded = await loadHiddenVideo(clip.assetId).catch(() => null);
+    if (!loaded) return null;
+    const { vid, url } = loaded;
+    const thumbH = 52;
+    const thumbW = Math.max(20, Math.round(thumbH * ((vid.videoWidth / vid.videoHeight) || 16 / 9)));
+    const count = Math.max(1, Math.min(30, Math.round(widthPx / thumbW)));
+    const strip = document.createElement('canvas');
+    strip.width = thumbW * count; strip.height = thumbH;
+    const sctx = strip.getContext('2d');
+    const span = clip.sourceOut - clip.sourceIn;
+    for (let i = 0; i < count; i++) {
+      const t = clip.sourceIn + (i + 0.5) / count * span;
+      await seekTo(vid, t);
+      sctx.drawImage(vid, i * thumbW, 0, thumbW, thumbH);
+    }
+    URL.revokeObjectURL(url);
+    return { canvas: strip };
+  })();
+  videoThumbCache.set(key, promise);
+  return promise;
+}
+const assetThumbCache = new Map(); // assetId -> Promise<dataURL|null>
+async function getAssetThumbnail(asset) {
+  if (asset.type !== 'video') return null;
+  if (assetThumbCache.has(asset.id)) return assetThumbCache.get(asset.id);
+  const promise = (async () => {
+    const loaded = await loadHiddenVideo(asset.id).catch(() => null);
+    if (!loaded) return null;
+    const { vid, url } = loaded;
+    await seekTo(vid, Math.min(1, (asset.duration || 2) * 0.1));
+    const canvas = document.createElement('canvas');
+    canvas.width = 64; canvas.height = 36;
+    canvas.getContext('2d').drawImage(vid, 0, 0, 64, 36);
+    URL.revokeObjectURL(url);
+    return canvas.toDataURL('image/jpeg', 0.72);
+  })();
+  assetThumbCache.set(asset.id, promise);
+  return promise;
+}
+
+/* =========================================================================
    STEP ENGINE — computes a proposed new clip list + a human diff, per step,
    for ONE original clip. Returns { clips, diffLines }.
    ========================================================================= */
@@ -2068,8 +2759,8 @@ function importWorkspace(event) {
   const reader = new FileReader();
   reader.onload = (e) => {
     const loaded = JSON.parse(e.target.result);
-    appState = Object.assign({ presets: [], markers: [], playheadTime: 0, selectedClipId: null, selectedClipType: null }, loaded);
-    renderAssets(); renderTimeline(); renderPresetList();
+    appState = Object.assign({ presets: [], markers: [], titles: [], playheadTime: 0, selectedClipId: null, selectedClipType: null }, loaded);
+    renderAssets(); renderTimeline(); renderPresetList(); renderTitleList();
     document.getElementById('idealVolumeSlider').value = appState.settings.idealVolume;
     document.getElementById('idealVolLabel').innerText = appState.settings.idealVolume.toFixed(2);
     document.getElementById('audioVisSelect').value = appState.settings.audioVisMode || 'waveform';
@@ -2079,9 +2770,10 @@ function importWorkspace(event) {
 }
 async function clearWorkspace() {
   if (confirm("Clear all cached files and project?")) {
-    const tx = db.transaction(STORE_NAME, "readwrite");
+    const tx = db.transaction([STORE_NAME, META_STORE], "readwrite");
     tx.objectStore(STORE_NAME).clear();
-    location.reload();
+    tx.objectStore(META_STORE).clear();
+    tx.oncomplete = () => location.reload();
   }
 }
 
@@ -2129,15 +2821,37 @@ function atempoChain(rate) {
   filters.push(`atempo=${r.toFixed(4)}`);
   return filters.join(',');
 }
+function hexToFFColor(hex) { return '0x' + String(hex || '#ffffff').replace('#', ''); }
+function buildVideoFilters(clip) {
+  const parts = [];
+  if (clip.playbackRate !== 1) parts.push(`setpts=PTS/${clip.playbackRate}`);
+  const hasColor = (clip.brightness ?? 0) !== 0 || (clip.contrast ?? 1) !== 1 || (clip.saturation ?? 1) !== 1;
+  if (hasColor) parts.push(`eq=brightness=${clip.brightness ?? 0}:contrast=${clip.contrast ?? 1}:saturation=${clip.saturation ?? 1}`);
+  if (clip.chromaKeyEnabled) {
+    parts.push(`colorkey=${hexToFFColor(clip.chromaKeyColor)}:${clip.chromaKeySimilarity ?? 0.2}:${clip.chromaKeyBlend ?? 0.1}`);
+  }
+  return parts;
+}
+function buildAudioFilters(clip, outDur) {
+  const parts = [atempoChain(clip.playbackRate), `volume=${clip.volume}`];
+  if (clip.denoiseStrength) parts.push(`afftdn=nr=${clip.denoiseStrength}`);
+  if (clip.fadeInSec) parts.push(`afade=t=in:st=0:d=${Math.min(clip.fadeInSec, outDur)}`);
+  if (clip.fadeOutSec) {
+    const st = Math.max(0, outDur - clip.fadeOutSec);
+    parts.push(`afade=t=out:st=${st}:d=${Math.min(clip.fadeOutSec, outDur)}`);
+  }
+  return parts.join(',');
+}
 async function renderClipSegment(ffmpeg, clip, index, kind, outLog) {
   const srcFile = await ensureAssetWritten(ffmpeg, clip.assetId);
   const outName = `${kind}seg_${index}.${kind === 'video' ? 'mp4' : 'm4a'}`;
   const dur = clip.sourceOut - clip.sourceIn;
+  const outDur = dur / clip.playbackRate;
   const args = ['-ss', String(clip.sourceIn), '-i', srcFile, '-t', String(dur)];
-  const af = `${atempoChain(clip.playbackRate)},volume=${clip.volume}`;
+  const af = buildAudioFilters(clip, outDur);
   if (kind === 'video') {
-    const vf = clip.playbackRate !== 1 ? `setpts=PTS/${clip.playbackRate}` : null;
-    if (vf) args.push('-vf', vf);
+    const vfParts = buildVideoFilters(clip);
+    if (vfParts.length) args.push('-vf', vfParts.join(','));
     args.push('-af', af, '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23', '-r', '30', '-c:a', 'aac', outName);
   } else {
     args.push('-vn', '-af', af, '-c:a', 'aac', outName);
@@ -2154,6 +2868,54 @@ async function concatSegments(ffmpeg, segmentNames, listFileName, outName, outLo
   await ffmpeg.exec(['-f', 'concat', '-safe', '0', '-i', listFileName, '-c', 'copy', outName]);
   return outName;
 }
+
+/* =========================================================================
+   TITLES (drawtext) & LOUDNESS NORMALIZATION — whole-video / whole-audio
+   passes applied after concatenation, since both operate in final timeline
+   time rather than per-clip. Titles are defined in TIMELINE seconds and
+   assume the video track has no gaps (clips concatenate back-to-back
+   regardless of where they sat on the timeline) — with gaps, a title's
+   on-screen timing can drift from what you see in the editor.
+   ========================================================================= */
+let robotoFontWritten = false;
+async function ensureTitleFont(ffmpeg) {
+  if (robotoFontWritten) return 'roboto.ttf';
+  const { fetchFile } = FFmpegUtil;
+  await ffmpeg.writeFile('roboto.ttf', await fetchFile('https://github.com/google/fonts/raw/main/apache/roboto/Roboto-Bold.ttf'));
+  robotoFontWritten = true;
+  return 'roboto.ttf';
+}
+/** ffmpeg drawtext's text= value is single-quoted, so straight quotes are
+    swapped for a typographic one rather than escaped — much less fragile
+    than trying to escape a quote inside a quoted value. */
+function escapeDrawtext(s) {
+  return String(s).replace(/\\/g, '\\\\').replace(/:/g, '\\:').replace(/'/g, '\u2019').replace(/%/g, '\\%');
+}
+async function applyTitlesPass(ffmpeg, videoIn, outLog) {
+  if (!appState.titles || appState.titles.length === 0) return videoIn;
+  const fontFile = await ensureTitleFont(ffmpeg);
+  const yFor = (pos) => pos === 'top' ? '20' : pos === 'bottom' ? 'h-text_h-20' : '(h-text_h)/2';
+  const filters = appState.titles.map(t => {
+    const text = escapeDrawtext(t.text || '');
+    const color = hexToFFColor(t.color || '#ffffff');
+    const size = t.fontSize || 36;
+    return `drawtext=fontfile=${fontFile}:text='${text}':fontsize=${size}:fontcolor=${color}:x=(w-text_w)/2:y=${yFor(t.position)}:box=1:boxcolor=black@0.5:boxborderw=8:enable='between(t,${t.start},${t.end})'`;
+  });
+  outLog(`Burning in ${appState.titles.length} title(s)…`);
+  const outName = 'video_titled.mp4';
+  await ffmpeg.exec(['-i', videoIn, '-vf', filters.join(','), '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23', '-c:a', 'copy', outName]);
+  return outName;
+}
+async function applyLoudnorm(ffmpeg, inputPath, hasVideo, outLog) {
+  const target = parseFloat(document.getElementById('loudnormTarget').value) || -16;
+  outLog(`Normalizing loudness to ${target} LUFS (single-pass)…`);
+  const outName = `loudnorm_out.${hasVideo ? 'mp4' : 'm4a'}`;
+  const args = ['-i', inputPath, '-af', `loudnorm=I=${target}:TP=-1.5:LRA=11`];
+  if (hasVideo) args.push('-c:v', 'copy');
+  args.push('-c:a', 'aac', outName);
+  await ffmpeg.exec(args);
+  return outName;
+}
 function preflightExport() {
   const hasVideo = appState.timeline.video.length > 0;
   const hasAudio = appState.timeline.audio.length > 0;
@@ -2164,7 +2926,10 @@ function preflightExport() {
     notes += `<p class="empty-note" style="color: var(--warn-color);">This page isn't cross-origin isolated yet, so export can't run. If you just loaded this page for the first time, coi-serviceworker.js should reload it once automatically — try again after that reload. If it still says this, make sure coi-serviceworker.js is published next to this page's HTML on GitHub Pages.</p>`;
   }
   if (!hasVideo && !hasAudio) notes += '<p class="empty-note">Add at least one clip to a track first.</p>';
-  else notes += `<p class="empty-note">Will render ${appState.timeline.video.length} video-track clip(s)${hasAudio ? ` and ${appState.timeline.audio.length} audio-track clip(s) (used as the final audio)` : ''}.</p>`;
+  else {
+    notes += `<p class="empty-note">Will render ${appState.timeline.video.length} video-track clip(s)${hasAudio ? ` and ${appState.timeline.audio.length} audio-track clip(s) (used as the final audio)` : ''}.</p>`;
+    if (appState.titles && appState.titles.length > 0) notes += `<p class="empty-note">Will burn in ${appState.titles.length} title(s) from the Titles tab.</p>`;
+  }
   box.innerHTML = notes;
   document.getElementById('exportAudioModeField').classList.toggle('hidden', !(hasVideo && hasAudio));
   document.getElementById('exportStartBtn').disabled = !isolated || (!hasVideo && !hasAudio);
@@ -2203,7 +2968,8 @@ async function startExport() {
     let finalName;
     if (videoSegNames.length > 0) {
       statusLine.innerText = 'Assembling video track…';
-      const videoTrackOut = await concatSegments(ffmpeg, videoSegNames, 'vlist.txt', 'video_track.mp4', log);
+      let videoTrackOut = await concatSegments(ffmpeg, videoSegNames, 'vlist.txt', 'video_track.mp4', log);
+      videoTrackOut = await applyTitlesPass(ffmpeg, videoTrackOut, log);
       if (audioSegNames.length > 0) {
         statusLine.innerText = 'Assembling audio track…';
         const audioTrackOut = await concatSegments(ffmpeg, audioSegNames, 'alist.txt', 'audio_track.m4a', log);
@@ -2219,10 +2985,12 @@ async function startExport() {
       } else {
         finalName = videoTrackOut === 'video_track.mp4' ? videoTrackOut : (await ffmpeg.exec(['-i', videoTrackOut, '-c', 'copy', 'final.mp4']), 'final.mp4');
       }
+      if (document.getElementById('loudnormEnabled').checked) finalName = await applyLoudnorm(ffmpeg, finalName, true, log);
     } else {
       // audio-only project
       statusLine.innerText = 'Assembling audio…';
       finalName = await concatSegments(ffmpeg, audioSegNames, 'alist.txt', 'final.m4a', log);
+      if (document.getElementById('loudnormEnabled').checked) finalName = await applyLoudnorm(ffmpeg, finalName, false, log);
     }
 
     statusLine.innerText = 'Reading result…';
@@ -2250,7 +3018,19 @@ async function startExport() {
    ========================================================================= */
 window.onload = async () => {
   await initDB();
-  renderAssets(); renderTimeline(); renderPresetList();
+  const saved = await loadMeta('appState').catch(() => undefined);
+  if (saved && ((saved.assets && saved.assets.length) || (saved.timeline && ((saved.timeline.video || []).length || (saved.timeline.audio || []).length)))) {
+    appState = Object.assign(
+      { presets: [], markers: [], titles: [], playheadTime: 0, selectedClipId: null, selectedClipType: null,
+        settings: { idealVolume: 0.7, zoomLevel: 10, audioVisMode: 'waveform' } },
+      saved
+    );
+  }
+  renderAssets(); renderTimeline(); renderPresetList(); renderTitleList();
+  document.getElementById('zoomSlider').value = appState.settings.zoomLevel;
+  document.getElementById('idealVolumeSlider').value = appState.settings.idealVolume;
+  document.getElementById('idealVolLabel').innerText = appState.settings.idealVolume.toFixed(2);
+  document.getElementById('audioVisSelect').value = appState.settings.audioVisMode || 'waveform';
   updateScopeHint();
 };
 </script>
