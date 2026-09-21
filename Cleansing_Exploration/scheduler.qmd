@@ -1596,7 +1596,8 @@ function ruleLabel(rule){
   }
   if(rel.type==='crossSchedule'){
     const n = rel.maxRepeat || 2;
-    return `${p} ${modal} repeat the same ${pos} assignment (same time slot) in ${n} consecutive schedules (viewing order).`;
+    const posPhrase = (rule.position && rule.position.mode!=='any') ? `${pos} ` : '';
+    return `${p} ${modal} repeat the same ${posPhrase}assignment (same time slot) in ${n} consecutive schedules (viewing order).`;
   }
   if(rel.type==='swap'){
     return `${p} ${modal} swap positions with someone else (X\u2192Y while they go Y\u2192X).`;
@@ -4610,7 +4611,8 @@ function renderTargetBubble(container, target, cfg, onChange){
     const name = target.specificId ? (cfg.kind==='person' ? personName(target.specificId) : positionName(target.specificId)) : null;
     mainLabel = name || `choose a ${cfg.kind}`;
   } else {
-    mainLabel = cfg.labels[target.primary] || target.primary;
+    const tagPhrase = tagComboPhrase(target.tagFilter.required, target.tagFilter.prohibited);
+    mainLabel = tagPhrase ? `${cfg.kind==='person' ? 'people' : 'positions'} ${tagPhrase}` : (cfg.labels[target.primary] || target.primary);
   }
   const isUnset = target.primary==='specific' && !target.specificId;
   const { el } = bubbleEl(mainLabel, (arrowEl)=>{
@@ -4703,23 +4705,35 @@ function renderTimeBubble(container, timeDraft, onChange, opts){
     {value:'range', label:'during a range'},
     {value:'near', label:'within X minutes of a position'},
   ];
+  const switchMode = (val)=>{
+    timeDraft.kind = val;
+    if(val==='specific' && timeDraft.slotIndex===undefined) timeDraft.slotIndex = 0;
+    if(val==='range'){ if(timeDraft.start===undefined) timeDraft.start=0; if(timeDraft.end===undefined) timeDraft.end = Math.max(0,slots.length-1); }
+    onChange();
+  };
+  if(timeDraft.kind==='near'){
+    // Two separate bubbles, matching how every other numeric-plus-position rule piece works:
+    // an inline-editable "within N minutes of" bubble, then the position target on its own,
+    // with the full specific/tagged flexibility every other position bubble has.
+    const inp = document.createElement('input');
+    inp.type = 'number'; inp.className = 'db-bubble-input narrow';
+    inp.min = SLOT_MINUTES; inp.step = SLOT_MINUTES;
+    inp.value = timeDraft.nearGap;
+    inp.addEventListener('change', ()=>{ timeDraft.nearGap = Math.max(SLOT_MINUTES, Number(inp.value)||15); onChange(); });
+    const contentEl = document.createElement('span');
+    contentEl.appendChild(document.createTextNode('within '));
+    contentEl.appendChild(inp);
+    contentEl.appendChild(document.createTextNode(' minutes of'));
+    const { el } = bubbleEl(null, (arrowEl)=>{ openBubbleMenu(arrowEl, primaryOptions, timeDraft.kind, switchMode); }, { contentEl });
+    container.appendChild(el);
+    renderTargetBubble(container, timeDraft.nearPosition, {kind:'position', primaryOptions:['specific','any'], labels:{specific:'a specific position', any:'any position'}, tagCategory:'position'}, onChange);
+    return;
+  }
   let mainLabel;
   if(timeDraft.kind==='any') mainLabel = opts.anyLabel || 'at any time';
   else if(timeDraft.kind==='specific') mainLabel = slots[timeDraft.slotIndex] ? `at ${slots[timeDraft.slotIndex].label}` : 'at…';
-  else if(timeDraft.kind==='near'){
-    const posLabel = timeDraft.nearPosition.specificId ? positionName(timeDraft.nearPosition.specificId) : 'choose a position';
-    mainLabel = `within ${timeDraft.nearGap} minutes of ${posLabel}`;
-  }
   else mainLabel = (slots[timeDraft.start] && slots[timeDraft.end]!==undefined && slots[timeDraft.end]) ? `from ${slots[timeDraft.start].label} to ${formatTime(slots[timeDraft.end].minutes+SLOT_MINUTES)}` : 'during…';
-  const { el } = bubbleEl(mainLabel, (arrowEl)=>{
-    openBubbleMenu(arrowEl, primaryOptions, timeDraft.kind, (val)=>{
-      timeDraft.kind = val;
-      if(val==='specific' && timeDraft.slotIndex===undefined) timeDraft.slotIndex = 0;
-      if(val==='range'){ if(timeDraft.start===undefined) timeDraft.start=0; if(timeDraft.end===undefined) timeDraft.end = Math.max(0,slots.length-1); }
-      if(val==='near' && !timeDraft.nearPosition.specificId && state.positions.length){ timeDraft.nearPosition = { primary:'specific', specificId: state.positions[0].id, tagFilter:{required:[],prohibited:[]}, count:{min:1,max:1} }; }
-      onChange();
-    });
-  });
+  const { el } = bubbleEl(mainLabel, (arrowEl)=>{ openBubbleMenu(arrowEl, primaryOptions, timeDraft.kind, switchMode); });
   el.style.cursor = 'pointer';
   el.addEventListener('click', (e)=>{
     if(e.target.classList.contains('db-bubble-arrow')) return;
@@ -4728,34 +4742,9 @@ function renderTimeBubble(container, timeDraft, onChange, opts){
       openBubbleMenu(el, options, timeDraft.slotIndex, (val)=>{ timeDraft.slotIndex=Number(val); onChange(); }, {searchable:true});
     } else if(timeDraft.kind==='range'){
       openTimeRangeEditor(el, timeDraft, onChange);
-    } else if(timeDraft.kind==='near'){
-      openNearPositionEditor(el, timeDraft, onChange);
     }
   });
   container.appendChild(el);
-}
-function openNearPositionEditor(anchorEl, timeDraft, onChange){
-  closeFloating();
-  const layer = getFloatingLayer();
-  const pop = document.createElement('div');
-  pop.className = 'db-bubble-menu'; pop.style.padding = '10px'; pop.style.minWidth = '220px';
-  pop.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px;">
-    <label>Within <input type="number" id="near-gap-input" min="${SLOT_MINUTES}" step="${SLOT_MINUTES}" value="${timeDraft.nearGap}" style="width:52px;padding:4px 6px;border:1px solid var(--border-strong);border-radius:5px;"/> minutes of</label>
-    <select id="near-position-select" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:5px;">
-      ${state.positions.map(p=>`<option value="${p.id}" ${timeDraft.nearPosition.specificId===p.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
-    </select>
-  </div>`;
-  layer.appendChild(pop);
-  positionFloating(pop, anchorEl.getBoundingClientRect());
-  const gapInp = pop.querySelector('#near-gap-input'), posSel = pop.querySelector('#near-position-select');
-  const commit = ()=>{
-    timeDraft.nearGap = Math.max(SLOT_MINUTES, Number(gapInp.value)||15);
-    if(posSel.value) timeDraft.nearPosition = { primary:'specific', specificId: posSel.value, tagFilter:{required:[],prohibited:[]}, count:{min:1,max:1} };
-    onChange();
-  };
-  gapInp.addEventListener('change', commit);
-  posSel.addEventListener('change', commit);
-  registerCloser((ev)=>{ if(!pop.contains(ev.target)){ commit(); closeFloating(); } });
 }
 function openTimeRangeEditor(anchorEl, timeDraft, onChange){
   closeFloating();
@@ -4825,7 +4814,7 @@ var PREDICATE_DEFS = {
   sequence:       { dropdownVerb:'do one position right before or after another', restingVerb:'do', reachableFrom:{person:['specific','noone']} },
   limit:          { dropdownVerb:'have too much of one position', restingVerb:'have more than', reachableFrom:{person:['specific','noone']} },
   crossSchedule:  { dropdownVerb:'repeat the same assignment across schedules', restingVerb:'have the same assignment for more than', reachableFrom:{person:['specific','noone']} },
-  swap:           { dropdownVerb:'swap positions with someone else', restingVerb:'swap positions with someone else (X\u2192Y while they go Y\u2192X)', reachableFrom:{person:['noone']} },
+  swap:           { dropdownVerb:'swap positions with someone else', restingVerb:'swap positions with someone else (X\u2192Y while they go Y\u2192X)', reachableFrom:{person:['specific','noone']} },
   staggeredStart: { dropdownVerb:'start a position on a repeating cadence', restingVerb:'start', reachableFrom:{person:['specific','countRange']} },
   allowance:      { dropdownVerb:'have unfilled time', restingVerb:'have', reachableFrom:{person:['specific','everyone','noone']} },
   positionWindow: { dropdownVerb:'run', restingVerb:'run', reachableFrom:{position:['specific','any']} },
@@ -4931,7 +4920,8 @@ function initDraftFromRule(rule){
     return draft;
   }
   if(predicateId==='swap'){
-    draft.subject = { kind:'person', who:'noone', specificId:null, tagFilter:{required:[],prohibited:[]}, count:{min:1,max:1} };
+    draft.subject = fieldToSubjectDraft(rule.person, 'forbid', ['specific','noone']);
+    if(!draft.subject) return null;
     draft.modal = strengthEffectToModal(rule.strength, 'forbid');
     return draft;
   }
@@ -4948,6 +4938,7 @@ function initDraftFromRule(rule){
     if(!draft.subject) return null;
     draft.modal = strengthEffectToModal(rule.strength, rule.effect);
     draft.personB = fieldToTargetDraft(rule.relative.otherPerson, 'person');
+    draft.position = (rule.position && rule.position.mode!=='any') ? fieldToTargetDraft(rule.position, 'position') : null;
     return draft;
   }
   if(predicateId==='sequence'){
@@ -4976,6 +4967,7 @@ function initDraftFromRule(rule){
     if(!draft.subject) return null;
     draft.modal = strengthEffectToModal(rule.strength, rule.effect);
     draft.maxRepeat = rule.relative.maxRepeat;
+    draft.position = (rule.position && rule.position.mode!=='any') ? fieldToTargetDraft(rule.position, 'position') : null;
     return draft;
   }
   if(predicateId==='staggeredStart'){
@@ -5040,10 +5032,24 @@ function getPredicateSteps(draft){
     },
     isComplete(){ return true; },
   });
+  // Starts collapsed as a "+" add-chip (defaulting to "any position" if never engaged) rather
+  // than always showing a bubble — most of these rules don't care which position, and forcing
+  // a visible "any position" bubble into every one of them would just be clutter.
+  const mkOptionalPositionStep = (key, addLabel)=>({
+    ensureInit(){ if(draft[key]===undefined) draft[key] = null; },
+    render(c,r){
+      if(draft[key]===null){
+        c.appendChild(addChipEl(addLabel, ()=>{ draft[key] = blankTarget(); r(); })); // 'specific' by default — 'any' is already what leaving this uncollapsed means
+      } else {
+        renderTargetBubble(c, draft[key], {kind:'position', primaryOptions:['specific','any'], labels:{specific:'a specific position', any:'any position'}, tagCategory:'position'}, r);
+      }
+    },
+    isComplete(){ return true; },
+  });
 
   switch(draft.predicate){
     case 'assignment': return [ mkPositionStep('position','for'), mkTimeStep() ];
-    case 'together': return [ mkPersonStep('personB', null) ];
+    case 'together': return [ mkPersonStep('personB', null), mkOptionalPositionStep('position', '+ for a position…') ];
     case 'sequence': return [
       mkPositionStep('positionB', null),
       mkChoiceStep('order', 'after', [{value:'after',label:'right after'},{value:'before',label:'right before'},{value:'either',label:'within'}]),
@@ -5061,6 +5067,7 @@ function getPredicateSteps(draft){
     ];
     case 'crossSchedule': return [
       mkNumberStep('maxRepeat', {prefix:'the same assignment for more than', min:2, step:1, default:2, suffix:'schedules in a row'}),
+      mkOptionalPositionStep('position', '+ for a position…'),
     ];
     case 'staggeredStart': return [
       mkPositionStep('position', null),
@@ -5087,9 +5094,9 @@ function buildRuleFromDraft(draft){
   const subj = draft.subject;
   switch(draft.predicate){
     case 'allowance': return { kind:'unfilledAllowance', strength, effect, person: subjectToPersonField(subj), minutes: Math.max(0,Number(draft.minutes)||0), scope: draft.scope||'perInstance' };
-    case 'swap': return { kind:'relative', strength, effect:'forbid', person:{mode:'any'}, position:{mode:'any'}, slot:{mode:'any'}, relative:{type:'swap'} };
+    case 'swap': return { kind:'relative', strength, effect:'forbid', person: subjectToPersonField(subj), position:{mode:'any'}, slot:{mode:'any'}, relative:{type:'swap'} };
     case 'assignment': return { kind:'standard', strength, effect, person: subjectToPersonField(subj), position: targetDraftToField(draft.position,'position'), slot: timeDraftToField(draft.time) };
-    case 'together': return { kind:'relative', strength, effect, person: subjectToPersonField(subj), position:{mode:'any'}, slot:{mode:'any'}, relative:{type:'together', otherPerson: targetDraftToField(draft.personB,'person')} };
+    case 'together': return { kind:'relative', strength, effect, person: subjectToPersonField(subj), position: draft.position ? targetDraftToField(draft.position,'position') : {mode:'any'}, slot:{mode:'any'}, relative:{type:'together', otherPerson: targetDraftToField(draft.personB,'person')} };
     case 'sequence': return { kind:'relative', strength, effect, person: subjectToPersonField(subj), position: targetDraftToField(draft.positionA,'position'), slot:{mode:'any'},
       relative:{ type:'sequence', order:draft.order, otherPosition: targetDraftToField(draft.positionB,'position'), maxGapMinutes: draft.maxGap } };
     case 'limit': {
@@ -5103,7 +5110,7 @@ function buildRuleFromDraft(draft){
       }
       return { kind:'relative', strength, effect, person: subjectToPersonField(subj), position: targetDraftToField(draft.position,'position'), slot:{mode:'any'}, relative };
     }
-    case 'crossSchedule': return { kind:'relative', strength, effect, person: subjectToPersonField(subj), position:{mode:'any'}, slot:{mode:'any'}, relative:{type:'crossSchedule', maxRepeat: Math.max(2, Number(draft.maxRepeat)||2)} };
+    case 'crossSchedule': return { kind:'relative', strength, effect, person: subjectToPersonField(subj), position: draft.position ? targetDraftToField(draft.position,'position') : {mode:'any'}, slot:{mode:'any'}, relative:{type:'crossSchedule', maxRepeat: Math.max(2, Number(draft.maxRepeat)||2)} };
     case 'staggeredStart': return { kind:'relative', strength, effect, person: subjectToPersonField(subj), position: targetDraftToField(draft.position,'position'), slot: timeDraftToField(draft.time), relative:{type:'staggeredStart', intervalMinutes: Math.max(SLOT_MINUTES, Number(draft.interval)||15)} };
     case 'positionWindow': return { kind:'standard', strength, effect, person:{mode:'any'}, position: subjectToPositionField(subj), slot: timeDraftToField(draft.time) };
     default: return null;

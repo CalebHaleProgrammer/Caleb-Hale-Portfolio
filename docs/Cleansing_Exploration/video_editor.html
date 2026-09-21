@@ -224,7 +224,7 @@ body {
   display: grid;
   flex: 1;
   min-height: 560px;
-  grid-template-columns: 260px 4px 1fr 4px 340px;
+  grid-template-columns: 260px 4px 1fr 4px 380px;
   grid-template-rows: 1fr 4px 300px;
   overflow: hidden;
 }
@@ -320,6 +320,7 @@ body {
   font-family: monospace;
   font-size: 0.85rem;
   color: var(--text-dim);
+  pointer-events: none; /* keep the native video controls (play/pause/seek) clickable underneath */
 }
 .blackout-overlay.active { display: flex; }
 }
@@ -373,12 +374,13 @@ body {
   overflow: hidden;
 }
 .timeline-toolbar {
-  height: 40px;
+  min-height: 40px;
   background: var(--bg-accent);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  padding: 0 15px;
-  gap: 10px;
+  padding: 6px 15px;
+  gap: 8px 14px;
   font-size: 0.8rem;
   flex-shrink: 0;
 }
@@ -593,6 +595,8 @@ body {
   font-size: 13px;
 }
 .asset-name {
+  flex: 1;
+  min-width: 0; /* without this, flex items refuse to shrink below content size and ellipsis never kicks in */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -655,6 +659,20 @@ body {
 .btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+.track-toggle-btn.muted {
+  background: var(--danger-color);
+  border-color: var(--danger-color);
+  color: white;
+  text-decoration: line-through;
+}
+.clip.track-muted {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+}
+.clip.clip-disabled {
+  opacity: 0.45;
+  background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.25) 0 6px, transparent 6px 12px);
 }
 .collapsible-btn {
   background: var(--bg-accent);
@@ -739,6 +757,18 @@ body {
   padding: 8px;
   margin-bottom: 12px;
 }
+.rule-section {
+  background: var(--bg-accent);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.rule-section:last-child { margin-bottom: 0; }
+.rule-subsection + .rule-subsection {
+  border-top: 1px solid var(--bg-accent-2);
+  margin-top: 12px;
+  padding-top: 12px;
+}
 .section-title {
   font-size: 0.85rem;
   font-weight: bold;
@@ -754,6 +784,17 @@ body {
   padding: 1px 8px;
   font-size: 0.65rem;
   color: var(--text-dim);
+}
+.chip-warn {
+  background: rgba(245, 158, 11, 0.18);
+  color: var(--warn-color);
+}
+.rule-empty-state {
+  text-align: center;
+  padding: 28px 12px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  line-height: 1.5;
 }
 .preset-card, .step-card {
   background: var(--bg-accent);
@@ -949,9 +990,21 @@ Click an asset to preview it. Right-click for options. Drag onto a track below.
 ⚙️ Rules &amp; Edits
 </button>
 <div id="rightPanelContent" class="panel-content">
+<div class="tab-row">
+<button class="tab-btn active" data-tab="tab-automate" onclick="switchTab('tab-automate')">
+⚡ Automate
+</button>
+<button class="tab-btn" data-tab="tab-properties" onclick="switchTab('tab-properties')">
+🎚️ Properties
+</button>
+<button class="tab-btn" data-tab="tab-titles" onclick="switchTab('tab-titles')">
+🔤 Titles
+</button>
+</div>
+<div id="tab-automate" class="tab-panel active" style="padding-top: 10px;">
 <div class="scope-box">
 <div class="section-title" style="margin-bottom:6px;">
-Apply Quick Edits &amp; Presets to
+Apply to
 </div>
 <div class="field" style="margin-bottom:6px;">
 <p><select id="scopeSelect" onchange="onScopeChange()"> <option value="clip">Selected clip only</option> <option value="range">A time range (on selected clip’s track)</option> <option value="track">Whole track (selected clip’s track)</option> <option value="project">Whole project (both tracks)</option> </select></p>
@@ -968,21 +1021,10 @@ Apply Quick Edits &amp; Presets to
 Runs on just the clip selected on the timeline.
 </p>
 </div>
-<div class="tab-row">
-<button class="tab-btn active" data-tab="tab-quick" onclick="switchTab('tab-quick')">
+<div class="rule-section">
+<div class="section-title">
 Quick Actions
-</button>
-<button class="tab-btn" data-tab="tab-presets" onclick="switchTab('tab-presets')">
-Presets
-</button>
-<button class="tab-btn" data-tab="tab-manual" onclick="switchTab('tab-manual')">
-Manual
-</button>
-<button class="tab-btn" data-tab="tab-titles" onclick="switchTab('tab-titles')">
-Titles
-</button>
 </div>
-<div id="tab-quick" class="tab-panel active" style="padding-top: 10px;">
 <p class="empty-note">
 Each opens a parameter dialog first.
 </p>
@@ -996,7 +1038,7 @@ Each opens a parameter dialog first.
 🔊 Normalize Volume
 </button>
 </div>
-<div id="tab-presets" class="tab-panel" style="padding-top: 10px;">
+<div class="rule-section">
 <div class="section-title">
 <p>Saved Presets <button class="btn" onclick="openPresetBuilder()">+ New Preset</button></p>
 </div>
@@ -1004,9 +1046,15 @@ Each opens a parameter dialog first.
 
 </div>
 </div>
-<div id="tab-manual" class="tab-panel" style="padding-top: 10px;">
+</div>
+<div id="tab-properties" class="tab-panel" style="padding-top: 10px;">
+<div id="propertiesEmptyState" class="rule-empty-state">
+Select a clip on the timeline to see and edit its properties here.
+</div>
+<div id="propertiesContent" class="hidden">
+<div class="rule-section">
 <div class="section-title">
-Manual Volume
+Volume
 </div>
 <div class="field">
 <p><label>Mode</label> <select id="volMode"> <option value="fixed">Fixed offset</option> <option value="proportional">Proportional to ideal level</option> </select></p>
@@ -1017,70 +1065,86 @@ Manual Volume
 <button class="btn btn-block btn-primary" onclick="applyVolumeChange()">
 Apply to Selected Clip
 </button>
-<hr style="border-color: var(--bg-accent); margin: 14px 0;">
-<div class="section-title">
-Ideal Volume Target
+<div class="rule-subsection">
+<p><label style="display:block; font-size: 0.72rem; color: var(--text-dim); margin-bottom: 3px;">Ideal target — used by “Proportional” mode above, and by the Normalize Volume quick action (0–1, <span id="idealVolLabel">0.70</span>)</label> <input type="range" id="idealVolumeSlider" min="0" max="1" step="0.01" value="0.7" oninput="updateIdealVolume(this.value)"></p>
 </div>
-<div class="field">
-<p><label>Used by “Proportional” mode and Normalize (0–1, <span id="idealVolLabel">0.70</span>)</label> <input type="range" id="idealVolumeSlider" min="0" max="1" step="0.01" value="0.7" oninput="updateIdealVolume(this.value)"></p>
 </div>
-<hr style="border-color: var(--bg-accent); margin: 14px 0;">
 <div id="colorSection" class="hidden">
+<div class="rule-section">
 <div class="section-title">
-Color Correction <span class="chip">selected video clip</span>
+Color Correction <span class="chip">video</span>
 </div>
 <p class="empty-note">
 Live-previewed here (CSS approximation); baked in properly with ffmpeg’s <code>eq</code> filter at export.
 </p>
 <div class="field">
-<p><label>Brightness (<span id="brightnessLabel">0.00</span>)</label> <input type="range" id="brightnessSlider" min="-1" max="1" step="0.01" value="0" oninput="updateClipColor('brightness', this.value, 'brightnessLabel')"></p>
+<p><label>Brightness (<span id="brightnessLabel">0.00</span>)</label> <input type="range" id="brightnessSlider" min="-1" max="1" step="0.01" value="0" onpointerdown="saveState()" oninput="updateClipColor('brightness', this.value, 'brightnessLabel')"></p>
 </div>
 <div class="field">
-<p><label>Contrast (<span id="contrastLabel">1.00</span>)</label> <input type="range" id="contrastSlider" min="0" max="2" step="0.01" value="1" oninput="updateClipColor('contrast', this.value, 'contrastLabel')"></p>
+<p><label>Contrast (<span id="contrastLabel">1.00</span>)</label> <input type="range" id="contrastSlider" min="0" max="2" step="0.01" value="1" onpointerdown="saveState()" oninput="updateClipColor('contrast', this.value, 'contrastLabel')"></p>
 </div>
-<div class="field">
-<p><label>Saturation (<span id="saturationLabel">1.00</span>)</label> <input type="range" id="saturationSlider" min="0" max="3" step="0.01" value="1" oninput="updateClipColor('saturation', this.value, 'saturationLabel')"></p>
+<div class="field" style="margin-bottom:0;">
+<p><label>Saturation (<span id="saturationLabel">1.00</span>)</label> <input type="range" id="saturationSlider" min="0" max="3" step="0.01" value="1" onpointerdown="saveState()" oninput="updateClipColor('saturation', this.value, 'saturationLabel')"></p>
 </div>
-<hr style="border-color: var(--bg-accent); margin: 14px 0;">
+</div>
+<div class="rule-section">
 <div class="section-title">
-Chroma Key <span class="chip">export only, no live preview</span>
+Chroma Key <span class="chip">video</span> <span class="chip chip-warn">export only</span>
 </div>
 <div class="field-row" style="margin-bottom: 10px;">
-<p><input type="checkbox" id="chromaEnabled" onchange="updateChromaKey()"> <label for="chromaEnabled" style="margin:0;">Enable (removes the color below)</label></p>
+<p><input type="checkbox" id="chromaEnabled" onpointerdown="saveState()" onchange="updateChromaKey()"> <label for="chromaEnabled" style="margin:0;">Enable (removes the color below)</label></p>
 </div>
 <div class="field-inline-pair">
 <div class="field">
-<label>Key color</label><input type="color" id="chromaColor" value="#00ff00" onchange="updateChromaKey()" style="height:28px; padding:2px;">
+<label>Key color</label><input type="color" id="chromaColor" value="#00ff00" onpointerdown="saveState()" onchange="updateChromaKey()" style="height:28px; padding:2px;">
 </div>
 <div class="field">
-<label>Similarity (<span id="chromaSimLabel">0.20</span>)</label><input type="range" id="chromaSimilarity" min="0.01" max="1" step="0.01" value="0.2" oninput="updateChromaKey()">
+<label>Similarity (<span id="chromaSimLabel">0.20</span>)</label><input type="range" id="chromaSimilarity" min="0.01" max="1" step="0.01" value="0.2" onpointerdown="saveState()" oninput="updateChromaKey()">
 </div>
 </div>
-<div class="field">
-<label>Edge blend (<span id="chromaBlendLabel">0.10</span>)</label><input type="range" id="chromaBlend" min="0" max="1" step="0.01" value="0.1" oninput="updateChromaKey()">
+<div class="field" style="margin-bottom:0;">
+<label>Edge blend (<span id="chromaBlendLabel">0.10</span>)</label><input type="range" id="chromaBlend" min="0" max="1" step="0.01" value="0.1" onpointerdown="saveState()" oninput="updateChromaKey()">
+</div>
+</div>
+<div class="rule-section">
+<div class="section-title">
+Transition In <span class="chip">video</span> <span class="chip chip-warn">export only</span>
+</div>
+<p class="empty-note">
+Crossfades from whichever clip directly precedes this one on the video track (video + its audio together). 0 = hard cut. Longer than either clip’s own length gets clamped down automatically.
+</p>
+<div class="field" style="margin-bottom:0;">
+<label>Duration (s)</label><input type="number" id="transitionInInput" min="0" step="0.1" value="0" onpointerdown="saveState()" onchange="updateTransitionIn(this.value)">
+</div>
 </div>
 </div>
 <div id="audioFxSection" class="hidden">
+<div class="rule-section">
 <div class="section-title">
-Noise Reduction <span class="chip">selected audio clip · export only</span>
+Noise Reduction <span class="chip">audio</span> <span class="chip chip-warn">export only</span>
 </div>
-<div class="field">
-<p><label>Strength (<span id="denoiseLabel">off</span>)</label> <input type="range" id="denoiseSlider" min="0" max="30" step="1" value="0" oninput="updateDenoise(this.value)"></p>
+<div class="field" style="margin-bottom:0;">
+<p><label>Strength (<span id="denoiseLabel">off</span>)</label> <input type="range" id="denoiseSlider" min="0" max="30" step="1" value="0" onpointerdown="saveState()" oninput="updateDenoise(this.value)"></p>
 </div>
+<div class="rule-subsection">
 <div class="section-title">
-Fades <span class="chip">export only</span>
+Fades <span class="chip chip-warn">export only</span>
 </div>
-<div class="field-inline-pair">
+<div class="field-inline-pair" style="margin-bottom:0;">
 <div class="field">
-<label>Fade in (s)</label><input type="number" id="fadeInInput" min="0" step="0.1" value="0" onchange="updateFade('fadeInSec', this.value)">
+<label>Fade in (s)</label><input type="number" id="fadeInInput" min="0" step="0.1" value="0" onpointerdown="saveState()" onchange="updateFade('fadeInSec', this.value)">
 </div>
 <div class="field">
-<label>Fade out (s)</label><input type="number" id="fadeOutInput" min="0" step="0.1" value="0" onchange="updateFade('fadeOutSec', this.value)">
+<label>Fade out (s)</label><input type="number" id="fadeOutInput" min="0" step="0.1" value="0" onpointerdown="saveState()" onchange="updateFade('fadeOutSec', this.value)">
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
 </div>
 <div id="tab-titles" class="tab-panel" style="padding-top: 10px;">
+<div class="rule-section">
 <p class="empty-note">
 Timed in project seconds. Live-previewed during timeline playback (click a track or use ▶ Play from Playhead); burned in at export with ffmpeg’s <code>drawtext</code>. Assumes the video track has no gaps.
 </p>
@@ -1103,14 +1167,14 @@ Timed in project seconds. Live-previewed during timeline playback (click a track
 <label>Size</label><input type="number" id="titleSizeInput" value="36" step="2">
 </div>
 </div>
-<div class="field">
+<div class="field" style="margin-bottom:0;">
 <label>Color</label><input type="color" id="titleColorInput" value="#ffffff" style="height:28px; padding:2px;">
 </div>
-<button class="btn btn-block btn-primary" onclick="addTitle()">
+<button class="btn btn-block btn-primary" onclick="addTitle()" style="margin-top:10px;">
 <ul>
 <li>Add Title
 </li></ul></button>
-<hr style="border-color: var(--bg-accent); margin: 14px 0;">
+</div>
 <div id="titleList">
 
 </div>
@@ -1143,18 +1207,26 @@ Timed in project seconds. Live-previewed during timeline playback (click a track
 <div style="display:flex; align-items:center; gap:6px;">
 <p><span>Audio view:</span> <select id="audioVisSelect" class="btn" onchange="updateAudioVisMode(this.value)"> <option value="waveform">Waveform</option> <option value="volume">Volume bars</option> <option value="frequency">Frequency (spectrogram)</option> </select></p>
 </div>
+<div style="display:flex; align-items:center; gap:6px;">
+<button class="btn track-toggle-btn" id="videoMuteBtn" onclick="toggleTrackEnabled('video')" title="Toggle the video track on/off for playback and export (clips stay put)">
+🎬 Video
+</button>
+<button class="btn track-toggle-btn" id="audioMuteBtn" onclick="toggleTrackEnabled('audio')" title="Toggle the audio track on/off for playback and export (clips stay put)">
+🔊 Audio
+</button>
+</div>
 <p><span id="timeline-cursor" style="font-family: monospace; margin-left: auto;">Cursor: 0.00s | Playhead: 0.00s</span></p>
 </div>
 <div id="timelineScroll" class="timeline-scroll" onscroll="syncCursor()" onmousemove="onTimelineHover(event)" onmouseleave="onTimelineLeave()">
 <div id="timeRuler" class="time-ruler" onclick="onRulerClick(event)">
 
 </div>
-<div id="video-track" class="track" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="onTrackClick(event)">
+<div id="video-track" class="track" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="onTrackClick(event)" oncontextmenu="onTrackContextMenu(event)">
 <div style="position:absolute; left:0; top:0; font-size: 10px; color: #666;">
 VIDEO TRACK
 </div>
 </div>
-<div id="audio-track" class="track" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="onTrackClick(event)">
+<div id="audio-track" class="track" ondrop="drop(event)" ondragover="allowDrop(event)" onclick="onTrackClick(event)" oncontextmenu="onTrackContextMenu(event)">
 <div style="position:absolute; left:0; top:0; font-size: 10px; color: #666;">
 AUDIO TRACK
 </div>
@@ -1188,6 +1260,37 @@ Delete from Asset list
 </button>
 <button id="btnDeleteWorkspace" onclick="deleteAsset('workspace')">
 Delete from Workspace
+</button>
+<button onclick="closeMenus()">
+Cancel
+</button>
+</div>
+<div id="clipCtxMenu" class="context-menu">
+<button id="clipCtxToggleBtn" onclick="ctxToggleClip()">
+🔇 Toggle Off
+</button>
+<button onclick="ctxSplitClip()">
+✂️ Split at Playhead
+</button>
+<button onclick="ctxDuplicateClip()">
+📄 Duplicate
+</button>
+<button onclick="ctxCutClip()">
+✂️ Cut
+</button>
+<button onclick="ctxCopyClip()">
+📋 Copy
+</button>
+<button onclick="ctxDeleteClip()" style="color: var(--danger-color);">
+🗑️ Delete
+</button>
+<button onclick="closeMenus()">
+Cancel
+</button>
+</div>
+<div id="trackPasteMenu" class="context-menu">
+<button onclick="ctxPasteClip()">
+📋 Paste
 </button>
 <button onclick="closeMenus()">
 Cancel
@@ -1289,6 +1392,18 @@ Single-pass (faster, slightly less precise than a full two-pass measure).
 </p>
 </div>
 </div>
+<hr style="border-color: var(--bg-accent); margin: 10px 0;">
+<div id="gifExportField" class="field-row" style="margin-bottom: 6px;">
+<p><input type="checkbox" id="gifExportEnabled" onchange="onGifModeChange()"> <label for="gifExportEnabled" style="margin:0;">Export as animated GIF instead (no audio, video track only)</label></p>
+</div>
+<div id="gifOptionsRow" class="field-inline-pair hidden">
+<div class="field">
+<label>Max width (px)</label><input type="number" id="gifMaxWidth" value="480" step="20" min="64">
+</div>
+<div class="field">
+<label>Frame rate</label><input type="number" id="gifFps" value="10" step="1" min="1" max="30">
+</div>
+</div>
 <div id="exportRunning" class="hidden">
 <p class="empty-note" id="exportStatusLine">
 Loading FFmpeg…
@@ -1324,6 +1439,8 @@ the top of this document. This registers itself as a service worker that
 adds COOP/COEP headers so the page can become cross-origin isolated on
 GitHub Pages (needed for SharedArrayBuffer / ffmpeg.wasm below).
 -->
+<a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main></div>
+
 
 <script src="coi-serviceworker.js"></script>
 <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
@@ -1341,7 +1458,7 @@ window.addEventListener('mousemove', (e) => {
   const gridRect = grid.getBoundingClientRect();
   if (isResizingLeft) {
     const newWidth = e.clientX - gridRect.left;
-    if (newWidth > 100 && newWidth < 600) grid.style.gridTemplateColumns = `${newWidth}px 4px 1fr 4px 340px`;
+    if (newWidth > 100 && newWidth < 600) grid.style.gridTemplateColumns = `${newWidth}px 4px 1fr 4px 380px`;
   } else if (isResizingRight) {
     const rightPanelWidth = gridRect.right - e.clientX;
     if (rightPanelWidth > 260 && rightPanelWidth < 640) grid.style.gridTemplateColumns = `260px 4px 1fr 4px ${rightPanelWidth}px`;
@@ -1424,6 +1541,7 @@ let appState = {
   presets: [],                             // {id, name, reviewBeforeApply, steps:[{type, params}]}
   markers: [],                             // {id, time, label}
   titles: [],                               // {id, text, start, end, position, fontSize, color}
+  trackEnabled: { video: true, audio: true }, // toggling a track off leaves its clips in place but skips them for playback & export
   playheadTime: 0,
   selectedClipId: null,
   selectedClipType: null
@@ -1431,6 +1549,38 @@ let appState = {
 let historyStack = [];
 
 function clipDuration(clip) { return Math.max(0, (clip.sourceOut - clip.sourceIn) / clip.playbackRate); }
+/** Filenames, preset names, and title text are all user-typed and end up in
+    innerHTML templates for convenient markup (bold, chips, etc.) — this
+    keeps something like a file named `<b>` or a preset called `A & B` from
+    being interpreted as markup instead of shown as plain text. */
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function isTrackEnabled(type) { return !appState.trackEnabled || appState.trackEnabled[type] !== false; }
+function isClipPlayable(clip, type) { return isTrackEnabled(type) && clip && clip.enabled !== false; }
+function syncTrackToggleButtons() {
+  const vBtn = document.getElementById('videoMuteBtn'), aBtn = document.getElementById('audioMuteBtn');
+  if (vBtn) vBtn.classList.toggle('muted', !isTrackEnabled('video'));
+  if (aBtn) aBtn.classList.toggle('muted', !isTrackEnabled('audio'));
+}
+/** Toggles a whole track on/off. Clips stay right where they are — this only
+    affects playback (preview skips them entirely, as if they didn't exist)
+    and export (they're left out of the rendered file). Manual clip selection
+    still works on a muted track so you can inspect/edit it. */
+function toggleTrackEnabled(type) {
+  if (!appState.trackEnabled) appState.trackEnabled = { video: true, audio: true };
+  appState.trackEnabled[type] = !isTrackEnabled(type);
+  // if we just muted the track that's actively playing, stop it immediately
+  if (!isTrackEnabled(type) && appState.selectedClipType === type && currentPreviewClip) {
+    clearTrimStop();
+    currentPreviewClip = null;
+    player.pause();
+    setBlackout(true, `${type === 'video' ? 'Video' : 'Audio'} track is muted`);
+  }
+  if (!isTrackEnabled(type)) stopPlayheadScan();
+  syncTrackToggleButtons();
+  renderTimeline();
+}
 
 function snapshot() {
   return { timeline: appState.timeline, settings: appState.settings, presets: appState.presets };
@@ -1506,6 +1656,8 @@ function updateIdealVolume(v) {
 function syncManualPanel() {
   const clip = getSelectedClip();
   const isVideo = appState.selectedClipType === 'video';
+  document.getElementById('propertiesEmptyState').classList.toggle('hidden', !!clip);
+  document.getElementById('propertiesContent').classList.toggle('hidden', !clip);
   document.getElementById('colorSection').classList.toggle('hidden', !(clip && isVideo));
   document.getElementById('audioFxSection').classList.toggle('hidden', !(clip && !isVideo));
   if (!clip) return;
@@ -1522,6 +1674,7 @@ function syncManualPanel() {
     document.getElementById('chromaSimLabel').innerText = (clip.chromaKeySimilarity ?? 0.2).toFixed(2);
     document.getElementById('chromaBlend').value = clip.chromaKeyBlend ?? 0.1;
     document.getElementById('chromaBlendLabel').innerText = (clip.chromaKeyBlend ?? 0.1).toFixed(2);
+    document.getElementById('transitionInInput').value = clip.transitionInSec ?? 0;
   } else {
     document.getElementById('denoiseSlider').value = clip.denoiseStrength ?? 0;
     document.getElementById('denoiseLabel').innerText = clip.denoiseStrength ? String(clip.denoiseStrength) : 'off';
@@ -1556,6 +1709,11 @@ function updateFade(field, value) {
   const clip = getSelectedClip();
   if (!clip) return;
   clip[field] = Math.max(0, parseFloat(value) || 0);
+}
+function updateTransitionIn(value) {
+  const clip = getSelectedClip();
+  if (!clip) return;
+  clip.transitionInSec = Math.max(0, parseFloat(value) || 0);
 }
 
 /* =========================================================================
@@ -1680,6 +1838,8 @@ async function deleteAsset(mode) {
 function closeMenus() {
   document.getElementById('assetCtxMenu').style.display = 'none';
   document.getElementById('deleteOptionsMenu').style.display = 'none';
+  document.getElementById('clipCtxMenu').style.display = 'none';
+  document.getElementById('trackPasteMenu').style.display = 'none';
 }
 
 /* =========================================================================
@@ -1687,9 +1847,29 @@ function closeMenus() {
    ========================================================================= */
 const player = document.getElementById('main-video-player');
 let trimStopHandler = null;
-let currentPreviewClip = null; // the timeline clip (if any) currently loaded in the player
+let currentPreviewClip = null; // the timeline clip (if any) currently loaded in the player — used as the primary reference for the position line / title overlay
+/** A second, hidden media element so a video-track clip and an audio-track
+    clip can play at once, aligned to the same timeline position, instead of
+    only ever one or the other. Not attached to the DOM — an Audio object
+    plays fine without being inserted anywhere. */
+const secondaryAudio = new Audio();
+secondaryAudio.preload = 'auto';
+let secondaryAudioURL = null;
+let secondaryTrimStopHandler = null;
+let previewVideoClip = null;       // video-track clip currently loaded (or null)
+let previewAudioClip = null;       // audio-track clip currently loaded (or null)
+let previewVideoSourceT0 = null;   // source-time reference points captured at playback start, used to keep the two in sync as they play
+let previewAudioSourceT0 = null;
 function clearTrimStop() {
   if (trimStopHandler) { player.removeEventListener('timeupdate', trimStopHandler); trimStopHandler = null; }
+}
+function clearSecondaryTrimStop() {
+  if (secondaryTrimStopHandler) { secondaryAudio.removeEventListener('timeupdate', secondaryTrimStopHandler); secondaryTrimStopHandler = null; }
+}
+function setSecondaryAudioSource(blob) {
+  if (secondaryAudioURL) URL.revokeObjectURL(secondaryAudioURL);
+  secondaryAudioURL = URL.createObjectURL(blob);
+  secondaryAudio.src = secondaryAudioURL;
 }
 function applyClipFilterPreview(clip) {
   if (!clip || clip.brightness === undefined) { player.style.filter = ''; return; }
@@ -1708,40 +1888,37 @@ function setBlackout(active, label) {
   overlay.classList.toggle('active', !!active);
   document.getElementById('blackoutLabel').innerText = active ? (label || '') : '';
 }
+/** Every preview switch was creating a new blob: URL for the player without
+    ever releasing the previous one — a real memory leak over a long editing
+    session (click around 50 clips, leak 50 blob URLs). This centralizes it. */
+let currentPlayerObjectURL = null;
+function setPlayerSource(blob) {
+  if (currentPlayerObjectURL) URL.revokeObjectURL(currentPlayerObjectURL);
+  currentPlayerObjectURL = URL.createObjectURL(blob);
+  player.src = currentPlayerObjectURL;
+}
 async function previewAsset(assetId) {
   clearTrimStop();
+  clearSecondaryTrimStop();
+  secondaryAudio.pause();
+  previewVideoClip = null; previewAudioClip = null;
   currentPreviewClip = null;
   updatePlaybackPositionLine();
   const asset = appState.assets.find(a => a.id === assetId);
   const blob = await getFileFromDB(assetId);
   if (!blob) return;
-  player.src = URL.createObjectURL(blob);
+  setPlayerSource(blob);
   player.playbackRate = 1;
+  player.muted = false;
   player.style.filter = '';
   setBlackout(asset && asset.type === 'audio');
   document.getElementById('clip-context-label').innerText = asset ? asset.name : '';
   player.load(); player.play().catch(() => {});
 }
-async function previewClip(clip) {
-  clearTrimStop();
-  currentPreviewClip = clip;
-  const asset = appState.assets.find(a => a.id === clip.assetId);
-  const blob = await getFileFromDB(clip.assetId);
-  if (!blob) return;
-  player.src = URL.createObjectURL(blob);
-  player.playbackRate = clip.playbackRate || 1;
-  const isVideo = asset && asset.type === 'video';
-  applyClipFilterPreview(isVideo ? clip : null);
-  setBlackout(!isVideo, 'Audio only');
-  document.getElementById('clip-context-label').innerText = `${asset ? asset.name : 'clip'}  [${clip.sourceIn.toFixed(2)}s – ${clip.sourceOut.toFixed(2)}s @ ${clip.playbackRate}x]`;
-  player.load();
-  player.onloadedmetadata = () => { player.currentTime = clip.sourceIn; player.play().catch(() => {}); };
-  trimStopHandler = () => { if (player.currentTime >= clip.sourceOut) player.pause(); };
-  player.addEventListener('timeupdate', trimStopHandler);
-}
 player.addEventListener('timeupdate', () => {
   document.getElementById('playback-info').innerText = `${fmtTime(player.currentTime)} / ${fmtTime(player.duration || 0)}`;
   updatePlaybackPositionLine();
+  resyncSecondaryAudio();
 });
 /** Moves the red "now playing" line on the tracks to match wherever the
     preview player currently is, mapped back from source time to timeline
@@ -1751,12 +1928,19 @@ function updatePlaybackPositionLine() {
   if (!line) return;
   if (!currentPreviewClip) { line.style.display = 'none'; updateTitleOverlay(-1); return; }
   const clip = currentPreviewClip;
-  const t = clip.start + (player.currentTime - clip.sourceIn) / clip.playbackRate;
+  // Use whichever element is actually the one driving this clip: the video
+  // element when a video clip is loaded, otherwise the secondary audio (its
+  // currentTime would otherwise be stale/meaningless during audio-only play).
+  const sourceTime = (previewVideoClip === clip) ? player.currentTime : secondaryAudio.currentTime;
+  const t = clip.start + (sourceTime - clip.sourceIn) / clip.playbackRate;
   if (t < clip.start - 0.05 || t > clip.start + clipDuration(clip) + 0.05) { line.style.display = 'none'; updateTitleOverlay(-1); return; }
   line.style.left = (Math.max(0, t) * appState.settings.zoomLevel) + 'px';
   line.style.display = 'block';
   updateTitleOverlay(t);
 }
+// Drives the position line/title overlay from the audio track's own clock
+// when it's playing solo (no video clip loaded alongside it).
+secondaryAudio.addEventListener('timeupdate', () => { if (!previewVideoClip) updatePlaybackPositionLine(); });
 function fmtTime(s) { if (!isFinite(s)) return '00:00.0'; const m = Math.floor(s / 60); const sec = (s % 60).toFixed(1).padStart(4, '0'); return `${String(m).padStart(2,'0')}:${sec}`; }
 
 /* =========================================================================
@@ -1767,19 +1951,30 @@ function fmtTime(s) { if (!isFinite(s)) return '00:00.0'; const m = Math.floor(s
    the AudioContext's destination rather than replacing the normal output.
    ========================================================================= */
 let vuAudioCtx = null, vuAnalyser = null, vuDataArray = null;
+let vuVideoSource = null, vuAudioSource = null;
 function ensureVUMeter() {
-  if (vuAudioCtx) { vuAudioCtx.resume().catch(() => {}); return; }
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    vuAudioCtx = new AudioCtx();
-    const source = vuAudioCtx.createMediaElementSource(player);
-    vuAnalyser = vuAudioCtx.createAnalyser();
-    vuAnalyser.fftSize = 512;
-    source.connect(vuAnalyser);
-    vuAnalyser.connect(vuAudioCtx.destination);
-    vuDataArray = new Uint8Array(vuAnalyser.frequencyBinCount);
-    requestAnimationFrame(drawVUMeter);
-  } catch (e) { console.warn('VU meter unavailable:', e); }
+  if (!vuAudioCtx) {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      vuAudioCtx = new AudioCtx();
+      vuAnalyser = vuAudioCtx.createAnalyser();
+      vuAnalyser.fftSize = 512;
+      vuAnalyser.connect(vuAudioCtx.destination);
+      vuDataArray = new Uint8Array(vuAnalyser.frequencyBinCount);
+      requestAnimationFrame(drawVUMeter);
+    } catch (e) { console.warn('VU meter unavailable:', e); return; }
+  }
+  vuAudioCtx.resume().catch(() => {});
+  // createMediaElementSource can only ever be called once per element, and
+  // doing so routes ALL of that element's audio through the graph from then
+  // on (nothing plays outside it) — so both sources get connected once and
+  // reused, rather than reconnected per playback.
+  if (!vuVideoSource) {
+    try { vuVideoSource = vuAudioCtx.createMediaElementSource(player); vuVideoSource.connect(vuAnalyser); } catch (e) {}
+  }
+  if (!vuAudioSource) {
+    try { vuAudioSource = vuAudioCtx.createMediaElementSource(secondaryAudio); vuAudioSource.connect(vuAnalyser); } catch (e) {}
+  }
 }
 function drawVUMeter() {
   requestAnimationFrame(drawVUMeter);
@@ -1815,7 +2010,9 @@ async function drop(ev) {
     brightness: 0, contrast: 1, saturation: 1,              // color correction (video), maps to ffmpeg's eq filter
     chromaKeyEnabled: false, chromaKeyColor: '#00ff00', chromaKeySimilarity: 0.2, chromaKeyBlend: 0.1, // colorkey (video)
     denoiseStrength: 0,                                      // 0 = off; maps to ffmpeg's afftdn (audio)
-    fadeInSec: 0, fadeOutSec: 0                               // maps to ffmpeg's afade (audio)
+    fadeInSec: 0, fadeOutSec: 0,                              // maps to ffmpeg's afade (audio)
+    transitionInSec: 0,                                       // crossfade duration from the PRECEDING video-track clip; maps to xfade
+    enabled: true                                             // per-clip toggle (distinct from the whole-track mute) — off skips it for playback & export, but it stays on the timeline
   });
   if (trackId === 'video-track') {
     appState.timeline.video.push(makeClip());
@@ -1842,7 +2039,7 @@ function renderTimeline() {
 }
 function createClipUI(clip, type) {
   const div = document.createElement('div');
-  div.className = `clip ${type}-clip ${appState.selectedClipId === clip.id ? 'selected' : ''}`;
+  div.className = `clip ${type}-clip ${appState.selectedClipId === clip.id ? 'selected' : ''} ${isTrackEnabled(type) ? '' : 'track-muted'} ${clip.enabled === false ? 'clip-disabled' : ''}`;
   div.dataset.clipId = clip.id;
   const widthPx = Math.max(4, clipDuration(clip) * appState.settings.zoomLevel);
   div.style.left = (clip.start * appState.settings.zoomLevel) + 'px';
@@ -1869,12 +2066,12 @@ function createClipUI(clip, type) {
     div.appendChild(canvas);
     computeVideoFilmstrip(clip, canvas.width).then(result => {
       if (!canvas.isConnected || !result) return;
-      canvas.getContext('2d').drawImage(result.canvas, 0, 0, canvas.width, canvas.height);
+      drawVideoFilmstrip(canvas, result);
     });
   }
   const label = document.createElement('div');
   label.className = 'clip-label';
-  label.innerHTML = `<div>${asset ? asset.name : 'Unknown Asset'}${linkTag}</div><div class="clip-meta">${clipDuration(clip).toFixed(1)}s${rateTag}</div>`;
+  label.innerHTML = `<div>${escapeHtml(asset ? asset.name : 'Unknown Asset')}${linkTag}</div><div class="clip-meta">${clipDuration(clip).toFixed(1)}s${rateTag}</div>`;
   div.appendChild(label);
   const edgeL = document.createElement('div'); edgeL.className = 'clip-edge left';
   const edgeR = document.createElement('div'); edgeR.className = 'clip-edge right';
@@ -1885,17 +2082,37 @@ function createClipUI(clip, type) {
 /** Selects a clip without tearing down and rebuilding the timeline DOM, so a
     drag in progress (which holds a direct reference to its clip's <div>)
     keeps working, and plain clicking stays cheap. */
-function selectClip(id, type) {
+/** Selects a clip without triggering playback — used when right-clicking to
+    open the context menu, where auto-playing would be a surprising side
+    effect of just opening a menu. */
+function selectClipQuiet(id, type) {
   document.querySelectorAll('.clip.selected').forEach(el => el.classList.remove('selected'));
   appState.selectedClipId = id; appState.selectedClipType = type;
-  const track = type === 'video' ? appState.timeline.video : appState.timeline.audio;
-  const clip = track.find(c => c.id === id);
   const el = document.querySelector(`.clip[data-clip-id="${id}"]`);
   if (el) el.classList.add('selected');
   updateSelectionLabel();
-  if (clip) previewClip(clip);
   updateScopeHint();
   syncManualPanel();
+}
+function selectClip(id, type) {
+  selectClipQuiet(id, type);
+  const track = type === 'video' ? appState.timeline.video : appState.timeline.audio;
+  const clip = track.find(c => c.id === id);
+  if (clip) {
+    if (isClipPlayable(clip, type)) {
+      playAtTimelinePosition(clip.start);
+    } else {
+      clearTrimStop();
+      clearSecondaryTrimStop();
+      secondaryAudio.pause();
+      previewVideoClip = null; previewAudioClip = null;
+      currentPreviewClip = null;
+      player.pause();
+      const reason = !isTrackEnabled(type) ? `${type === 'video' ? 'Video' : 'Audio'} track is muted` : 'This clip is toggled off';
+      setBlackout(true, reason);
+      document.getElementById('clip-context-label').innerText = '';
+    }
+  }
 }
 function updateAudioVisMode(mode) {
   appState.settings.audioVisMode = mode;
@@ -1951,6 +2168,7 @@ function deleteClip() {
   appState.timeline[type] = appState.timeline[type].filter(c => c.id !== clip.id);
   appState.selectedClipId = null;
   renderTimeline();
+  syncManualPanel();
 }
 
 /* =========================================================================
@@ -1976,6 +2194,7 @@ function attachClipDragHandlers(div, edgeL, edgeR, clip, type) {
     const asset = appState.assets.find(a => a.id === clip.assetId);
     const maxSourceOut = asset && asset.duration ? asset.duration : Infinity;
     const snapThresholdT = 8 / zoom;
+    const snapTargetsCache = getSnapTargets(clip.id, type); // computed once — doesn't change mid-drag
     let dragged = false;
 
     function onMove(ev) {
@@ -1986,7 +2205,7 @@ function attachClipDragHandlers(div, edgeL, edgeR, clip, type) {
         saveState(); // snapshot the pre-drag state once, right before the first real mutation
       }
       const deltaT = deltaPx / zoom;
-      const targets = ev.shiftKey ? [] : getSnapTargets(clip.id, type); // hold Shift to disable snapping
+      const targets = ev.shiftKey ? [] : snapTargetsCache; // hold Shift to disable snapping
 
       if (mode === 'move') {
         let newStart = Math.max(0, orig.start + deltaT);
@@ -2038,10 +2257,99 @@ function attachClipDragHandlers(div, edgeL, edgeR, clip, type) {
   edgeL.addEventListener('mousedown', startDrag('trim-start'));
   edgeR.addEventListener('mousedown', startDrag('trim-end'));
   div.addEventListener('click', (e) => e.stopPropagation());
+  div.addEventListener('contextmenu', (e) => openClipContextMenu(e, clip, type));
+}
+
+/* =========================================================================
+   PER-CLIP CONTEXT MENU — right-click a clip for toggle/split/duplicate/
+   cut/copy/delete; right-click empty track space to paste.
+   ========================================================================= */
+let ctxMenuClip = null, ctxMenuTrackType = null;
+let clipClipboard = null; // { data: {...clip fields, no id}, trackType }
+let ctxPasteTrackType = null, ctxPasteTime = 0;
+function openClipContextMenu(e, clip, type) {
+  e.preventDefault();
+  e.stopPropagation();
+  closeMenus();
+  ctxMenuClip = clip; ctxMenuTrackType = type;
+  selectClipQuiet(clip.id, type); // select for editing, but don't auto-play just from opening a menu
+  document.getElementById('clipCtxToggleBtn').innerText = clip.enabled === false ? '🔊 Toggle On' : '🔇 Toggle Off';
+  const menu = document.getElementById('clipCtxMenu');
+  menu.style.display = 'block';
+  menu.style.left = e.pageX + 'px';
+  menu.style.top = e.pageY + 'px';
+}
+function ctxToggleClip() {
+  if (!ctxMenuClip) return;
+  saveState();
+  ctxMenuClip.enabled = ctxMenuClip.enabled === false ? true : false;
+  if (ctxMenuClip.enabled === false && currentPreviewClip === ctxMenuClip) {
+    // stop it immediately if it was mid-playback when toggled off
+    if (previewVideoClip === ctxMenuClip) { player.pause(); previewVideoClip = null; }
+    if (previewAudioClip === ctxMenuClip) { secondaryAudio.pause(); previewAudioClip = null; }
+  }
+  renderTimeline();
+  closeMenus();
+}
+function ctxSplitClip() { closeMenus(); splitClip(); }
+function ctxDeleteClip() { closeMenus(); deleteClip(); }
+function ctxDuplicateClip() {
+  if (!ctxMenuClip) return;
+  saveState();
+  const track = appState.timeline[ctxMenuTrackType];
+  const dup = { ...ctxMenuClip, id: Date.now() + Math.random(), start: ctxMenuClip.start + clipDuration(ctxMenuClip) + 0.1 };
+  delete dup.linkId; // the duplicate isn't part of the original auto-link pairing
+  track.push(dup);
+  renderTimeline();
+  closeMenus();
+}
+function ctxCopyClip() {
+  if (!ctxMenuClip) return;
+  const data = { ...ctxMenuClip };
+  delete data.id; delete data.linkId;
+  clipClipboard = { data, trackType: ctxMenuTrackType };
+  closeMenus();
+}
+function ctxCutClip() {
+  if (!ctxMenuClip) return;
+  const data = { ...ctxMenuClip };
+  delete data.id; delete data.linkId;
+  clipClipboard = { data, trackType: ctxMenuTrackType };
+  saveState();
+  appState.timeline[ctxMenuTrackType] = appState.timeline[ctxMenuTrackType].filter(c => c.id !== ctxMenuClip.id);
+  appState.selectedClipId = null;
+  renderTimeline();
+  syncManualPanel();
+  closeMenus();
+}
+/** Right-click on empty track space (not a clip): offers Paste if there's
+    something in the clipboard. Clips carry their own contextmenu handler
+    with stopPropagation, so this only ever fires for genuine empty space. */
+function onTrackContextMenu(ev) {
+  ev.preventDefault();
+  closeMenus();
+  if (!clipClipboard) return;
+  ctxPasteTrackType = ev.currentTarget.id === 'video-track' ? 'video' : 'audio';
+  ctxPasteTime = xToTime(ev.clientX);
+  const menu = document.getElementById('trackPasteMenu');
+  menu.style.display = 'block';
+  menu.style.left = ev.pageX + 'px';
+  menu.style.top = ev.pageY + 'px';
+}
+function ctxPasteClip() {
+  if (!clipClipboard) return;
+  saveState();
+  const newClip = { ...clipClipboard.data, id: Date.now() + Math.random(), start: Math.max(0, ctxPasteTime) };
+  appState.timeline[ctxPasteTrackType].push(newClip);
+  renderTimeline();
+  closeMenus();
 }
 
 function syncCursor() {
-  renderRuler(); // keep tick density/labels correct as zoom/content change; cheap relative to scroll frequency
+  // Ruler content (tick positions/labels) only changes with zoom or content
+  // length — both already call renderRuler() via renderTimeline(). Rebuilding
+  // it here too meant every scroll event (dozens/sec during a drag-scroll)
+  // tore down and recreated every tick/label DOM node for nothing.
   const scrollLeft = document.getElementById('timelineScroll').scrollLeft;
   document.getElementById('timeline-cursor').innerText = `Cursor: ${(scrollLeft / appState.settings.zoomLevel).toFixed(2)}s | Playhead: ${appState.playheadTime.toFixed(2)}s`;
 }
@@ -2177,30 +2485,29 @@ function onTrackClick(ev) {
   if (hit) {
     appState.selectedClipId = hit.id; appState.selectedClipType = type;
     renderTimeline();
-    previewClipFrom(hit, hit.sourceIn + (t - hit.start) * hit.playbackRate);
+    if (isClipPlayable(hit, type)) playAtTimelinePosition(t);
     updateScopeHint();
+    syncManualPanel();
   }
 }
-/** Plays whatever is under the current playhead, on whichever track has
-    something there (video preferred). */
+/** Plays whatever is under the current playhead — on BOTH tracks at once if
+    both have something there, not just one. A muted track, or an
+    individually toggled-off clip, is treated as if it has nothing there. */
 function findClipAt(track, t) {
-  return track.find(c => t >= c.start && t <= c.start + clipDuration(c));
+  return track.find(c => c.enabled !== false && t >= c.start && t <= c.start + clipDuration(c));
 }
 function playFromPlayhead() {
-  stopPlayheadScan();
-  const t = appState.playheadTime;
-  const vHit = findClipAt(appState.timeline.video, t);
-  if (vHit) { previewClipFrom(vHit, vHit.sourceIn + (t - vHit.start) * vHit.playbackRate); return; }
-  const aHit = findClipAt(appState.timeline.audio, t);
-  if (aHit) { previewClipFrom(aHit, aHit.sourceIn + (t - aHit.start) * aHit.playbackRate); return; }
-  scanForwardForContent();
+  playAtTimelinePosition(appState.playheadTime);
 }
 /** Nothing under the playhead: stop and silence whatever was playing, show
     black, then advance the playhead forward in real time (smoothly,
     auto-scrolling the view to keep it visible) until ANY clip — video or
-    audio — turns up, or the ruler's tick range runs out. */
+    audio, on an enabled track — turns up, or the ruler's tick range runs out. */
 function scanForwardForContent() {
   clearTrimStop();
+  clearSecondaryTrimStop();
+  secondaryAudio.pause();
+  previewVideoClip = null; previewAudioClip = null;
   currentPreviewClip = null;
   player.pause();
   player.removeAttribute('src');
@@ -2219,12 +2526,11 @@ function scanForwardForContent() {
     document.getElementById('timeline-cursor').innerText = `Cursor: ${(scrollEl.scrollLeft / appState.settings.zoomLevel).toFixed(2)}s | Playhead: ${appState.playheadTime.toFixed(2)}s`;
     const px = appState.playheadTime * appState.settings.zoomLevel;
     if (px > scrollEl.scrollLeft + scrollEl.clientWidth - 60) scrollEl.scrollLeft = px - scrollEl.clientWidth * 0.4;
-    const vHit = findClipAt(appState.timeline.video, appState.playheadTime);
-    const aHit = !vHit ? findClipAt(appState.timeline.audio, appState.playheadTime) : null;
-    const hit = vHit || aHit;
-    if (hit) {
+    const vHit = isTrackEnabled('video') ? findClipAt(appState.timeline.video, appState.playheadTime) : null;
+    const aHit = isTrackEnabled('audio') ? findClipAt(appState.timeline.audio, appState.playheadTime) : null;
+    if (vHit || aHit) {
       playheadScanRAF = null;
-      previewClipFrom(hit, hit.sourceIn + (appState.playheadTime - hit.start) * hit.playbackRate);
+      playAtTimelinePosition(appState.playheadTime);
       return;
     }
     if (appState.playheadTime >= endLimit) {
@@ -2236,23 +2542,97 @@ function scanForwardForContent() {
   }
   playheadScanRAF = requestAnimationFrame(step);
 }
-async function previewClipFrom(clip, sourceStartTime) {
+/** The canonical entry point for starting playback from a TIMELINE position
+    (used by clicking a clip, clicking the ruler/track, Play from Playhead,
+    and the searching scan when it finds something). Finds whatever's
+    playable on EACH track at that instant and plays them together — a video
+    clip's picture with a separate audio-track clip's sound at the same time,
+    aligned to the same moment, rather than only ever one exclusively. When
+    both are present the video clip's own embedded audio is muted so the
+    audio-track clip provides the sound instead (mirrors the "replace" export
+    mode); each stops independently when it reaches its own out point rather
+    than being cut short by the other. */
+async function playAtTimelinePosition(t) {
+  stopPlayheadScan();
+  const vClip = isTrackEnabled('video') ? findClipAt(appState.timeline.video, t) : null;
+  const aClip = isTrackEnabled('audio') ? findClipAt(appState.timeline.audio, t) : null;
+
+  if (!vClip && !aClip) { scanForwardForContent(); return; }
+
   clearTrimStop();
-  currentPreviewClip = clip;
-  const asset = appState.assets.find(a => a.id === clip.assetId);
-  const blob = await getFileFromDB(clip.assetId);
-  if (!blob) return;
-  player.src = URL.createObjectURL(blob);
-  player.playbackRate = clip.playbackRate || 1;
-  const isVideo = asset && asset.type === 'video';
-  applyClipFilterPreview(isVideo ? clip : null);
-  setBlackout(!isVideo, 'Audio only');
-  document.getElementById('clip-context-label').innerText = `${asset ? asset.name : 'clip'}  [from ${sourceStartTime.toFixed(2)}s]`;
-  player.load();
-  player.onloadedmetadata = () => { player.currentTime = sourceStartTime; player.play().catch(() => {}); };
-  trimStopHandler = () => { if (player.currentTime >= clip.sourceOut) player.pause(); };
-  player.addEventListener('timeupdate', trimStopHandler);
+  clearSecondaryTrimStop();
+  previewVideoClip = vClip;
+  previewAudioClip = aClip;
+  currentPreviewClip = vClip || aClip;
+  previewVideoSourceT0 = null;
+  previewAudioSourceT0 = null;
+
+  const labelParts = [];
+
+  if (vClip) {
+    ensureVUMeter();
+    const vAsset = appState.assets.find(a => a.id === vClip.assetId);
+    const vBlob = await getFileFromDB(vClip.assetId);
+    if (vBlob) {
+      setPlayerSource(vBlob);
+      player.playbackRate = vClip.playbackRate || 1;
+      player.muted = !!aClip;
+      applyClipFilterPreview(vClip);
+      setBlackout(false);
+      const vSourceT = vClip.sourceIn + (t - vClip.start) * vClip.playbackRate;
+      previewVideoSourceT0 = vSourceT;
+      player.load();
+      player.onloadedmetadata = () => { player.currentTime = vSourceT; player.play().catch(() => {}); };
+      trimStopHandler = () => { if (player.currentTime >= vClip.sourceOut) player.pause(); };
+      player.addEventListener('timeupdate', trimStopHandler);
+      labelParts.push(`🎬 ${vAsset ? vAsset.name : 'video'} [${vSourceT.toFixed(2)}s]`);
+    }
+  } else {
+    player.pause();
+    player.muted = true;
+    setBlackout(true, 'Audio only');
+  }
+
+  if (aClip) {
+    ensureVUMeter();
+    const aAsset = appState.assets.find(a => a.id === aClip.assetId);
+    const aBlob = await getFileFromDB(aClip.assetId);
+    if (aBlob) {
+      setSecondaryAudioSource(aBlob);
+      secondaryAudio.playbackRate = aClip.playbackRate || 1;
+      const aSourceT = aClip.sourceIn + (t - aClip.start) * aClip.playbackRate;
+      previewAudioSourceT0 = aSourceT;
+      secondaryAudio.load();
+      secondaryAudio.onloadedmetadata = () => { secondaryAudio.currentTime = aSourceT; secondaryAudio.play().catch(() => {}); };
+      secondaryTrimStopHandler = () => { if (secondaryAudio.currentTime >= aClip.sourceOut) secondaryAudio.pause(); };
+      secondaryAudio.addEventListener('timeupdate', secondaryTrimStopHandler);
+      labelParts.push(`🔊 ${aAsset ? aAsset.name : 'audio'} [${aSourceT.toFixed(2)}s]`);
+    }
+  } else {
+    secondaryAudio.pause();
+  }
+
+  document.getElementById('clip-context-label').innerText = labelParts.join('   +   ');
 }
+/** Keeps the secondary audio roughly aligned with the video as both play —
+    HTML media elements don't share a clock, so left alone they'll drift.
+    Not sample-accurate (that would need real Web Audio scheduling), but
+    close enough for a preview. Corrects on the video's own timeupdate tick
+    (~4/sec) and right after a manual seek. */
+function resyncSecondaryAudio() {
+  if (!previewVideoClip || !previewAudioClip) return;
+  if (previewVideoSourceT0 == null || previewAudioSourceT0 == null) return;
+  if (secondaryAudio.paused || player.paused) return;
+  const timelineElapsed = (player.currentTime - previewVideoSourceT0) / (previewVideoClip.playbackRate || 1);
+  const expected = previewAudioSourceT0 + timelineElapsed * (previewAudioClip.playbackRate || 1);
+  if (Math.abs(secondaryAudio.currentTime - expected) > 0.15) secondaryAudio.currentTime = Math.max(0, expected);
+}
+// Native video controls (play/pause/seek) only touch the <video> element by
+// default — mirror them onto the secondary audio so pausing or scrubbing the
+// video doesn't leave the audio track playing on its own or out of step.
+player.addEventListener('play', () => { if (previewAudioClip && secondaryAudio.paused) secondaryAudio.play().catch(() => {}); });
+player.addEventListener('pause', () => { if (previewAudioClip) secondaryAudio.pause(); });
+player.addEventListener('seeked', resyncSecondaryAudio);
 function addMarkerAtPlayhead() {
   const label = prompt('Marker label (optional):', '');
   if (label === null) return; // cancelled
@@ -2308,7 +2688,7 @@ function renderTitleList() {
   if (appState.titles.length === 0) { list.innerHTML = '<p class="empty-note">No titles yet.</p>'; return; }
   appState.titles.slice().sort((a, b) => a.start - b.start).forEach(t => {
     const card = document.createElement('div'); card.className = 'preset-card';
-    card.innerHTML = `<div class="preset-head"><strong>${t.text}</strong><span class="chip">${t.start.toFixed(1)}s–${t.end.toFixed(1)}s · ${t.position}</span></div>`;
+    card.innerHTML = `<div class="preset-head"><strong>${escapeHtml(t.text)}</strong><span class="chip">${t.start.toFixed(1)}s–${t.end.toFixed(1)}s · ${t.position}</span></div>`;
     const delBtn = document.createElement('button'); delBtn.className = 'btn btn-danger'; delBtn.innerText = 'Delete';
     delBtn.onclick = () => deleteTitle(t.id);
     card.appendChild(delBtn);
@@ -2689,21 +3069,44 @@ async function computeVideoFilmstrip(clip, widthPx) {
     const { vid, url } = loaded;
     const thumbH = 52;
     const thumbW = Math.max(20, Math.round(thumbH * ((vid.videoWidth / vid.videoHeight) || 16 / 9)));
-    const count = Math.max(1, Math.min(30, Math.round(widthPx / thumbW)));
-    const strip = document.createElement('canvas');
-    strip.width = thumbW * count; strip.height = thumbH;
-    const sctx = strip.getContext('2d');
+    // Sample enough frames to cover the clip's full width at its NATURAL
+    // aspect ratio (capped so very wide/long clips don't trigger hundreds of
+    // slow sequential seeks). Frames beyond the cap repeat when drawn rather
+    // than stretching — a repeated frame is far less jarring than a visibly
+    // squished one.
+    const neededForNoRepeat = Math.max(1, Math.ceil(widthPx / thumbW));
+    const count = Math.min(neededForNoRepeat, 60);
     const span = clip.sourceOut - clip.sourceIn;
+    const frames = [];
     for (let i = 0; i < count; i++) {
       const t = clip.sourceIn + (i + 0.5) / count * span;
       await seekTo(vid, t);
-      sctx.drawImage(vid, i * thumbW, 0, thumbW, thumbH);
+      const fc = document.createElement('canvas');
+      fc.width = thumbW; fc.height = thumbH;
+      fc.getContext('2d').drawImage(vid, 0, 0, thumbW, thumbH);
+      frames.push(fc);
     }
     URL.revokeObjectURL(url);
-    return { canvas: strip };
+    return { frames, thumbW, thumbH };
   })();
   videoThumbCache.set(key, promise);
   return promise;
+}
+/** Tiles the sampled frames across the canvas at their natural width —
+    repeating frames as needed to fill the space, never stretching one to
+    fit, so thumbnails always stay at the video's real aspect ratio. */
+function drawVideoFilmstrip(canvas, result) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  if (!result || !result.frames.length) return;
+  const { frames, thumbW } = result;
+  let x = 0, i = 0;
+  while (x < w) {
+    ctx.drawImage(frames[i % frames.length], x, 0, thumbW, h);
+    x += thumbW;
+    i++;
+  }
 }
 const assetThumbCache = new Map(); // assetId -> Promise<dataURL|null>
 async function getAssetThumbnail(asset) {
@@ -2836,6 +3239,7 @@ function commitScopeResult(chainResult) {
   }
   appState.selectedClipId = null;
   renderTimeline();
+  syncManualPanel();
 }
 
 /* Repack a track after ONE clip was replaced by newClips, rippling later
@@ -2941,7 +3345,7 @@ function renderPresetList() {
   appState.presets.forEach(preset => {
     const card = document.createElement('div'); card.className = 'preset-card';
     const head = document.createElement('div'); head.className = 'preset-head';
-    head.innerHTML = `<strong>${preset.name}</strong> <span class="chip">${preset.reviewBeforeApply ? 'review on' : 'auto-apply'}</span>`;
+    head.innerHTML = `<strong>${escapeHtml(preset.name)}</strong> <span class="chip">${preset.reviewBeforeApply ? 'review on' : 'auto-apply'}</span>`;
     card.appendChild(head);
     const stepsLine = document.createElement('div'); stepsLine.className = 'preset-steps';
     stepsLine.innerText = preset.steps.map(s => STEP_LIBRARY[s.type].label).join(' → ');
@@ -2998,15 +3402,18 @@ function togglePanel(id) { document.getElementById(id).classList.toggle('hidden'
    ========================================================================= */
 function exportWorkspace() {
   const blob = new Blob([JSON.stringify(appState)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = 'workspace.json'; a.click();
+  a.href = url; a.download = 'workspace.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000); // give the download a moment to actually start before releasing it
 }
 function importWorkspace(event) {
   const reader = new FileReader();
   reader.onload = (e) => {
     const loaded = JSON.parse(e.target.result);
-    appState = Object.assign({ presets: [], markers: [], titles: [], playheadTime: 0, selectedClipId: null, selectedClipType: null }, loaded);
+    appState = Object.assign({ presets: [], markers: [], titles: [], trackEnabled: { video: true, audio: true }, playheadTime: 0, selectedClipId: null, selectedClipType: null }, loaded);
     renderAssets(); renderTimeline(); renderPresetList(); renderTitleList();
+    syncTrackToggleButtons();
     document.getElementById('idealVolumeSlider').value = appState.settings.idealVolume;
     document.getElementById('idealVolLabel').innerText = appState.settings.idealVolume.toFixed(2);
     document.getElementById('audioVisSelect').value = appState.settings.audioVisMode || 'waveform';
@@ -3032,6 +3439,7 @@ async function clearWorkspace() {
    clips, the video track's own processed audio is used as-is.
    ========================================================================= */
 let ffmpegInstance = null;
+let lastExportObjectURL = null;
 let writtenAssetIds = new Set();
 
 async function getFFmpeg(onLog) {
@@ -3114,6 +3522,42 @@ async function concatSegments(ffmpeg, segmentNames, listFileName, outName, outLo
   await ffmpeg.exec(['-f', 'concat', '-safe', '0', '-i', listFileName, '-c', 'copy', outName]);
   return outName;
 }
+/** Concatenates the video track like concatSegments, but crossfades (video +
+    its own audio together) wherever a clip's transitionInSec is set, instead
+    of a hard cut. Falls back to a plain concat step-by-step where it isn't,
+    so a project with no transitions behaves the same as concatSegments. */
+async function concatVideoWithTransitions(ffmpeg, videoClips, segmentNames, outLog) {
+  if (segmentNames.length === 1) return segmentNames[0];
+  let current = segmentNames[0];
+  let currentDuration = clipDuration(videoClips[0]);
+  for (let i = 1; i < segmentNames.length; i++) {
+    const nextClip = videoClips[i];
+    const nextSeg = segmentNames[i];
+    const nextDuration = clipDuration(nextClip);
+    const wanted = nextClip.transitionInSec || 0;
+    // Can't crossfade longer than either side actually is.
+    const transitionDur = Math.max(0, Math.min(wanted, currentDuration - 0.05, nextDuration - 0.05));
+    const outSegName = `xfade_${i}.mp4`;
+    if (transitionDur > 0.05) {
+      const offset = Math.max(0, currentDuration - transitionDur);
+      outLog(`Crossfading into clip ${i + 1} (${transitionDur.toFixed(2)}s)…`);
+      await ffmpeg.exec([
+        '-i', current, '-i', nextSeg,
+        '-filter_complex',
+        `[0:v][1:v]xfade=transition=fade:duration=${transitionDur}:offset=${offset}[v];[0:a][1:a]acrossfade=d=${transitionDur}[a]`,
+        '-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '23', '-c:a', 'aac', outSegName
+      ]);
+      currentDuration = currentDuration + nextDuration - transitionDur;
+    } else {
+      const listName = `xfconcat_${i}.txt`;
+      await ffmpeg.writeFile(listName, `file '${current}'\nfile '${nextSeg}'`);
+      await ffmpeg.exec(['-f', 'concat', '-safe', '0', '-i', listName, '-c', 'copy', outSegName]);
+      currentDuration = currentDuration + nextDuration;
+    }
+    current = outSegName;
+  }
+  return current;
+}
 
 /* =========================================================================
    TITLES (drawtext) & LOUDNESS NORMALIZATION — whole-video / whole-audio
@@ -3162,23 +3606,55 @@ async function applyLoudnorm(ffmpeg, inputPath, hasVideo, outLog) {
   await ffmpeg.exec(args);
   return outName;
 }
+/** Standard two-pass-in-one-command GIF technique: generate an optimized
+    color palette from the clip, then re-encode using it — much smaller and
+    cleaner than a naive direct GIF conversion. No audio (GIF can't carry it). */
+async function convertToGif(ffmpeg, videoIn, maxWidth, fps, outLog) {
+  outLog(`Building GIF (max ${maxWidth}px wide, ${fps}fps)…`);
+  const filters = `fps=${fps},scale=${maxWidth}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`;
+  await ffmpeg.exec(['-i', videoIn, '-filter_complex', filters, 'out.gif']);
+  return 'out.gif';
+}
 function preflightExport() {
   const hasVideo = appState.timeline.video.length > 0;
   const hasAudio = appState.timeline.audio.length > 0;
+  const effVideo = hasVideo && isTrackEnabled('video');
+  const effAudio = hasAudio && isTrackEnabled('audio');
   const box = document.getElementById('exportPreflight');
   const isolated = window.crossOriginIsolated;
   let notes = '';
   if (!isolated) {
     notes += `<p class="empty-note" style="color: var(--warn-color);">This page isn't cross-origin isolated yet, so export can't run. If you just loaded this page for the first time, coi-serviceworker.js should reload it once automatically — try again after that reload. If it still says this, make sure coi-serviceworker.js is published next to this page's HTML on GitHub Pages.</p>`;
   }
-  if (!hasVideo && !hasAudio) notes += '<p class="empty-note">Add at least one clip to a track first.</p>';
-  else {
-    notes += `<p class="empty-note">Will render ${appState.timeline.video.length} video-track clip(s)${hasAudio ? ` and ${appState.timeline.audio.length} audio-track clip(s) (used as the final audio)` : ''}.</p>`;
+  if (!hasVideo && !hasAudio) {
+    notes += '<p class="empty-note">Add at least one clip to a track first.</p>';
+  } else if (!effVideo && !effAudio) {
+    notes += '<p class="empty-note" style="color: var(--warn-color);">Both tracks are muted — nothing would be in the export. Toggle 🎬 Video / 🔊 Audio back on in the timeline toolbar.</p>';
+  } else {
+    if (!isTrackEnabled('video') && hasVideo) notes += '<p class="empty-note">Video track is muted — its clips will be skipped.</p>';
+    if (!isTrackEnabled('audio') && hasAudio) notes += '<p class="empty-note">Audio track is muted — its clips will be skipped.</p>';
+    notes += `<p class="empty-note">Will render ${effVideo ? appState.timeline.video.length : 0} video-track clip(s)${effAudio ? ` and ${appState.timeline.audio.length} audio-track clip(s) (used as the final audio)` : ''}.</p>`;
     if (appState.titles && appState.titles.length > 0) notes += `<p class="empty-note">Will burn in ${appState.titles.length} title(s) from the Titles tab.</p>`;
+    const disabledCount = appState.timeline.video.concat(appState.timeline.audio).filter(c => c.enabled === false).length;
+    if (disabledCount > 0) notes += `<p class="empty-note">${disabledCount} individually toggled-off clip(s) will be skipped too.</p>`;
+    const transitionCount = appState.timeline.video.filter(c => c.transitionInSec > 0).length;
+    if (transitionCount > 0 && effVideo) notes += `<p class="empty-note">Will crossfade at ${transitionCount} clip transition(s).</p>`;
   }
   box.innerHTML = notes;
-  document.getElementById('exportAudioModeField').classList.toggle('hidden', !(hasVideo && hasAudio));
-  document.getElementById('exportStartBtn').disabled = !isolated || (!hasVideo && !hasAudio);
+  document.getElementById('exportAudioModeField').classList.toggle('hidden', !(effVideo && effAudio));
+  document.getElementById('gifExportField').classList.toggle('hidden', !effVideo);
+  if (!effVideo) { document.getElementById('gifExportEnabled').checked = false; }
+  onGifModeChange();
+  document.getElementById('exportStartBtn').disabled = !isolated || (!effVideo && !effAudio);
+}
+/** GIF has no audio track and can't be loudness-normalized, so hide those
+    controls while GIF mode is checked rather than leave them inert. */
+function onGifModeChange() {
+  const gif = document.getElementById('gifExportEnabled').checked;
+  document.getElementById('gifOptionsRow').classList.toggle('hidden', !gif);
+  document.getElementById('exportAudioModeField').classList.toggle('hidden', gif || !(appState.timeline.video.length > 0 && appState.timeline.audio.length > 0));
+  document.getElementById('loudnormEnabled').disabled = gif;
+  document.getElementById('loudnormTarget').disabled = gif;
 }
 function openExportModal() {
   document.getElementById('exportRunning').classList.add('hidden');
@@ -3202,8 +3678,8 @@ async function startExport() {
     const ffmpeg = await getFFmpeg(log);
     ffmpeg.on('progress', ({ progress }) => { fill.style.width = `${Math.min(100, Math.max(0, progress * 100))}%`; });
 
-    const videoClips = appState.timeline.video.slice().sort((a, b) => a.start - b.start);
-    const audioClips = appState.timeline.audio.slice().sort((a, b) => a.start - b.start);
+    const videoClips = isTrackEnabled('video') ? appState.timeline.video.filter(c => c.enabled !== false).sort((a, b) => a.start - b.start) : [];
+    const audioClips = isTrackEnabled('audio') ? appState.timeline.audio.filter(c => c.enabled !== false).sort((a, b) => a.start - b.start) : [];
 
     statusLine.innerText = 'Rendering clips…';
     const videoSegNames = [];
@@ -3212,11 +3688,17 @@ async function startExport() {
     for (let i = 0; i < audioClips.length; i++) audioSegNames.push(await renderClipSegment(ffmpeg, audioClips[i], i, 'audio', log));
 
     let finalName;
+    const gifMode = document.getElementById('gifExportEnabled').checked && videoSegNames.length > 0;
     if (videoSegNames.length > 0) {
       statusLine.innerText = 'Assembling video track…';
-      let videoTrackOut = await concatSegments(ffmpeg, videoSegNames, 'vlist.txt', 'video_track.mp4', log);
+      let videoTrackOut = await concatVideoWithTransitions(ffmpeg, videoClips, videoSegNames, log);
       videoTrackOut = await applyTitlesPass(ffmpeg, videoTrackOut, log);
-      if (audioSegNames.length > 0) {
+
+      if (gifMode) {
+        const maxWidth = parseInt(document.getElementById('gifMaxWidth').value) || 480;
+        const fps = parseInt(document.getElementById('gifFps').value) || 10;
+        finalName = await convertToGif(ffmpeg, videoTrackOut, maxWidth, fps, log);
+      } else if (audioSegNames.length > 0) {
         statusLine.innerText = 'Assembling audio track…';
         const audioTrackOut = await concatSegments(ffmpeg, audioSegNames, 'alist.txt', 'audio_track.m4a', log);
         const audioMode = document.getElementById('exportAudioMode').value;
@@ -3231,7 +3713,7 @@ async function startExport() {
       } else {
         finalName = videoTrackOut === 'video_track.mp4' ? videoTrackOut : (await ffmpeg.exec(['-i', videoTrackOut, '-c', 'copy', 'final.mp4']), 'final.mp4');
       }
-      if (document.getElementById('loudnormEnabled').checked) finalName = await applyLoudnorm(ffmpeg, finalName, true, log);
+      if (!gifMode && document.getElementById('loudnormEnabled').checked) finalName = await applyLoudnorm(ffmpeg, finalName, true, log);
     } else {
       // audio-only project
       statusLine.innerText = 'Assembling audio…';
@@ -3241,12 +3723,13 @@ async function startExport() {
 
     statusLine.innerText = 'Reading result…';
     const data = await ffmpeg.readFile(finalName);
-    const mime = finalName.endsWith('.m4a') ? 'audio/mp4' : 'video/mp4';
+    const mime = finalName.endsWith('.m4a') ? 'audio/mp4' : finalName.endsWith('.gif') ? 'image/gif' : 'video/mp4';
     const blob = new Blob([data.buffer], { type: mime });
-    const url = URL.createObjectURL(blob);
+    if (lastExportObjectURL) URL.revokeObjectURL(lastExportObjectURL); // in case export was re-run this session
+    lastExportObjectURL = URL.createObjectURL(blob);
     const link = document.getElementById('exportDownloadLink');
-    link.href = url;
-    link.download = finalName.endsWith('.m4a') ? 'export.m4a' : 'export.mp4';
+    link.href = lastExportObjectURL;
+    link.download = finalName.endsWith('.m4a') ? 'export.m4a' : finalName.endsWith('.gif') ? 'export.gif' : 'export.mp4';
 
     document.getElementById('exportRunning').classList.add('hidden');
     document.getElementById('exportDone').classList.remove('hidden');
@@ -3267,12 +3750,13 @@ window.onload = async () => {
   const saved = await loadMeta('appState').catch(() => undefined);
   if (saved && ((saved.assets && saved.assets.length) || (saved.timeline && ((saved.timeline.video || []).length || (saved.timeline.audio || []).length)))) {
     appState = Object.assign(
-      { presets: [], markers: [], titles: [], playheadTime: 0, selectedClipId: null, selectedClipType: null,
+      { presets: [], markers: [], titles: [], trackEnabled: { video: true, audio: true }, playheadTime: 0, selectedClipId: null, selectedClipType: null,
         settings: { idealVolume: 0.7, zoomLevel: 10, audioVisMode: 'waveform' } },
       saved
     );
   }
   renderAssets(); renderTimeline(); renderPresetList(); renderTitleList();
+  syncTrackToggleButtons();
   document.getElementById('zoomSlider').value = appState.settings.zoomLevel;
   document.getElementById('idealVolumeSlider').value = appState.settings.idealVolume;
   document.getElementById('idealVolLabel').innerText = appState.settings.idealVolume.toFixed(2);
@@ -3282,7 +3766,6 @@ window.onload = async () => {
 </script>
 
 
-<a onclick="window.scrollTo(0, 0); return false;" role="button" id="quarto-back-to-top"><i class="bi bi-arrow-up"></i> Back to top</a></main></div>
 
 
 
