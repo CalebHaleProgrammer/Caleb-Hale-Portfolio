@@ -370,7 +370,10 @@ html, body{
 .db-row-label.lock-preview{ box-shadow: -40px 0 0 0 var(--panel); }
 .db-row-label .name{ font-weight: 600; font-size: 13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .db-row-label .tags{ display:flex; flex-wrap:wrap; gap:3px; margin-top:3px; }
-.db-row-label .tags.tags-hidden{ display:none; }
+.db-row-label .tags.tags-hidden .db-tag-pill{ display:none; } /* hidden per-pill, not the whole row — so one relevant tag can still be forced visible */
+.db-row-label .tags.tags-hidden .db-tag-pill.force-show{ display:inline-block; }
+.db-tag-pill.highlight-red{ outline: 2px solid var(--danger); outline-offset: 1px; }
+.range-link.highlight-red{ outline: 2px solid var(--danger); outline-offset: 2px; border-radius: 3px; color: var(--danger); }
 .db-row-resize-handle{
   grid-column:1;
   width:6px;
@@ -898,7 +901,7 @@ details.db-manual-toggle > summary:hover{ color:var(--accent); }
         <div class="db-chart-grid" id="chart-grid"></div>
       </div>
       <div class="db-chart-footer">
-        <button class="btn btn-sm" id="btn-toggle-tags">👤 Person tags: on</button>
+        <button class="btn btn-sm" id="btn-toggle-tags">👤 Person tags: off</button>
         <button class="btn btn-sm" id="hidden-people-btn" disabled>No people toggled off</button>
         <button class="btn btn-sm" id="btn-toggle-lock-display" title="When on, lock icons stay visible. When off, they flash briefly then only reappear on hover.">🔒 Lock display: off</button>
         <button class="btn btn-sm" id="btn-undo" title="Undo the last change (Ctrl+Z)" style="margin-left:auto;">↶ Undo</button>
@@ -1108,7 +1111,7 @@ state.hiddenPeople = state.schedules[0].hiddenPeople;
 var rulesFocusPersonId = null;
 var rulesFocusSlotIndex = null;
 var tagsTabFilter = 'all'; // 'all' | 'person' | 'position' | 'rule' — which tag category the Tags tab shows
-var showPersonTags = true;
+var showPersonTags = false;
 var fullViewMode = false;
 var resizeDrag = null; // { assignmentId, startX, startSlotCount, cellWidth }
 var rowLabelWidth = 150;
@@ -1378,7 +1381,7 @@ function tagChipHtml(tagId){
   if(!t) return '';
   const bg = t.highlightColor || '#eef1f5';
   const fg = t.textColor || '#647186';
-  return `<span class="db-tag-pill" style="background:${bg};color:${fg};">${escapeHtml(t.name)}</span>`;
+  return `<span class="db-tag-pill" data-tag-id="${tagId}" style="background:${bg};color:${fg};">${escapeHtml(t.name)}</span>`;
 }
 function positionDurationSlots(positionId){
   const pos = state.positions.find(p=>p.id===positionId);
@@ -1782,11 +1785,56 @@ function findSwapCounterparts(personId, positionId, occupiedSlots, excludeId){
   return involved;
 }
 
+/* What to visually highlight when a hovered option is blocked by `rule`. Deliberately
+   mirrors the sentence builder's own "only mention what's actually restricted" wording:
+   a bare, unrestricted person/position/time never highlights anything, since it would
+   never appear in the rule's own sentence either (e.g. "Bob should never be in position
+   X" never highlights the whole schedule's time range, because "at any time" is omitted
+   from that sentence). Positions have no dedicated axis on the chart the way people
+   (rows) and times (columns) do, so a specific/tagged position falls back to the
+   "N positions" summary label instead — same for a bare "no one"/"anyone" person target,
+   which is explicit in the wording but not a single row to point to. That fallback is
+   standard-rule-only: relative rules always have something more specific already
+   (the conflicting assignment itself). */
 function describeHighlights(rule, personId, positionId, occupiedSlots){
-  const out = { personIds:[], slots:[], assignmentIds:[], scheduleIds:[] };
-  if(rule.person && rule.person.mode!=='any') out.personIds.push(personId);
-  if(!rule.kind || rule.kind!=='relative'){
-    if(rule.slot && rule.slot.mode!=='any') out.slots = occupiedSlots.slice();
+  const out = { personIds:[], slots:[], assignmentIds:[], scheduleIds:[], tagIds:[], positionsLabel:false, peopleLabel:false };
+  const isRelative = rule.kind==='relative';
+
+  if(rule.person){
+    if(rule.person.mode==='id'){
+      out.personIds.push(personId);
+    } else if(rule.person.mode==='tag'){
+      const person = state.people.find(p=>p.id===personId);
+      if(person && person.tags.includes(rule.person.value)) out.tagIds.push(rule.person.value);
+    } else if(rule.person.mode==='any'){
+      const reqTags = rule.person.requiredTags || [];
+      if(reqTags.length){
+        const person = state.people.find(p=>p.id===personId);
+        out.tagIds.push(...reqTags.filter(t=>person && person.tags.includes(t)));
+      } else if(!isRelative && !rule.person.count){
+        out.peopleLabel = true; // bare "no one" — explicit in the wording, but no single row to point to
+      }
+    }
+  }
+
+  if(!isRelative){
+    if(rule.position){
+      const posRestricted = rule.position.mode==='id' || rule.position.mode==='tag' ||
+        (rule.position.mode==='any' && ((rule.position.requiredTags||[]).length || (rule.position.prohibitedTags||[]).length));
+      if(posRestricted) out.positionsLabel = true;
+    }
+    if(rule.slot){
+      if(rule.slot.mode==='id' || rule.slot.mode==='range'){
+        out.slots = targetSlotIndices(rule.slot, getSlots().length); // the rule's own full range, not just where this candidate happens to sit
+      } else if(rule.slot.mode==='except' || rule.slot.mode==='exceptRange'){
+        out.slots = occupiedSlots.slice(); // the "except" range is typically almost the whole schedule — not useful to fully highlight
+      } else if(rule.slot.mode==='nearPosition'){
+        const gapSlots = Math.max(0, Math.round((Number(rule.slot.maxGapMinutes)||15)/SLOT_MINUTES));
+        state.assignments.filter(a=>positionMatchesTarget(rule.slot.position, a.positionId) &&
+          occupiedSlots.some(s=>s>=a.startSlot-gapSlots && s<=a.startSlot+a.slotCount-1+gapSlots)
+        ).forEach(a=>out.assignmentIds.push(a.id));
+      }
+    }
     return out;
   }
   const rel = rule.relative || {};
@@ -3199,6 +3247,7 @@ function positionFloating(el, rect){
 }
 function clearAllHighlights(){
   document.querySelectorAll('.cell-flash, .highlight-red').forEach(el=>el.classList.remove('cell-flash','highlight-red'));
+  document.querySelectorAll('.db-tag-pill.force-show').forEach(el=>el.classList.remove('force-show'));
 }
 function applyOptionHighlight(opt, personId, slotIndex){
   clearAllHighlights();
@@ -3227,6 +3276,18 @@ function applyOptionHighlight(opt, personId, slotIndex){
     const tab = document.querySelector(`.db-tab[data-schedule-id="${sid}"]`);
     if(tab) tab.classList.add('highlight-red');
   });
+  (h.tagIds||[]).forEach(tid=>{
+    const pill = document.querySelector(`.db-row-label[data-person-id="${personId}"] .db-tag-pill[data-tag-id="${tid}"]`);
+    if(pill) pill.classList.add('force-show','highlight-red'); // force-show so the relevant tag appears even with person tags toggled off
+  });
+  if(h.positionsLabel){
+    const el = document.getElementById('range-positions-link');
+    if(el) el.classList.add('highlight-red');
+  }
+  if(h.peopleLabel){
+    const el = document.getElementById('range-people-link');
+    if(el) el.classList.add('highlight-red');
+  }
 }
 
 function positionOptionsFor(personId, slotIndex){
