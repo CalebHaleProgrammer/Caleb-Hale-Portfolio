@@ -4990,6 +4990,7 @@ details.db-manual-toggle > summary:hover{ color:var(--accent); }
       </div>
     </div>
     <div class="db-tabs-bar" id="schedule-tabs"></div>
+    <button class="btn btn-sm" id="schedule-dropdown-btn" title="Find a schedule by name" style="display:none;flex-shrink:0;">Schedules ▾</button>
     <div class="db-toolbar">
       <button class="btn" id="btn-help" title="Help — a quick tour of the UI">? Help</button>
       <button class="btn" id="btn-xlsx-menu" title="Save or load this schedule as a .xlsx file">Use .xlsx files ▾</button>
@@ -6789,6 +6790,47 @@ function renderScheduleTabs(){
     });
     bar.appendChild(tab);
   });
+  const dropdownBtn = document.getElementById('schedule-dropdown-btn');
+  if(dropdownBtn) dropdownBtn.style.display = state.schedules.length > 4 ? 'inline-flex' : 'none';
+}
+/* A searchable alternative to scrolling the tabs bar, once there are enough schedules
+   that finding one by name is faster than hunting through tabs. */
+function openScheduleDropdown(anchorEl){
+  closeFloating();
+  const layer = getFloatingLayer();
+  const menu = document.createElement('div');
+  menu.className = 'db-bubble-menu';
+  const searchInput = document.createElement('input');
+  searchInput.className = 'db-bubble-menu-search';
+  searchInput.placeholder = 'Search schedules…';
+  menu.appendChild(searchInput);
+  const list = document.createElement('div');
+  menu.appendChild(list);
+  function renderList(filter){
+    list.innerHTML = '';
+    const shown = state.schedules.filter(s=>!filter || s.name.toLowerCase().includes(filter.toLowerCase()));
+    if(shown.length===0){
+      const none = document.createElement('div');
+      none.className = 'db-bubble-option'; none.style.color = '#c3cad6'; none.style.cursor = 'default';
+      none.textContent = 'No matches';
+      list.appendChild(none);
+      return;
+    }
+    shown.forEach(s=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'db-bubble-option' + (s.id===state.activeScheduleId ? ' selected' : '');
+      btn.textContent = s.name;
+      btn.addEventListener('click', ()=>{ closeFloating(); setActiveSchedule(s.id); });
+      list.appendChild(btn);
+    });
+  }
+  renderList('');
+  searchInput.addEventListener('input', ()=>renderList(searchInput.value));
+  layer.appendChild(menu);
+  positionFloating(menu, anchorEl.getBoundingClientRect());
+  setTimeout(()=>searchInput.focus(), 0);
+  registerCloser((ev)=>{ if(!menu.contains(ev.target)) closeFloating(); });
 }
 
 function layoutSuggestionStars(starEls){
@@ -10394,6 +10436,8 @@ function init(){
   document.getElementById('btn-close-settings').addEventListener('click', closeSettings);
   document.getElementById('settings-overlay').addEventListener('click', (e)=>{ if(e.target.id==='settings-overlay') closeSettings(); });
   document.querySelectorAll('.db-modal-tab').forEach(t=>t.addEventListener('click', ()=>{ editingRuleId = null; tagsTabFilter = 'all'; switchModalTab(t.dataset.tab); }));
+
+  document.getElementById('schedule-dropdown-btn').addEventListener('click', (e)=>openScheduleDropdown(e.currentTarget));
 
   document.getElementById('btn-help').addEventListener('click', openHelp);
   document.getElementById('btn-close-help').addEventListener('click', closeHelp);
