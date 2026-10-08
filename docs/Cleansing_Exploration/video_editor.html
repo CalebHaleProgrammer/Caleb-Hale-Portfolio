@@ -237,19 +237,41 @@ body {
 .dropdown-submenu-trigger:hover {
   background-color: var(--bg-accent);
 }
-.dropdown-content .submenu {
+.submenu {
+  display: none;
+  position: absolute;
   top: 0;
   left: 100%;
   margin-left: 1px;
+  background-color: var(--bg-panel);
+  min-width: 180px;
+  box-shadow: 0px 8px 16px rgba(0,0,0,0.5);
+  z-index: 1002;
+  border: 1px solid var(--bg-accent);
+}
+.submenu button {
+  color: white;
+  padding: 10px;
+  text-align: left;
+  border: none;
+  background: none;
+  width: 100%;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.submenu button:hover {
+  background-color: var(--bg-accent);
 }
 .dropdown-submenu:hover > .submenu {
   display: block;
 }
-.dropdown-content button.view-active {
+.dropdown-content button.view-active,
+.submenu button.view-active {
   color: var(--accent-color);
   font-weight: 600;
 }
-.dropdown-content button.view-active::before {
+.dropdown-content button.view-active::before,
+.submenu button.view-active::before {
   content: "✓ ";
 }
 .editor-grid {
@@ -989,7 +1011,7 @@ View ▾
 <button class="dropdown-submenu-trigger">
 Audio View ▸
 </button>
-<div class="dropdown-content submenu">
+<div class="submenu">
 <button id="audioViewWaveformBtn" onclick="setAudioVisModeFromMenu('waveform')">
 Waveform
 </button>
@@ -1005,15 +1027,18 @@ Frequency (spectrogram)
 <button class="dropdown-submenu-trigger">
 Video View ▸
 </button>
-<div class="dropdown-content submenu">
+<div class="submenu">
 <button id="storyboardToggleBtn" onclick="toggleStoryboardMode()">
 Toggle Storyboard
+</button>
+<button onclick="openStoryboardSettings()">
+Storyboard Settings…
 </button>
 </div>
 </div>
 </div>
 </div>
-<p><input type="file" id="importWorkspaceBtn" class="hidden" onchange="importWorkspace(event)"> <button class="btn" onclick="undo()">Undo (Ctrl+Z)</button> <span id="selection-label" style="color: var(--text-dim); font-size: 0.75rem;">No clip selected</span> <button class="btn" style="background: var(--success-color); margin-left: auto;" onclick="openExportModal()">🚀 Export Video</button></p>
+<p><input type="file" id="importWorkspaceBtn" class="hidden" onchange="importWorkspace(event)"> <button class="btn" onclick="undo()">Undo (Ctrl+Z)</button> <button class="btn hidden" id="redoBtn" onclick="redo()">Redo (Ctrl+Y)</button> <span id="selection-label" style="color: var(--text-dim); font-size: 0.75rem;">No clip selected</span> <button class="btn" style="background: var(--success-color); margin-left: auto;" onclick="openExportModal()">🚀 Export Video</button></p>
 </div>
 <div id="editorGrid" class="editor-grid">
 <div class="panel assets-panel">
@@ -1431,6 +1456,24 @@ Apply Changes
 </div>
 </div>
 <!-- Marker edit popup -->
+<div id="storyboardSettingsModal" class="modal-overlay">
+<div class="modal-box">
+<div class="modal-title">
+<span>Storyboard Settings</span><button class="btn" onclick="closeModal('storyboardSettingsModal')">✕</button>
+</div>
+<p class="empty-note">
+Every clip boundary and marker is guaranteed at least this many pixels apart in Storyboard view, so nothing collapses to an invisible sliver — extra room beyond this is still shared out proportionally to actual time.
+</p>
+<div class="field" style="margin-bottom:0;">
+<p><label>Minimum segment/gap size (px)</label> <input type="number" id="storyboardMinGapInput" min="1" max="500" step="5" value="20" onchange="updateStoryboardMinGap(this.value)"></p>
+</div>
+<div class="modal-actions">
+<button class="btn btn-primary" onclick="closeModal('storyboardSettingsModal')">
+Done
+</button>
+</div>
+</div>
+</div>
 <div id="markerEditModal" class="modal-overlay">
 <div class="modal-box">
 <div class="modal-title">
@@ -1631,7 +1674,7 @@ function scheduleAutosave() {
 let appState = {
   assets: [],                              // {id, name, type, duration, hasAudio}
   timeline: { video: [], audio: [] },
-  settings: { idealVolume: 0.7, zoomLevel: 10, audioVisMode: 'waveform', storyboardMode: false },
+  settings: { idealVolume: 0.7, zoomLevel: 10, audioVisMode: 'waveform', storyboardMode: false, storyboardMinGapPx: 20 },
   presets: [],                             // {id, name, reviewBeforeApply, steps:[{type, params}]}
   markers: [],                             // {id, time, label}
   titles: [],                               // {id, text, start, end, position, fontSize, color}
@@ -1640,6 +1683,7 @@ let appState = {
   selectedClipType: null
 };
 let historyStack = [];
+let redoStack = [];
 
 function clipDuration(clip) { return Math.max(0, (clip.sourceOut - clip.sourceIn) / clip.playbackRate); }
 
@@ -1658,7 +1702,7 @@ function invalidateStoryboardScale() { _storyboardScaleCache = null; }
 function round3(t) { return Math.round(t * 1000) / 1000; } // collapses float dust so equal times share one key point
 function computeStoryboardScale() {
   const zoom = appState.settings.zoomLevel;
-  const minGapPx = Math.max(50, Math.min(200, zoom * 6));
+  const minGapPx = Math.max(1, appState.settings.storyboardMinGapPx || 20);
   const pxPerSecond = Math.max(4, zoom);
   const pointSet = new Set([0]);
   appState.timeline.video.forEach(c => { pointSet.add(round3(c.start)); pointSet.add(round3(c.start + clipDuration(c))); });
@@ -1714,6 +1758,14 @@ function toggleStoryboardMode() {
   updateViewMenuState();
   renderTimeline();
 }
+function openStoryboardSettings() {
+  document.getElementById('storyboardMinGapInput').value = appState.settings.storyboardMinGapPx || 20;
+  openModal('storyboardSettingsModal');
+}
+function updateStoryboardMinGap(value) {
+  appState.settings.storyboardMinGapPx = Math.max(1, parseInt(value) || 20);
+  if (appState.settings.storyboardMode) renderTimeline();
+}
 /** Filenames, preset names, and title text are all user-typed and end up in
     innerHTML templates for convenient markup (bold, chips, etc.) — this
     keeps something like a file named `<b>` or a preset called `A & B` from
@@ -1723,25 +1775,59 @@ function escapeHtml(s) {
 }
 
 function snapshot() {
-  return { timeline: appState.timeline, settings: appState.settings, presets: appState.presets };
+  return { timeline: appState.timeline, settings: appState.settings, presets: appState.presets, markers: appState.markers };
 }
 function saveState() {
   historyStack.push(JSON.stringify(snapshot()));
   if (historyStack.length > 50) historyStack.shift();
+  redoStack = []; // a fresh action invalidates whatever could have been redone
+  syncUndoRedoButtons();
 }
-function undo() {
-  if (historyStack.length === 0) return;
-  const state = JSON.parse(historyStack.pop());
+function restoreSnapshot(state) {
   appState.timeline = state.timeline;
-  appState.settings = state.settings;
+  // View-only settings (zoom, audio view mode, storyboard) aren't edits — keep
+  // them as-is so undoing/redoing a change never flips you in or out of
+  // Storyboard view or changes your zoom level as a side effect.
+  const s = appState.settings;
+  const keepView = { zoomLevel: s.zoomLevel, audioVisMode: s.audioVisMode, storyboardMode: s.storyboardMode, storyboardMinGapPx: s.storyboardMinGapPx };
+  appState.settings = { ...state.settings, ...keepView };
   appState.presets = state.presets || appState.presets;
+  appState.markers = state.markers || appState.markers;
   renderTimeline(); renderPresetList();
   document.getElementById('zoomSlider').value = appState.settings.zoomLevel;
   document.getElementById('idealVolumeSlider').value = appState.settings.idealVolume;
   document.getElementById('idealVolLabel').innerText = appState.settings.idealVolume.toFixed(2);
   updateViewMenuState();
 }
-window.addEventListener('keydown', (e) => { if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); } });
+function undo() {
+  if (historyStack.length === 0) return;
+  redoStack.push(JSON.stringify(snapshot()));
+  if (redoStack.length > 50) redoStack.shift();
+  restoreSnapshot(JSON.parse(historyStack.pop()));
+  syncUndoRedoButtons();
+}
+function redo() {
+  if (redoStack.length === 0) return;
+  historyStack.push(JSON.stringify(snapshot()));
+  if (historyStack.length > 50) historyStack.shift();
+  restoreSnapshot(JSON.parse(redoStack.pop()));
+  syncUndoRedoButtons();
+}
+/** The Redo button stays hidden until there's actually something to redo —
+    i.e. right after at least one undo, and until a new action clears it. */
+function syncUndoRedoButtons() {
+  const redoBtn = document.getElementById('redoBtn');
+  if (redoBtn) redoBtn.classList.toggle('hidden', redoStack.length === 0);
+}
+window.addEventListener('keydown', (e) => {
+  if (!e.ctrlKey && !e.metaKey) return;
+  const el = document.activeElement;
+  const isTextField = el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && ['text', 'number', 'search', 'email', 'url', 'tel', 'password'].includes(el.type)));
+  if (isTextField) return; // let the field's own native undo/redo work instead of the timeline's
+  const key = e.key.toLowerCase();
+  if (key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+  else if (key === 'y' || (key === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
+});
 /** Keyboard shortcuts. Ignored while typing in any input/select/textarea
     (including inside the modals) so they never hijack normal typing. */
 window.addEventListener('keydown', (e) => {
@@ -2798,6 +2884,7 @@ player.addEventListener('play', () => { if (previewAudioClip && secondaryAudio.p
 player.addEventListener('pause', () => { if (previewAudioClip) secondaryAudio.pause(); });
 player.addEventListener('seeked', resyncSecondaryAudio);
 function addMarkerAtPlayhead() {
+  saveState();
   appState.markers.push({ id: Date.now() + Math.random(), time: appState.playheadTime, label: '', color: '#f59e0b' });
   renderMarkers();
 }
@@ -2930,34 +3017,48 @@ function attachMarkerDragHandlers(flag, marker) {
     e.stopPropagation();
     e.preventDefault();
     const startClientX = e.clientX;
+    const startTime = marker.time;
     const ruler = document.getElementById('timeRuler');
     let dragged = false;
+    let dragMode = null; // 'move' | 'region', decided once when the drag actually starts
     let previewEl = null;
     function onMove(ev) {
       if (Math.abs(ev.clientX - startClientX) <= 3 && !dragged) return;
       if (!dragged) {
         dragged = true;
-        previewEl = document.createElement('div');
-        previewEl.className = 'region-band';
-        previewEl.style.background = marker.color || '#f59e0b';
-        previewEl.style.opacity = '0.6';
-        ruler.appendChild(previewEl);
+        dragMode = ev.shiftKey ? 'region' : 'move';
+        saveState(); // one undo checkpoint for the whole drag, taken before any change
+        if (dragMode === 'region') {
+          previewEl = document.createElement('div');
+          previewEl.className = 'region-band';
+          previewEl.style.background = marker.color || '#f59e0b';
+          previewEl.style.opacity = '0.6';
+          ruler.appendChild(previewEl);
+        }
       }
       const t = xToTime(ev.clientX);
-      const x1 = timeToPx(marker.time), x2 = timeToPx(t);
-      previewEl.style.left = Math.min(x1, x2) + 'px';
-      previewEl.style.width = Math.max(1, Math.abs(x2 - x1)) + 'px';
+      if (dragMode === 'move') {
+        marker.time = Math.max(0, t);
+        renderMarkers(); // cheap — just repositions flags/lines, no full timeline relayout mid-drag
+      } else {
+        const x1 = timeToPx(startTime), x2 = timeToPx(t);
+        previewEl.style.left = Math.min(x1, x2) + 'px';
+        previewEl.style.width = Math.max(1, Math.abs(x2 - x1)) + 'px';
+      }
     }
     function onUp(ev) {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       if (previewEl) previewEl.remove();
-      if (dragged) {
-        saveState();
+      if (dragged && dragMode === 'region') {
         const regionId = marker.regionId || (Date.now() + Math.random());
         marker.regionId = regionId;
         appState.markers.push({ id: Date.now() + Math.random(), time: Math.max(0, xToTime(ev.clientX)), label: '', color: marker.color || '#f59e0b', regionId });
         renderMarkers();
+      } else if (dragged) {
+        // 'move': already live-updated; a full render settles storyboard layout
+        // correctly now that this marker's time (a key point there) has changed.
+        renderTimeline();
       } else {
         openMarkerEditPopup(marker);
       }
@@ -2982,6 +3083,7 @@ function openMarkerEditPopup(marker) {
 function saveMarkerEdit() {
   const marker = appState.markers.find(m => m.id === editingMarkerId);
   if (marker) {
+    saveState();
     marker.label = document.getElementById('markerEditLabel').value.trim();
     marker.color = document.getElementById('markerEditColor').value;
   }
@@ -2992,6 +3094,7 @@ function saveMarkerEdit() {
     (colored band) goes away, but the OTHER end stays behind as an ordinary,
     unpaired marker rather than also being deleted. */
 function deleteMarkerEdit() {
+  saveState();
   const marker = appState.markers.find(m => m.id === editingMarkerId);
   if (marker && marker.regionId) {
     appState.markers.forEach(other => { if (other.id !== marker.id && other.regionId === marker.regionId) other.regionId = null; });
@@ -3004,6 +3107,7 @@ function deleteMarkerEdit() {
 function deleteRegionEdit() {
   const marker = appState.markers.find(m => m.id === editingMarkerId);
   if (!marker || !marker.regionId) return;
+  saveState();
   appState.markers = appState.markers.filter(m => m.regionId !== marker.regionId);
   closeModal('markerEditModal');
   renderMarkers();
@@ -4026,7 +4130,7 @@ window.onload = async () => {
   if (saved && ((saved.assets && saved.assets.length) || (saved.timeline && ((saved.timeline.video || []).length || (saved.timeline.audio || []).length)))) {
     appState = Object.assign(
       { presets: [], markers: [], titles: [], playheadTime: 0, selectedClipId: null, selectedClipType: null,
-        settings: { idealVolume: 0.7, zoomLevel: 10, audioVisMode: 'waveform', storyboardMode: false } },
+        settings: { idealVolume: 0.7, zoomLevel: 10, audioVisMode: 'waveform', storyboardMode: false, storyboardMinGapPx: 20 } },
       saved
     );
   }
