@@ -2691,7 +2691,9 @@ function openScheduleDropdown(anchorEl){
   menu.appendChild(list);
   function renderList(filter){
     list.innerHTML = '';
-    const shown = state.schedules.filter(s=>!filter || s.name.toLowerCase().includes(filter.toLowerCase()));
+    // state.schedules is stored oldest-first (the tab bar and auto-delete both rely on that),
+    // so reverse a copy here to list the newest at the top and the oldest at the bottom.
+    const shown = state.schedules.filter(s=>!filter || s.name.toLowerCase().includes(filter.toLowerCase())).reverse();
     if(shown.length===0){
       const none = document.createElement('div');
       none.className = 'db-bubble-option'; none.style.color = '#c3cad6'; none.style.cursor = 'default';
