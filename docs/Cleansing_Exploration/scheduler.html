@@ -4974,6 +4974,65 @@ details.db-manual-toggle > summary:hover{ color:var(--accent); }
 .db-exclusive-row input[type="checkbox"]{ margin-top:3px; accent-color: var(--accent); }
 .db-exclusive-row.marked-remove label{ text-decoration: line-through; color:#8a92a3; }
 .db-exclusive-mark{ color: var(--danger); font-weight:700; margin-right:4px; }
+
+.db-help-modal{ width:min(1180px,100%); max-width:none; max-height:min(860px,94vh); }
+.db-help-tree-wrap{ padding:16px 22px 14px; border-bottom:1px solid var(--border); background:var(--panel-2); overflow-x:auto; flex-shrink:0; }
+.db-help-tree{ --ht-gap:11px; --ht-line:#aeb8c9; min-width:760px; }
+
+.ht-branch, .ht-kid{ display:flex; flex-direction:column; min-width:0; }
+.ht-kids{ position:relative; display:flex; padding-top:var(--ht-gap); }
+.ht-kids::before{ content:''; position:absolute; top:0; left:50%; height:var(--ht-gap); border-left:2px solid var(--ht-line); }
+.ht-kid{ position:relative; padding-top:var(--ht-gap); }
+.ht-kid::before{ content:''; position:absolute; top:0; left:50%; height:var(--ht-gap); border-left:2px solid var(--ht-line); }
+.ht-kid::after{ content:''; position:absolute; top:0; left:0; width:100%; border-top:2px solid var(--ht-line); }
+.ht-kid:first-child::after{ left:50%; width:50%; }
+.ht-kid:last-child::after{ width:50%; }
+.ht-kid:only-child::after{ display:none; }
+.ht-node{
+display:flex; align-items:center; justify-content:center; text-align:center;
+margin:0 4px; padding:6px 6px; min-height:42px;
+border:1.5px solid var(--border-strong); border-radius:10px; background:#fff; color:var(--ink);
+font-family:var(--font-body); font-weight:650; font-size:12px; line-height:1.25; cursor:pointer;
+box-shadow:0 3px 0 var(--border-strong); 
+transition:transform .08s ease, box-shadow .08s ease, background .12s ease, border-color .12s ease, color .12s ease;
+overflow-wrap:break-word;
+}
+.ht-node:hover{ border-color:var(--accent); color:var(--accent); transform:translateY(-1px); box-shadow:0 4px 0 var(--accent); }
+.ht-node:active{ transform:translateY(2px); box-shadow:0 1px 0 var(--border-strong); }
+.ht-node.on-path{ border-color:var(--accent); background:var(--accent-soft); color:var(--accent); box-shadow:0 3px 0 var(--accent); }
+.ht-node.selected{ background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 3px 0 rgba(0,0,0,.28); }
+.ht-node.l1{ min-height:46px; font-size:15px; letter-spacing:.01em; }
+.ht-node.l2{ min-height:44px; font-size:13.5px; }
+.ht-node.l3{ min-height:46px; font-size:11.5px; padding:5px 3px; }
+@media (max-width: 1060px){ .ht-node{ margin:0 3px; } .ht-node.l3{ font-size:10.5px; padding:4px 2px; } .db-help-tree-wrap{ padding:14px 14px 12px; } }
+.db-help-content{ padding:20px 26px 28px; line-height:1.6; font-size:13.5px; }
+.hc-crumbs{ display:flex; flex-wrap:wrap; align-items:center; gap:4px; font-size:11.5px; color:var(--muted); margin-bottom:6px; }
+.hc-crumbs button{ border:none; background:none; padding:0; font:inherit; color:var(--accent); cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+.hc-crumbs .cur{ color:var(--ink); font-weight:600; }
+.db-help-content h3{ margin:0 0 10px; font-size:21px; line-height:1.25; }
+.db-help-content h4{ margin:22px 0 6px; font-size:14.5px; padding-bottom:3px; border-bottom:1px solid var(--border); }
+.db-help-content p{ margin:0 0 10px; }
+.db-help-content ul, .db-help-content ol{ margin:0 0 12px; padding-left:22px; }
+.db-help-content li{ margin:3px 0; }
+.db-help-content kbd{ font-family:var(--font-mono); font-size:11.5px; padding:1px 6px; border:1px solid var(--border-strong); border-bottom-width:2px; border-radius:5px; background:#fff; }
+.hc-lead{ font-size:15px; color:var(--ink); }
+.hc-link{ color:var(--accent); text-decoration:underline; text-underline-offset:2px; cursor:pointer; }
+.hc-tip, .hc-warn{ margin:12px 0; padding:9px 13px; border-radius:var(--radius-sm); font-size:12.8px; }
+.hc-tip{ background:var(--accent-soft); border:1px solid var(--accent); }
+.hc-warn{ background:#FFF6E0; border:1px solid #E0B34A; }
+.hc-ex{ margin:6px 0 10px; padding:7px 12px; border-left:3px solid var(--accent); background:var(--panel-2); font-style:italic; border-radius:0 var(--radius-sm) var(--radius-sm) 0; }
+.hc-table{ width:100%; border-collapse:collapse; margin:8px 0 14px; font-size:12.8px; }
+.hc-table th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--faint); padding:6px 9px; border-bottom:2px solid var(--border-strong); }
+.hc-table td{ padding:7px 9px; border-bottom:1px solid var(--border); vertical-align:top; }
+.hc-cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; margin:12px 0 6px; }
+.hc-card{ border:1.5px solid var(--border-strong); border-radius:12px; padding:12px 14px; background:#fff; }
+.hc-card h5{ margin:0 0 4px; font-size:14px; }
+.hc-card h5 button{ border:none; background:none; padding:0; font:inherit; color:var(--accent); cursor:pointer; text-align:left; }
+.hc-card h5 button:hover{ text-decoration:underline; }
+.hc-card p{ margin:0 0 6px; font-size:12.5px; color:var(--muted); }
+.hc-card ul{ margin:0; padding-left:18px; font-size:12.5px; }
+.hc-nav{ display:flex; justify-content:space-between; gap:10px; margin-top:26px; padding-top:14px; border-top:1px solid var(--border); }
+.hc-nav button{ max-width:48%; text-align:left; }
 @media (max-width: 980px){
 .db-main-row{ grid-template-columns: 1fr; }
 }
@@ -5115,12 +5174,13 @@ details.db-manual-toggle > summary:hover{ color:var(--accent); }
 
   <!-- Help modal -->
   <div class="db-modal-overlay" id="help-overlay" style="display:none;">
-    <div class="db-modal" style="max-width:640px;">
+    <div class="db-modal db-help-modal">
       <div class="db-modal-head">
         <h2 class="anchored">Help</h2>
         <button class="db-icon-btn" id="btn-close-help">✕</button>
       </div>
-      <div class="db-modal-body" id="help-body"></div>
+      <div class="db-help-tree-wrap"><div class="db-help-tree" id="help-tree"></div></div>
+      <div class="db-modal-body db-help-content" id="help-body"></div>
     </div>
   </div>
 
@@ -8003,23 +8063,830 @@ function closeSettings(){
   document.getElementById('settings-overlay').style.display = 'none';
   editingRuleId = null;
 }
-const HELP_SECTIONS = [
-  { title: 'The schedule chart', body: 'Click any empty cell to see and pick from every position a person could do there — greyed-out options explain why they\u2019re blocked, and a star marks a preferred match. Click a filled block to cut, copy, lock, or remove it; drag its right edge to resize it when the position allows a range of durations. Click a person\u2019s name or a time-column header for row/column-wide options (lock, swap, clear, and more).' },
-  { title: 'Solve', body: '"Fill required" places only what\u2019s needed to satisfy required rules. "Fill unlocked" clears and refills everything except locked cells/rows/columns. "Fill all" clears and refills the entire chart. All three also try to honor preferred rules and leave star suggestions you can accept or reject with a click.' },
-  { title: 'Decisions', body: 'Lists rule violations and open coverage decisions, roughly ordered by how constrained they are — a "0 options" card needs attention first. Click any card to jump to and flash the relevant cell(s).' },
-  { title: 'Rules', body: 'Every rule that governs this schedule tab, with search and filters. Required rules are hard constraints; preferred rules generate suggestions instead of blocking anything. Toggle a rule off without deleting it, or edit/delete it with the icons on the right.' },
-  { title: 'Advanced settings', body: 'People, Positions, and Tags are shared by every schedule tab; Rules and the schedule-management options are specific to the current tab. Time range is shared. Save/Load settings exports or imports people, positions, tags, and time range as a JSON file.' },
-  { title: 'Schedule tabs & .xlsx', body: 'Each tab is an independent schedule (own assignments, own rules) sharing the same roster. Click the active tab for clone/rename/delete options. "Use .xlsx files" exports the current schedule to a spreadsheet, or imports one as a brand-new tab.' },
-  { title: 'Locking', body: 'Lock a person\u2019s whole row, a whole time column, or a single cell to protect it from Fill/Clear operations and from being displaced. "Lock display" keeps every lock icon always visible instead of only flashing briefly when something is newly locked.' },
-];
-function renderHelpBody(){
+/* ================================================================
+   HELP — a three-layer topic pyramid (All topics → 4 sections → 14 topics) above
+   a documentation pane. HELP_TREE defines the structure; HELP_CONTENT holds each
+   page. Every page can link to any other with helpLink(id, text). */
+var HELP_TREE = { id:'all', label:'All topics', title:'All topics', children:[
+  { id:'interface', label:'The Scheduler Interface', title:'The Scheduler Interface', children:[
+    { id:'interface-chart',   label:'The Chart',    title:'The Chart' },
+    { id:'interface-toolbar', label:'Toolbar',      title:'Header, Tabs & Toolbar' },
+    { id:'interface-panels',  label:'Side Panels',  title:'The Decisions & Rules Panels' },
+  ]},
+  { id:'making', label:'Making a Schedule', title:'Making a Schedule', children:[
+    { id:'making-people',    label:'People',           title:'People' },
+    { id:'making-positions', label:'Positions & Tags', title:'Positions & Tags' },
+    { id:'making-time',      label:'Time & Tabs',      title:'Time Range & Schedule Tabs' },
+    { id:'making-save',      label:'Save & Load',      title:'Saving, Loading & Sharing' },
+  ]},
+  { id:'planning', label:'Planning', title:'Planning', children:[
+    { id:'planning-basics',  label:'Rule Basics',  title:'Rule Basics' },
+    { id:'planning-builder', label:'Rule Builder', title:'The Rule Builder' },
+    { id:'planning-types',   label:'Rule Types',   title:'Every Kind of Rule' },
+  ]},
+  { id:'filling', label:'Filling a Schedule', title:'Filling a Schedule', children:[
+    { id:'filling-hand',      label:'By Hand',          title:'Filling by Hand' },
+    { id:'filling-auto',      label:'Auto-Fill',        title:'Auto-Fill (Solve)' },
+    { id:'filling-locks',     label:'Locks & Undo',     title:'Locks & Undo' },
+    { id:'filling-decisions', label:'Conflicts & Hints',title:'Conflicts, Decisions & Hints' },
+  ]},
+]};
+var HELP_DESC = {
+  'interface':'A tour of everything on screen.',
+  'interface-chart':'Rows, columns, blocks, what each click opens, resizing, and the chart\u2019s own controls.',
+  'interface-toolbar':'The header, schedule tabs, Solve, file, fullscreen and settings buttons, plus shortcuts.',
+  'interface-panels':'How to read the Decisions and Rules panels beside the chart.',
+  'making':'Set up the people, positions, tags, times and tabs a schedule is built from.',
+  'making-people':'The roster, tags, personal details, and per-position qualifications.',
+  'making-positions':'Positions (durations, colors, display labels, copies) and tags of every type.',
+  'making-time':'The time range, unfilled-time tolerance, schedule tabs and cloning.',
+  'making-save':'Autosave, .xlsx files, and saving your settings.',
+  'planning':'Tell the board what must, can\u2019t, should and shouldn\u2019t happen.',
+  'planning-basics':'What a rule is, required vs. preferred, require vs. forbid, and what each does.',
+  'planning-builder':'Building rules as sentences, tag logic, Make Exclusive, and the manual form.',
+  'planning-types':'Every kind of rule, with an example of each.',
+  'filling':'Put people into positions \u2014 by hand, automatically, or both.',
+  'filling-hand':'Cell options, blocks, a person\u2019s row, and a time column.',
+  'filling-auto':'Solve, its three modes, and how gaps are handled.',
+  'filling-locks':'Protect finished work with locks; step backward with Undo.',
+  'filling-decisions':'Conflicts, open decisions, red highlights and \u2605 suggestions.',
+};
+function helpLink(id, text){ return `<a href="#" class="hc-link" data-help-goto="${id}">${text}</a>`; }
+var HL = helpLink;
+
+function helpFindNode(id, node){
+  node = node || HELP_TREE;
+  if(node.id===id) return node;
+  for(const c of (node.children||[])){ const f = helpFindNode(id, c); if(f) return f; }
+  return null;
+}
+function helpPath(id, node, trail){
+  node = node || HELP_TREE; trail = (trail||[]).concat([node]);
+  if(node.id===id) return trail;
+  for(const c of (node.children||[])){ const p = helpPath(id, c, trail); if(p) return p; }
+  return null;
+}
+function helpLeafCount(node){ return (node.children && node.children.length) ? node.children.reduce((s,c)=>s+helpLeafCount(c),0) : 1; }
+function helpFlatOrder(node, out){
+  out = out || []; node = node || HELP_TREE; out.push(node.id);
+  (node.children||[]).forEach(c=>helpFlatOrder(c, out));
+  return out;
+}
+function helpCards(node){
+  return `<div class="hc-cards">` + (node.children||[]).map(c=>{
+    const desc = HELP_DESC[c.id] || '';
+    const subs = (c.children&&c.children.length)
+      ? `<ul>${c.children.map(s=>`<li>${HL(s.id, s.title||s.label)}</li>`).join('')}</ul>` : '';
+    return `<div class="hc-card"><h5>${HL(c.id, c.title||c.label)}</h5><p>${desc}</p>${subs}</div>`;
+  }).join('') + `</div>`;
+}
+
+var HELP_CONTENT = {
+'all': ()=>`
+<p class="hc-lead">The Duty Board is a grid scheduler. <b>People are rows</b>, <b>time runs across the columns</b> in ${SLOT_MINUTES}\u2011minute slots, and each colored block is one person doing one position for a stretch of time. You tell the board what exists, write down the rules, then fill the chart by hand, automatically, or both \u2014 and it keeps checking your work against the rules as you go.</p>
+<h4>Quick start</h4>
+<ol>
+  <li>In \u2699 Advanced settings, add your ${HL('making-people','people')} and ${HL('making-positions','positions')}, and set the ${HL('making-time','time range')}.</li>
+  <li>${HL('planning-basics','Write rules')} for what must, can\u2019t, should, or shouldn\u2019t happen.</li>
+  <li>Press <b>\u25B6 Solve</b> to ${HL('filling-auto','fill the chart automatically')}, then adjust ${HL('filling-hand','by hand')}.</li>
+  <li>Read the ${HL('filling-decisions','Decisions panel')} for anything unresolved, and ${HL('filling-locks','lock')} what\u2019s final.</li>
+  <li>${HL('making-time','Clone the tab')} to start the next day from this one.</li>
+</ol>
+<div class="hc-tip">Everything you do saves automatically in this browser. To back it up or move it, see ${HL('making-save','Saving, Loading & Sharing')}.</div>
+<h4>Everything in this guide</h4>
+${helpCards(HELP_TREE)}`,
+
+/* ------------------------------ INTERFACE ------------------------------ */
+'interface': ()=>`
+<p class="hc-lead">Everything lives on one page: the chart in the middle, the Decisions and Rules panels beside and below it, and \u2699 Advanced settings for everything you set up.</p>
+${helpCards(helpFindNode('interface'))}
+<h4>Where do I\u2026?</h4>
+
+<table class="hc-table caption-top" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">I want to\u2026</td>
+<td data-quarto-table-cell-role="th">Go to\u2026</td>
+</tr>
+<tr class="even">
+<td>Add a person, position or tag</td>
+<td>\u2699 Advanced settings \u2192 People / Positions / Tags</td>
+</tr>
+<tr class="odd">
+<td>Add or edit a rule</td>
+<td>\u2699 Advanced settings \u2192 Rules (or the \u270E on a rule in the Rules panel)</td>
+</tr>
+<tr class="even">
+<td>Fill the chart automatically</td>
+<td>\u25B6 Solve \u25BE above the chart</td>
+</tr>
+<tr class="odd">
+<td>Put one person in one spot</td>
+<td>Click that empty cell</td>
+</tr>
+<tr class="even">
+<td>Start tomorrow\u2019s schedule</td>
+<td>Click the active tab \u2192 Clone all / Clone locked</td>
+</tr>
+<tr class="odd">
+<td>Save a file or load one</td>
+<td>Use .xlsx files \u25BE (top right)</td>
+</tr>
+<tr class="even">
+<td>See what\u2019s still unresolved</td>
+<td>The Decisions panel</td>
+</tr>
+</tbody>
+</table>
+`,
+
+'interface-chart': ()=>`
+<p class="hc-lead">The chart is the heart of the board: one row per person, one column per ${SLOT_MINUTES}\u2011minute slot.</p>
+<h4>Reading it</h4>
+<ul>
+  <li><b>Rows</b> are people. Each row\u2019s label shows the name \u2014 and, when <b>\uD83D\uDC64 Person tags</b> is on, the person\u2019s tags beneath it.</li>
+  <li><b>Columns</b> are time slots, labeled across the top. The range of times is set in ${HL('making-time','Time & Tabs')}.</li>
+  <li><b>Blocks</b> are assignments. A block\u2019s color is its position\u2019s fill color and its text is the position\u2019s <i>Display</i> label (hover for the full name). A block covers consecutive slots \u2014 as many as its duration needs.</li>
+  <li><b>Empty cells</b> are free time. A faint <b>\u2605</b> in an empty cell is a suggestion (see ${HL('filling-decisions','Conflicts, Decisions & Hints')}).</li>
+  <li>Next to the chart\u2019s title, <b>N people \u00B7 N positions</b> shows how many of each there are \u2014 click either to open its settings tab. (These two labels also light up red in some situations; see ${HL('filling-decisions','red highlights')}.)</li>
+</ul>
+<h4>What each click opens</h4>
+
+<table class="hc-table caption-top" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">You click\u2026</td>
+<td data-quarto-table-cell-role="th">You get\u2026</td>
+</tr>
+<tr class="even">
+<td>An empty cell</td>
+<td>The position options for that person and time \u2014 which positions are available and which are blocked, and why. (${HL('filling-hand','By Hand')})</td>
+</tr>
+<tr class="odd">
+<td>A colored block</td>
+<td>The block menu: Cut, Copy, Lock/Unlock cell, Remove.</td>
+</tr>
+<tr class="even">
+<td>A person\u2019s name</td>
+<td>The person menu: See [Name], Lock row, Toggle person, Swap names / rows, Copy / Paste / Clear row, Show rules.</td>
+</tr>
+<tr class="odd">
+<td>A time heading</td>
+<td>The time menu: Lock column, Clear this time, Clear assignments, Show rules for this time.</td>
+</tr>
+<tr class="even">
+<td>A \u2605</td>
+<td>A popup to accept or reject that suggestion.</td>
+</tr>
+</tbody>
+</table>
+
+<h4>Resizing a block</h4>
+<p>Drag a block\u2019s right edge to lengthen or shorten it in ${SLOT_MINUTES}\u2011minute steps. It can only change within its position\u2019s minimum\u2013maximum duration (set in ${HL('making-positions','Positions')}), and it stops where the new length would break a required rule, overlap another assignment, or run into a locked cell.</p>
+<h4>Chart controls</h4>
+<ul>
+  <li><b>\u25B6 Solve \u25BE</b> \u2014 automatic filling. See ${HL('filling-auto','Auto-Fill')}.</li>
+  <li><b>Full view</b> \u2014 stretches the columns so the whole day fits across the panel with no sideways scrolling. Off, columns are a fixed narrow width and the chart scrolls sideways.</li>
+  <li><b>\u26F6</b> \u2014 makes the chart itself fill the screen.</li>
+</ul>
+<h4>Below the chart</h4>
+<ul>
+  <li><b>\uD83D\uDC64 Person tags: on/off</b> \u2014 show or hide each person\u2019s tags under their name. <i>Off</i> by default. (Even when off, the one tag responsible for a blocked option appears briefly while you hover it.)</li>
+  <li><b>N toggled off \u2014 select to restore</b> \u2014 appears once you\u2019ve used <i>Toggle person</i>. Toggled-off people are hidden from the chart and skipped when filling; pick a name to bring them back. This is per schedule tab.</li>
+  <li><b>\uD83D\uDD12 Lock display: on/off</b> \u2014 keep every lock icon visible instead of only flashing when something is locked. See ${HL('filling-locks','Locks & Undo')}.</li>
+  <li><b>\u21B6 Undo</b> \u2014 step back through your recent changes (also <kbd>Ctrl</kbd>/<kbd>\u2318</kbd>+<kbd>Z</kbd>).</li>
+</ul>`,
+
+'interface-toolbar': ()=>`
+<p class="hc-lead">The strip across the top holds your schedule tabs and the buttons that act on the whole board.</p>
+<h4>The header</h4>
+<p>The title block shows the board\u2019s name and the schedule\u2019s time range (for example <i>10:30 AM \u2013 4:30 PM</i>).</p>
+<h4>Schedule tabs</h4>
+<p>Each tab is one schedule. Click a tab to switch to it, drag tabs to reorder them, and click the <i>active</i> tab for its menu (Rename, Clone all, Clone locked, Delete). Once there are more than four tabs, a <b>Schedules \u25BE</b> button appears beside them: a searchable list, newest first, for jumping straight to one by name. Full details in ${HL('making-time','Time & Tabs')}.</p>
+<h4>Top-right buttons</h4>
+<ul>
+  <li><b>? Help</b> \u2014 this guide. It pulses until you open it for the first time.</li>
+  <li><b>Use .xlsx files \u25BE</b> \u2014 <i>Save .xlsx</i> and <i>Load .xlsx</i>. See ${HL('making-save','Saving, Loading & Sharing')}.</li>
+  <li><b>\u26F6</b> \u2014 <i>Scheduler fullscreen</i>: the chart, Decisions and Rules together fill the screen.</li>
+  <li><b>\u2699 Advanced settings</b> \u2014 opens the settings window (below the Decisions panel).</li>
+</ul>
+<h4>The settings window</h4>
+
+<table class="hc-table caption-top" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Tab</td>
+<td data-quarto-table-cell-role="th">What it holds</td>
+</tr>
+<tr class="even">
+<td>People</td>
+<td>The roster, person tags, qualifications, personal details. ${HL('making-people','\u2192')}</td>
+</tr>
+<tr class="odd">
+<td>Positions</td>
+<td>Durations, colors, Display labels, copies, position tags. ${HL('making-positions','\u2192')}</td>
+</tr>
+<tr class="even">
+<td>Tags</td>
+<td>All tags, of every type, and their colors. ${HL('making-positions','\u2192')}</td>
+</tr>
+<tr class="odd">
+<td>Rules</td>
+<td>The rule builder and this tab\u2019s rule list. ${HL('planning-builder','\u2192')}</td>
+</tr>
+<tr class="even">
+<td>Time range</td>
+<td>Start/end times and the maximum unfilled time. ${HL('making-time','\u2192')}</td>
+</tr>
+<tr class="odd">
+<td>Schedules</td>
+<td>Cloning, auto-naming and auto-delete options. ${HL('making-time','\u2192')}</td>
+</tr>
+</tbody>
+</table>
+
+<p>Along the top of the window are <b>Save settings</b> and <b>Load settings</b> ${HL('making-save','(details)')}.</p>
+<h4>Shortcuts &amp; messages</h4>
+<ul>
+  <li><kbd>Ctrl</kbd>/<kbd>\u2318</kbd>+<kbd>Z</kbd> \u2014 undo. <kbd>Esc</kbd> \u2014 close any open menu.</li>
+  <li>Short messages (for example what Solve just did) appear briefly at the bottom center of the screen.</li>
+</ul>`,
+
+'interface-panels': ()=>`
+<p class="hc-lead">Two panels sit beside and below the chart and keep you oriented: <b>Decisions</b> (what still needs attention) and <b>Rules</b> (what governs this schedule).</p>
+<h4>The Decisions panel</h4>
+<p>It lists problems and open choices for the current schedule, most urgent first. Red cards are violations; the others are decisions still to be made, each with a count of how many options remain. Click any card and the relevant cells flash on the chart. The \u201C?\u201D icon in its heading explains the ordering. A full explanation is in ${HL('filling-decisions','Conflicts, Decisions & Hints')}.</p>
+<h4>The Rules panel</h4>
+<p>It lists every rule on the current tab, split into <b>Required</b> and <b>Preferred</b> sections. Each rule shows:</p>
+<ul>
+  <li>A chip \u2014 <b>REQUIRE</b> or <b>FORBID</b> \u2014 plus <b>RELATIVE</b> or <b>ALLOWANCE</b> for those special kinds.</li>
+  <li>The rule written out as a sentence. If it\u2019s currently broken, <span style="color:var(--danger);font-weight:700;">Required rule violated.</span> or <b>Preferred rule violated.</b> ends the sentence.</li>
+  <li>Any rule tags as colored pills.</li>
+  <li>An on/off switch (an off rule is kept but ignored), a \u270E to edit it, and a \uD83D\uDDD1 to delete it.</li>
+</ul>
+<p>Across the top are a <b>search box</b>; <b>Person</b>, <b>Position</b> and <b>Time</b> filters (narrow to rules that name something specific, rules that cover a group or range, or rules that leave it unrestricted); a <b>Tag</b> filter; and <b>Required</b>, <b>Preferred</b> and <b>Show inactive</b> checkboxes.</p>
+<p><b>Show rules</b> in a person\u2019s menu or a time heading\u2019s menu filters this panel to the rules that involve that person or time, with a note at the top saying so.</p>
+<p>To add a rule, open \u2699 Advanced settings \u2192 Rules. See ${HL('planning-basics','Rule Basics')}.</p>`,
+
+/* -------------------------------- MAKING -------------------------------- */
+'making': ()=>`
+<p class="hc-lead">Before filling anything, tell the board what exists. Some things are shared by every schedule tab; others belong to one tab.</p>
+${helpCards(helpFindNode('making'))}
+<h4>Shared vs. per tab</h4>
+
+<table class="hc-table caption-top" data-quarto-postprocess="true">
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Shared by every tab</td>
+<td data-quarto-table-cell-role="th">Belongs to each tab</td>
+</tr>
+<tr class="even">
+<td>People (with their tags and personal details)<br />
+Positions<br />
+Tags<br />
+The time range<br />
+Maximum unfilled time<br />
+Cloning, auto-name and auto-delete options</td>
+<td>Assignments (the blocks)<br />
+Rules (including qualifications)<br />
+Locks on cells, rows and columns<br />
+Toggled-off people<br />
+Rejected \u2605 suggestions</td>
+</tr>
+</tbody>
+</table>
+
+<div class="hc-tip">Start with <b>People</b> and <b>Positions</b>; those are the only things you must set up. Tags, rules and the rest make the board smarter but are optional.</div>`,
+
+'making-people': ()=>`
+<p class="hc-lead">The roster lives in \u2699 Advanced settings \u2192 <b>People</b>, and is shared by every schedule tab.</p>
+<h4>The People table</h4>
+
+<table class="hc-table caption-top" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Column</td>
+<td data-quarto-table-cell-role="th">What it does</td>
+</tr>
+<tr class="even">
+<td>Name</td>
+<td>The name shown on the chart.</td>
+</tr>
+<tr class="odd">
+<td>Tags</td>
+<td>Click a tag to put it on, or take it off, that person. Only <em>People</em> tags appear here; create more in the Tags tab. Clicking the <strong>Tags</strong> heading jumps to the Tags tab, already filtered to people tags.</td>
+</tr>
+<tr class="even">
+<td>Qualifications \u25A6</td>
+<td>See below.</td>
+</tr>
+<tr class="odd">
+<td>\u24D8 and \uD83D\uDDD1</td>
+<td>Personal details, and delete.</td>
+</tr>
+</tbody>
+</table>
+
+<p>To add someone, type a name under <b>New person name</b> and press <b>Add person</b>.</p>
+<h4>Qualifications</h4>
+<p>The grid button on a person\u2019s row (\u201Creview positions\u201D) opens a list of every position with three choices:</p>
+<ul>
+  <li><b>Cannot</b> \u2014 never schedule them there. A required \u201Ccan\u2019t\u201D rule.</li>
+  <li><b>Preferred Not</b> \u2014 avoid it if possible. A \u201Cshouldn\u2019t\u201D rule.</li>
+  <li><b>Preferred</b> \u2014 favor it. A \u201Cshould\u201D rule (earns \u2605 suggestions).</li>
+</ul>
+<p>The three are mutually exclusive: choosing one replaces any other for that person and position, and clicking the lit one clears it. Under the hood each choice is an ordinary rule for that exact person and position, at any time, in the <i>current</i> tab \u2014 so it also appears in the Rules panel and can be edited or removed there.</p>
+<h4>Personal details</h4>
+<p>The \u24D8 button opens a free-text box for anything you want to remember about a person. It saves when you press Save or click away, is kept with your browser data and with <i>Save settings</i>, and is not included in .xlsx files.</p>
+<h4>Deleting a person</h4>
+<p>\uD83D\uDDD1 removes the person and <b>their assignments from every schedule</b> (you\u2019ll be asked to confirm).</p>
+<h4>From the chart</h4>
+<p>Click a name on the chart and choose <b>See [Name]</b> to jump to this table with their row flashing. <i>Toggle person</i> in that same menu hides someone from just the current tab without deleting them.</p>`,
+
+'making-positions': ()=>`
+<p class="hc-lead">Positions are the things people do. Tags are labels you can put on people, positions or rules so a rule can aim at a whole group.</p>
+<h4>The Positions table</h4>
+
+<table class="hc-table caption-top" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Column</td>
+<td data-quarto-table-cell-role="th">What it does</td>
+</tr>
+<tr class="even">
+<td>Name</td>
+<td>The full name, used in menus, rules and decisions.</td>
+</tr>
+<tr class="odd">
+<td>Display</td>
+<td>The short label shown on the chart\u2019s blocks. The box itself is colored with the fill and text colors as a live preview. Leave it empty to show the full name.</td>
+</tr>
+<tr class="even">
+<td>Min / Preferred / Max</td>
+<td>The shortest, default and longest a block may be, in minutes (multiples of ${SLOT_MINUTES}). New blocks start at <em>Preferred</em>; you can drag them within the range.</td>
+</tr>
+<tr class="odd">
+<td>Single\u2011person</td>
+<td>Checked: only one person can hold it at a time. Unchecked: several people can share it.</td>
+</tr>
+<tr class="even">
+<td>Fill color / Text color</td>
+<td>Click a swatch; the picker\u2019s own hex field lets you type exact colors.</td>
+</tr>
+<tr class="odd">
+<td>Tags</td>
+<td>Click a position tag to put it on, or take it off. Clicking the <strong>Tags</strong> heading jumps to the Tags tab filtered to position tags.</td>
+</tr>
+<tr class="even">
+<td>\u270E and \uD83D\uDDD1</td>
+<td>Rename or copy; delete.</td>
+</tr>
+</tbody>
+</table>
+
+<h4>Copying a position</h4>
+<p>\u270E offers <b>Save name</b> (rename) or <b>Copy this position</b>, which duplicates every setting and tag as \u201CName (copy)\u201D. The starter positions ending in <i>to Clone</i> (EOB, IWK, PCV, VWk, Recommend Desk) are templates for this: copy one, then change the copy\u2019s name and Display \u2014 for example <i>EOB\u2011#</i> \u2192 <i>EOB\u20111</i>. They share a tag (such as <i>eob</i>), so one rule can still target all of them.</p>
+<h4>Deleting a position</h4>
+<p>\uD83D\uDDD1 removes the position and its assignments from every schedule. If any rule mentions it, you get a warning first that lets you look at those rules.</p>
+<h4>The Tags tab</h4>
+<ul>
+  <li>A tag has a <b>name</b>, a <b>type</b> \u2014 <i>People</i>, <i>Positions</i> or <i>Rules</i> \u2014 and a <b>highlight</b> and <b>text</b> color. Tags appear as colored, outlined pills everywhere.</li>
+  <li>The <b>Show</b> menu filters the list by type. The table also shows a live <b>Preview</b> and how many things use each tag.</li>
+  <li>Add one with the row at the bottom (the Preview chip updates as you type and pick colors).</li>
+  <li>\uD83D\uDDD1 deletes a tag after confirmation and takes it off everything it was on. Rules that referenced it are kept but stop matching anything.</li>
+  <li><i>Rule</i> tags are just organizing labels for rules, searchable with the Rules panel\u2019s tag filter. You attach them in the <i>Manually define rule</i> form.</li>
+</ul>
+<p>People and position tags are what let a rule say \u201Cno one tagged <i>trained</i>\u201D or \u201Cany position tagged <i>physically demanding</i>.\u201D See ${HL('planning-builder','The Rule Builder')}.</p>`,
+
+'making-time': ()=>`
+<p class="hc-lead">The time range sets the chart\u2019s columns. Schedule tabs let you keep many schedules side by side.</p>
+<h4>Time range (settings \u2192 Time range)</h4>
+<ul>
+  <li><b>Start time</b> and <b>End time</b>, snapped to ${SLOT_MINUTES}\u2011minute slots, then <b>Apply</b>. The range is shared by every tab.</li>
+  <li>Shrinking the range <b>removes any assignments that fall outside it</b>, in every tab.</li>
+  <li><b>Maximum unfilled time</b> (minutes, default 15): when filling, gaps up to this size are left empty on purpose. See ${HL('filling-auto','Auto-Fill')} for how it\u2019s used, and ${HL('planning-types','unfilled-time allowance rules')} for per-person overrides.</li>
+</ul>
+<h4>Schedule tabs</h4>
+<p>Each tab is an independent schedule with its own assignments, rules, locks, toggled-off people and rejected suggestions; people, positions, tags and the time range are shared.</p>
+<ul>
+  <li><b>Switch</b> by clicking a tab. <b>Reorder</b> by dragging. The leftmost tab is the oldest.</li>
+  <li>Click the <b>active</b> tab for its menu: <b>Rename</b>, <b>Clone all</b>, <b>Clone locked</b>, <b>Delete</b>.</li>
+  <li><b>Clone all</b> makes a new tab with copies of everything: assignments, rules, locks, toggled-off people and rejected suggestions. <b>Clone locked</b> keeps the rules and locks but only the assignments that touch locked cells, rows or columns \u2014 a quick way to carry forward what\u2019s settled and refill the rest. Hover the button to preview which locks will carry over.</li>
+  <li>There is no blank \u201Cnew schedule\u201D button: new tabs come from cloning, or from loading an .xlsx file. The first tab is <i>Schedule 1</i>.</li>
+  <li>With more than four tabs a <b>Schedules \u25BE</b> button appears next to them: a searchable dropdown listing every schedule, newest first.</li>
+  <li>Some rules look across tabs \u2014 \u201Cthe same assignment for more than N schedules in a row\u201D compares neighboring tabs in tab order, so order matters.</li>
+</ul>
+<h4>Schedules options (settings \u2192 Schedules)</h4>
+<ul>
+  <li><b>Where to show \u201Cclone of\u2026\u201D</b> \u2014 beside the name, under it (default), or hidden.</li>
+  <li><b>Auto-delete</b> \u2014 when a new tab pushes the count past the limit, the <i>oldest</i> (leftmost) schedule is deleted, never the one just made. On by default, with a limit of 5.</li>
+  <li><b>New tab names</b> \u2014 today\u2019s date, the next chosen day of the week (default: Thursday, ignoring today), or the same name as the tab it was cloned from. If that name is taken, a number is added, like <i>(2)</i>.</li>
+</ul>`,
+
+'making-save': ()=>`
+<p class="hc-lead">Your work is kept automatically, and there are two kinds of files for backing up or moving it.</p>
+<h4>Autosave</h4>
+<p>Every change is saved in <b>this browser, on this device</b> as you go. Nothing is sent anywhere. It stays until you clear the site\u2019s data, so keep a file copy of anything important.</p>
+<h4>.xlsx spreadsheets \u2014 Use .xlsx files \u25BE</h4>
+<ul>
+  <li><b>Save .xlsx</b> downloads the <i>current tab</i> as a workbook with sheets for the Schedule grid, People (names and tags), Positions, Tags, Rules and Settings.</li>
+  <li><b>Load .xlsx</b> reads a file made that way and adds its schedule as a <b>new tab at the right</b>.</li>
+</ul>
+<div class="hc-warn"><b>Loading replaces the shared setup.</b> The file\u2019s people, positions, tags and time range <i>replace</i> the current ones for every tab, not just the new one. Save a copy first if you\u2019re unsure.</div>
+<h4>Settings files \u2014 \u2699 Advanced settings \u2192 Save settings / Load settings</h4>
+<ul>
+  <li><b>Save settings</b> writes people (including personal details), positions, tags and the time range to a file.</li>
+  <li><b>Load settings</b> reads one back. It does <i>not</i> include rules or assignments.</li>
+</ul>
+<p>Use a settings file to give a colleague your roster and positions, or to set up a new browser, then ${HL('planning-basics','write the rules')} fresh or load an .xlsx for a full schedule.</p>
+<h4>Moving everything to another computer</h4>
+<ol>
+  <li>Save settings, and Save .xlsx for each schedule you want.</li>
+  <li>On the other computer, Load settings, then Load .xlsx for each schedule.</li>
+</ol>`,
+
+/* ------------------------------- PLANNING ------------------------------- */
+'planning': ()=>`
+<p class="hc-lead">Rules are how you tell the board what\u2019s allowed. They\u2019re checked continuously: they block impossible choices, flag broken ones, drive Solve, and guide the \u2605 suggestions.</p>
+<div class="hc-ex">Someone must be scheduled for Front Desk, from 10:30 AM to 12:00 PM.</div>
+<div class="hc-ex">No one tagged Male can be scheduled for Break.</div>
+<div class="hc-ex">No one can have more than 2 slots of positions tagged Physically demanding at a time.</div>
+${helpCards(helpFindNode('planning'))}`,
+
+'planning-basics': ()=>`
+<p class="hc-lead">A rule is a sentence: <b>who or what</b> \u2014 <b>must / can\u2019t / should / shouldn\u2019t</b> \u2014 <b>do something</b> \u2014 <b>when</b>. Rules belong to the tab they\u2019re written in.</p>
+<h4>The four strengths</h4>
+
+<table class="hc-table caption-top" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Word</td>
+<td data-quarto-table-cell-role="th">Kind</td>
+<td data-quarto-table-cell-role="th">What the board does</td>
+</tr>
+<tr class="even">
+<td><strong>must</strong></td>
+<td>Required \u00B7 require</td>
+<td>Creates a need. Until it\u2019s met it shows in Decisions as unfilled, and Solve places people to satisfy it.</td>
+</tr>
+<tr class="odd">
+<td><strong>can\u2019t</strong></td>
+<td>Required \u00B7 forbid</td>
+<td>A hard block. Blocked positions are greyed out in the cell options (hover to see why). If an existing assignment breaks it anyway \u2014 say, after you edit a rule \u2014 it\u2019s flagged as a violation.</td>
+</tr>
+<tr class="even">
+<td><strong>should</strong></td>
+<td>Preferred \u00B7 require</td>
+<td>A wish. Matching options earn a \u2605 and Solve favors them. Never blocks anything.</td>
+</tr>
+<tr class="odd">
+<td><strong>shouldn\u2019t</strong></td>
+<td>Preferred \u00B7 forbid</td>
+<td>Solve avoids it; if it happens anyway it\u2019s flagged \u201CPreferred rule violated.\u201D You can still do it by hand.</td>
+</tr>
+</tbody>
+</table>
+
+<p>With the subject <b>no one</b>, the verbs read <i>can</i> and <i>should</i> (\u201CNo one <i>can</i> be scheduled for\u2026\u201D) to avoid a double negative \u2014 the meanings are the same as can\u2019t and shouldn\u2019t.</p>
+<h4>Who, what and when</h4>
+<ul>
+  <li><b>People:</b> a specific person; <i>someone</i>, a number of people, or <i>everyone</i> (for coverage needs); <i>no one</i> (for bans). Any of the last group can be narrowed by tag.</li>
+  <li><b>Positions:</b> a specific position, or positions with certain tags.</li>
+  <li><b>Time:</b> any time (left unsaid), a specific time, a range, or within some minutes of another position. A range can run all the way to closing time.</li>
+  <li><b>Tags combine</b> with AND and NOT: <i>tagged Hardworking and tagged Punctual but not tagged Trained nor tagged New</i>. For \u201Ceither/or,\u201D write one rule per tag (this works for can\u2019t rules).</li>
+</ul>
+<div class="hc-tip">A rule aimed at a tag stays live: \u201Cno one tagged Trained\u2026\u201D applies to anyone who has the tag now <i>or later</i> \u2014 it isn\u2019t a fixed list of names.</div>
+<p>Only the parts that matter appear in a rule\u2019s wording. \u201CBob should never be in Break\u201D doesn\u2019t say \u201Cat any time,\u201D and the board highlights only what the sentence mentions (see ${HL('filling-decisions','red highlights')}).</p>
+<h4>Managing rules</h4>
+<ul>
+  <li>The ${HL('interface-panels','Rules panel')} shows them; its switch turns one off without deleting it.</li>
+  <li>\u2699 Advanced settings \u2192 <b>Rules</b> is where you build and edit them. Click \u270E on any rule to reopen it, fully filled in. See ${HL('planning-builder','The Rule Builder')}.</li>
+  <li>Cloning a tab copies its rules; the copies are independent.</li>
+</ul>`,
+
+'planning-builder': ()=>`
+<p class="hc-lead">The rule builder assembles a rule as a sentence, one bubble at a time. Open it from \u2699 Advanced settings \u2192 <b>Rules</b>, or by clicking \u270E on a rule.</p>
+<h4>Building a sentence</h4>
+<ol>
+  <li><b>Choose beginning of rule</b> \u2014 pick who or what the rule is about: <i>a specific person, someone, # of people, everyone, no one, a specific position,</i> or <i>positions tagged\u2026</i></li>
+  <li><b>Choose what happens</b> \u2014 a searchable list of every phrase that makes sense for your first choice, each already including must / can\u2019t / should / shouldn\u2019t.</li>
+  <li>The remaining pieces \u2014 a position, a time, a number \u2014 appear one at a time, each only after the one before it has a value.</li>
+  <li>The <b>Rule Preview:</b> line reads the finished rule back to you. <b>Add rule</b> (or <b>Update rule</b>) turns on once the sentence is complete.</li>
+</ol>
+<h4>How the bubbles work</h4>
+<ul>
+  <li>A <b>gray, italic</b> bubble hasn\u2019t been chosen yet.</li>
+  <li>The big <b>\u25BE arrow</b> under a bubble swaps that piece for a different kind of choice. Clicking the bubble\u2019s <b>text</b> edits its content \u2014 pick the person or position, type a number, open the time or count popup.</li>
+  <li>Changing an early bubble clears any later ones that no longer fit.</li>
+  <li>The <b>?</b> at the top has example sentences.</li>
+</ul>
+<h4>People counts: someone \u21C4 N people \u21C4 everyone</h4>
+<p>These are one bubble. Click its text to open a number popup (<i>N to M people</i>). A 1\u20131 range reads <b>someone</b>; anything else reads <b>N people</b> or <b>N to M people</b>. The <b>All N people</b> button turns it into <b>everyone</b>, and you can click <i>everyone</i> to dial it back down. Choosing <i># of people</i> from the arrow starts at 2.</p>
+<h4>Narrowing by tag</h4>
+<p>People and position starts accept tag chips: <b>+ tagged\u2026</b>, then <b>+ and tagged\u2026</b> for more required tags; <b>+ not tagged\u2026</b> (or <b>+ but not tagged\u2026</b> once a required tag exists), then <b>+ nor tagged\u2026</b> for more excluded ones. Click \u2715 on a chip to remove it. The add-buttons spell out the exact word they\u2019ll add.</p>
+<h4>The time bubble</h4>
+<p>Choose among <b>at any time</b>, <b>at a specific time</b>, <b>during a range</b> (the end choices are slot <i>ends</i>, so a range can reach closing time), or <b>within X minutes of a position</b> \u2014 which is two bubbles: the minutes, and a position you can make specific or tagged like any other.</p>
+<h4>Optional extras</h4>
+<p>Paired-people and repeat-across-schedules rules offer a <b>+ for a position\u2026</b> chip to limit them to one position or tagged positions; leave it alone to apply to all.</p>
+<h4>Make Exclusive</h4>
+<p>For a \u201Cmust be scheduled\u2026\u201D rule, a <b>Make Exclusive:</b> list appears under the preview, offering companion rules that close loopholes. Tick any to add them (as separate rules) when you add the main rule. For <i>\u201CJanet must be at position X at time Y\u201D</i> it can offer:</p>
+<ul>
+  <li><i>Janet must not be at position X other than (an assignment at) time Y</i> \u2014 needs a specific time or range.</li>
+  <li><i>No one except Janet can be at position X at time Y</i> \u2014 needs a specific person.</li>
+</ul>
+<p>If none apply it says so. When <i>editing</i>, companions that already exist are marked with an <b>*</b> and start ticked; unticking one shows a red <b style="color:var(--danger)">\u2715</b>, meaning it will be removed when you press Update. A toggle, <b>Only disable deselected rules</b>, turns them off instead of deleting them.</p>
+<h4>Manually define rule</h4>
+<p>The collapsed section below the builder is the original form with every field exposed: person, position and time targets; Standard or Relative kind; strength and effect; each relative type\u2019s settings; a nickname; rule tags; and the active switch. Use it for anything the sentence doesn\u2019t cover. It opens by itself when you edit a rule the sentence builder can\u2019t express.</p>`,
+
+'planning-types': ()=>`
+<p class="hc-lead">Every kind of rule the builder can make, with an example and what to expect from it. (Examples are paraphrased; the builder\u2019s own preview wording may differ slightly.)</p>
+<h4>1. Assignment</h4>
+<div class="hc-ex">Alice must be scheduled for Front Desk, from 10:30 AM to 12:00 PM.</div>
+<div class="hc-ex">No one tagged Male can be scheduled for Break.</div>
+<div class="hc-ex">2 to 3 people must be scheduled for Recommend Desk.</div>
+<p><i>Must/should</i> with someone, a number of people, or everyone are coverage needs \u2014 \u201C2 to 3 people\u201D means at least 2 and at most 3 at each covered moment. <i>Can\u2019t/shouldn\u2019t</i> bans a person, group or no one from a position, optionally within a time.</p>
+<h4>2. A position\u2019s own hours</h4>
+<div class="hc-ex">Front Desk can\u2019t run from 1:00 PM to 2:00 PM.</div>
+<p>Starts with a position (or positions tagged\u2026) instead of a person, so no one is named. <i>Can\u2019t</i> bans it during that time; <i>must</i> needs it covered throughout.</p>
+<h4>3. Paired people</h4>
+<div class="hc-ex">Alice must always be scheduled together with Bob.</div>
+<div class="hc-ex">No one can be scheduled together with Bob for Front Desk.</div>
+<p>Optional position. <i>Can\u2019t</i> keeps people apart. <i>Should</i> earns \u2605 suggestions that pair them.</p>
+<h4>4. Sequence</h4>
+<div class="hc-ex">No one can do Break right after doing Prep Meeting.</div>
+<div class="hc-ex">Alice can\u2019t do Home within 30 minutes of doing Break.</div>
+<p>Choose <b>right after</b>, <b>right before</b>, or <b>within</b> (either order, optionally a number of minutes).</p>
+<h4>5. Limit</h4>
+<div class="hc-ex">No one can have more than 2 slots of positions tagged Physically demanding at a time.</div>
+<div class="hc-ex">Alice can\u2019t have more than 45 minutes of Break throughout the day.</div>
+<p>Measure in <b>slots</b> or <b>minutes</b>. <b>At a time</b> limits one unbroken stretch; <b>throughout the day</b> limits the total across the schedule. Only the \u201Ccan\u2019t/shouldn\u2019t\u201D wordings exist.</p>
+<h4>6. Repeat across schedules</h4>
+<div class="hc-ex">No one can have the same assignment for more than 2 schedules in a row.</div>
+<p>Compares the same time slot in neighboring tabs, in tab order. Optional position. Can\u2019t/shouldn\u2019t only.</p>
+<h4>7. Mutual swaps</h4>
+<div class="hc-ex">No one can swap positions with someone else (X\u2192Y while they go Y\u2192X).</div>
+<p>Stops two people from trading places. It can also be aimed at one specific person. Can\u2019t/shouldn\u2019t only.</p>
+<h4>8. Staggered start</h4>
+<div class="hc-ex">Someone must start Front Desk every 15 minutes, from 10:30 AM to 4:30 PM.</div>
+<p>Cuts the time range into back-to-back windows of the interval and needs at least one start of that position in each. Must/should only. Unmet windows appear in Decisions and Solve fills them.</p>
+<h4>9. Unfilled-time allowance</h4>
+<div class="hc-ex">Everyone must have 15 minutes of unfilled time at a time.</div>
+<div class="hc-ex">Alice must have 60 minutes of unfilled time throughout the whole day.</div>
+<p>This isn\u2019t about a placement \u2014 it tunes how much empty time Solve tolerates for someone (see ${HL('filling-auto','Auto-Fill')}). <i>Must/should</i> raise their tolerance to at least that amount; <i>can\u2019t/shouldn\u2019t</i> cap it, even below the global Maximum unfilled time. If they disagree, the cap wins. <b>At a time</b> is the size of any single gap; <b>throughout the whole day</b> is a running budget that stacks on top.</p>
+<h4>10. Qualifications</h4>
+<p>The \u25A6 buttons in the People tab create plain assignment rules for you \u2014 see ${HL('making-people','People')}.</p>
+<h4>What\u2019s enforced, honestly</h4>
+
+<table class="hc-table caption-top" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Rule</td>
+<td data-quarto-table-cell-role="th">Notes</td>
+</tr>
+<tr class="even">
+<td>Can\u2019t (required)</td>
+<td>Blocks the choice by hand, and Solve never breaks it. Works for every kind above that offers it.</td>
+</tr>
+<tr class="odd">
+<td>Must (required) on assignments, a position\u2019s hours, and staggered start</td>
+<td>Becomes a need that Solve fills and Decisions tracks.</td>
+</tr>
+<tr class="even">
+<td>Must (required) on paired people or sequence</td>
+<td>Not enforced or auto-filled today. Use <strong>should</strong> to get \u2605 suggestions, or <strong>can\u2019t</strong> to forbid the opposite.</td>
+</tr>
+<tr class="odd">
+<td>Should / shouldn\u2019t</td>
+<td>Soft: \u2605 suggestions and \u201CPreferred rule violated\u201D flags; never blocks.</td>
+</tr>
+<tr class="even">
+<td>\u201CWithin X minutes of a position\u201D</td>
+<td>Checked against assignments already on the chart; Solve can\u2019t plan around it, so it works best with can\u2019t/shouldn\u2019t.</td>
+</tr>
+</tbody>
+</table>
+`,
+
+/* ------------------------------- FILLING ------------------------------- */
+'filling': ()=>`
+<p class="hc-lead">Filling is deciding who does what, when. Do it by hand, let Solve do it, or mix the two \u2014 the board checks every step against your rules.</p>
+${helpCards(helpFindNode('filling'))}
+<h4>A workable routine</h4>
+<ol>
+  <li>${HL('filling-hand','Place')} what you already know by hand, and ${HL('filling-locks','lock')} it.</li>
+  <li>Run <b>Fill unlocked</b>. Locked work stays; everything else is rebuilt around it.</li>
+  <li>Read ${HL('filling-decisions','Decisions')}, fix what\u2019s left, run Fill unlocked again if you like.</li>
+  <li>Lock the final result, then ${HL('making-time','clone the tab')} for the next day.</li>
+</ol>`,
+
+'filling-hand': ()=>`
+<p class="hc-lead">Click around the chart; each click opens the menu that fits what you clicked.</p>
+<h4>Picking a position for a cell</h4>
+<p>Click an <b>empty cell</b> to see every position that person could take at that time:</p>
+<ul>
+  <li>Each row shows the position\u2019s color, name, its default duration, and a <b>\u2605</b> if one of your preferred rules favors it.</li>
+  <li>It also shows how often this person has held that position at that time in your other schedules.</li>
+  <li><b>Unavailable positions</b> are greyed out. Hover one to see the rule that blocks it \u2014 and watch the chart highlight what\u2019s responsible (see ${HL('filling-decisions','red highlights')}).</li>
+  <li>Click an available position to place it, at its <i>Preferred</i> duration.</li>
+  <li>The menu\u2019s heading names the person and time, with a \uD83D\uDD12 to lock the cell and \u2014 if you\u2019ve cut or copied a block \u2014 a \uD83D\uDCCB to paste it here.</li>
+</ul>
+<p>Only <i>required</i> rules block a choice. Anything that merely breaks a <i>preferred</i> rule is allowed and gets flagged afterward.</p>
+<h4>The block menu</h4>
+<p>Click a <b>colored block</b>: <b>Cut</b>, <b>Copy</b>, <b>Lock cell / Unlock cell</b>, <b>Remove</b>. To move a block, Cut it, click the destination cell, and press \uD83D\uDCCB; Copy does the same without removing the original. Drag a block\u2019s right edge to resize it (see ${HL('interface-chart','The Chart')}).</p>
+<h4>The person menu</h4>
+<p>Click a <b>name</b>:</p>
+<ul>
+  <li><b>See [Name]</b> \u2014 opens the People tab with that row flashing.</li>
+  <li><b>Lock row / Unlock row</b> \u2014 see ${HL('filling-locks','Locks & Undo')}.</li>
+  <li><b>Toggle person</b> \u2014 hide this person from the current tab and from Fill. Restore from the footer.</li>
+  <li><b>Swap names</b> and <b>Swap rows</b> \u2014 choose one, then click the second person\u2019s name and choose the same. <i>Swap names</i> trades the two names between the rows; <i>Swap rows</i> trades all the entries between the rows. Names and entries end up lined up the same way either way \u2014 the difference is what you see move. (Tags, personal details and rules belong to the row\u2019s person, so with <i>Swap names</i> they stay put while the name moves.)</li>
+  <li><b>Copy row / Paste row</b> \u2014 copy one person\u2019s whole row of assignments onto another person (Paste appears once something is copied; locked cells are skipped).</li>
+  <li><b>Clear row</b> \u2014 remove their assignments (locked cells are skipped).</li>
+  <li><b>Show rules</b> \u2014 filter the Rules panel to rules that involve them.</li>
+</ul>
+<h4>The time menu</h4>
+<p>Click a <b>time heading</b>:</p>
+<ul>
+  <li><b>Lock column / Unlock column.</b></li>
+  <li><b>Clear this time</b> \u2014 trims just this one slot out of any block that crosses it, keeping what remains on either side.</li>
+  <li><b>Clear assignments</b> \u2014 removes every block touching this time, completely.</li>
+  <li><b>Show rules for this time.</b></li>
+</ul>
+<p>Both clear actions skip locked cells.</p>`,
+
+'filling-auto': ()=>`
+<p class="hc-lead">The <b>\u25B6 Solve \u25BE</b> menu above the chart fills the schedule for you, using your rules. It\u2019s randomized, so running it again gives a different arrangement.</p>
+<h4>The three modes</h4>
+
+<table class="hc-table caption-top" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Mode</td>
+<td data-quarto-table-cell-role="th">What it does</td>
+</tr>
+<tr class="even">
+<td><strong>Fill required</strong></td>
+<td>Adds only what <em>required</em> rules need, and removes nothing. Preferred wishes stay as \u2605 suggestions for you to accept. Doesn\u2019t treat locks as off-limits.</td>
+</tr>
+<tr class="odd">
+<td><strong>Fill unlocked</strong></td>
+<td>Removes every assignment that doesn\u2019t touch a locked cell, row or column, then rebuilds: required needs first, then preferred wishes, then remaining gaps. Locked work and locked cells are left alone.</td>
+</tr>
+<tr class="even">
+<td><strong>Fill all</strong></td>
+<td>Clears the entire chart \u2014 locks don\u2019t protect anything here \u2014 and rebuilds from scratch.</td>
+</tr>
+</tbody>
+</table>
+
+<p>A short message at the bottom summarizes what changed, and each run is a single ${HL('filling-locks','Undo')} step. Toggled-off people are skipped.</p>
+<h4>What it follows</h4>
+<ul>
+  <li><b>Can\u2019t</b> rules are hard limits. <b>Must</b> rules (assignments, a position\u2019s hours, staggered start) are needs it fills. <b>Should/shouldn\u2019t</b> steer its choices.</li>
+  <li>Positions\u2019 minimum/maximum durations and single\u2011person settings.</li>
+</ul>
+<h4>Gaps</h4>
+<p>Solve doesn\u2019t chase every last empty slot. A gap no bigger than the <b>Maximum unfilled time</b> (default 15 minutes, in settings \u2192 Time range) is left alone on purpose; larger gaps get filled wherever something valid fits, and what\u2019s left stays empty. ${HL('planning-types','Unfilled-time allowance rules')} adjust this for particular people \u2014 raising it with <i>must</i>, capping it with <i>can\u2019t</i>, per gap or as a daily budget.</p>
+<h4>What it can\u2019t do</h4>
+<ul>
+  <li>It can\u2019t plan around \u201Cwithin X minutes of a position,\u201D which depends on assignments that may not exist yet.</li>
+  <li>If your rules can\u2019t all be satisfied, it fills what it can and leaves the rest in ${HL('filling-decisions','Decisions')} \u2014 often as a card with <b>0 options</b>.</li>
+</ul>
+<div class="hc-tip">Try Fill unlocked several times and keep the version you like \u2014 Undo (<kbd>Ctrl</kbd>/<kbd>\u2318</kbd>+<kbd>Z</kbd>) steps back through them.</div>`,
+
+'filling-locks': ()=>`
+<p class="hc-lead">Locks mark work as settled; Undo takes back what you didn\u2019t mean.</p>
+<h4>Locking</h4>
+<p>You can lock three things, from three menus:</p>
+<ul>
+  <li><b>A cell</b> \u2014 the \uD83D\uDD12 in the cell options, or <i>Lock cell</i> in a block\u2019s menu.</li>
+  <li><b>A row</b> \u2014 <i>Lock row</i> in a person\u2019s menu.</li>
+  <li><b>A column</b> \u2014 <i>Lock column</i> in a time heading\u2019s menu.</li>
+</ul>
+<p>Lock icons flash when you lock something, and hovering a lock button previews what it covers. Turn on <b>\uD83D\uDD12 Lock display</b> under the chart to keep every lock visible. Locking is per tab.</p>
+<h4>What locks protect</h4>
+<ul>
+  <li><b>Fill unlocked</b> never changes locked work and never fills a locked cell, row or column.</li>
+  <li><b>Clear row</b>, <b>Paste row</b>, <b>Clear this time</b> and <b>Clear assignments</b> skip locked cells.</li>
+  <li><b>Resizing</b> a block can\u2019t extend it into a locked cell.</li>
+  <li><b>Clone locked</b> carries forward exactly the assignments that touch locks.</li>
+</ul>
+<div class="hc-warn">Locks guard against automation and bulk actions. <b>Fill all</b> ignores them (it clears everything), <b>Fill required</b> may add to locked cells, and placing or removing a single block by hand in a locked cell is still allowed.</div>
+<h4>Undo</h4>
+<p>Press <b>\u21B6 Undo</b> under the chart, or <kbd>Ctrl</kbd>/<kbd>\u2318</kbd>+<kbd>Z</kbd>, to step back through your most recent changes \u2014 placements, removals, solves, locks, and rule edits \u2014 up to the last 30. <kbd>Esc</kbd> closes any open menu without changing anything.</p>`,
+
+'filling-decisions': ()=>`
+<p class="hc-lead">The board constantly checks your schedule against your rules and tells you three ways: the Decisions panel, red highlights while you hover, and \u2605 suggestions.</p>
+<h4>The Decisions panel</h4>
+<ul>
+  <li><b>Violations (red)</b> \u2014 an existing assignment breaks a rule: <i>Required Rule Violated</i> or <i>Preferred Rule Violated</i>, plus required capacity or coverage problems.</li>
+  <li><b>Open decisions</b> \u2014 coverage that\u2019s still needed, such as <i>Needs coverage at 11:15 AM</i>. Each has an <b>N options</b> badge: how many ways it could be filled right now. <b>0 options</b> (in red) means it can\u2019t be filled given everything else.</li>
+  <li><b>Ordering</b> \u2014 fewest options first, so the most constrained choices come up top. Each card shows who and when, and the heading counts violations and open items.</li>
+  <li><b>Big decisions</b> \u2014 empty cells where many rules converge, so settling them simplifies the most.</li>
+  <li>Click any card and its cells <b>flash</b> on the chart.</li>
+</ul>
+<h4>Red highlights while you hover</h4>
+<p>In the cell options, hover a greyed-out position and the chart highlights what\u2019s behind the block \u2014 only the things the rule\u2019s own wording mentions:</p>
+
+<table class="hc-table caption-top" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Highlight</td>
+<td data-quarto-table-cell-role="th">Means</td>
+</tr>
+<tr class="even">
+<td>A person\u2019s row</td>
+<td>The rule names that person (or the other person in a pairing).</td>
+</tr>
+<tr class="odd">
+<td>A tag pill under the name</td>
+<td>The rule aims at a tag the person has. It appears even when Person tags is off.</td>
+</tr>
+<tr class="even">
+<td>A stretch of cells</td>
+<td>The rule applies only to that time, so that whole range lights up \u2014 not just the cells you\u2019d fill.</td>
+</tr>
+<tr class="odd">
+<td>Other blocks</td>
+<td>The assignments that cause a conflict \u2014 the earlier position in a sequence, the paired person\u2019s block, the stretch you\u2019d be extending.</td>
+</tr>
+<tr class="even">
+<td>A schedule tab</td>
+<td>A repeat-across-schedules rule: the earlier tabs with the same assignment.</td>
+</tr>
+<tr class="odd">
+<td>\u201CN people\u201D / \u201CN positions\u201D above the chart</td>
+<td>The rule is about people or positions in general (\u201Cno one\u2026\u201D, or a particular position) with nothing more specific to point at.</td>
+</tr>
+</tbody>
+</table>
+
+<p>An unrestricted piece \u2014 \u201Cat any time,\u201D \u201Cany position\u201D \u2014 highlights nothing, because the rule wouldn\u2019t say it.</p>
+<h4>\u2605 Suggestions</h4>
+<p>A faint \u2605 in an empty cell means a preferred (\u201Cshould\u201D) rule would like that person in that position there. Click it for a popup naming the suggestion and the rule(s) behind it, with <b>Accept</b> (places it) and <b>Reject</b> (hides it; remembered for this tab). The same star appears beside favored positions in the cell options.</p>
+<h4>In the Rules panel</h4>
+<p>A broken rule ends with <b style="color:var(--danger)">Required rule violated.</b> or <b>Preferred rule violated.</b> in its sentence. ${HL('interface-panels','More on the Rules panel')}.</p>`,
+};
+
+/* ---- rendering ---- */
+var helpSelectedId = 'all';
+function buildHelpBranch(node, depth, isRoot){
+  const wrap = document.createElement('div');
+  wrap.className = isRoot ? 'ht-branch' : 'ht-kid';
+  if(!isRoot) wrap.style.flex = `${helpLeafCount(node)} 1 0`;
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = `ht-node l${depth+1}`; btn.dataset.helpId = node.id;
+  btn.textContent = node.label;
+  btn.addEventListener('click', ()=>selectHelpTopic(node.id));
+  wrap.appendChild(btn);
+  if(node.children && node.children.length){
+    const kids = document.createElement('div'); kids.className = 'ht-kids';
+    node.children.forEach(c=>kids.appendChild(buildHelpBranch(c, depth+1, false)));
+    wrap.appendChild(kids);
+  }
+  return wrap;
+}
+function renderHelpTree(){
+  const host = document.getElementById('help-tree');
+  if(!host) return;
+  host.innerHTML = '';
+  host.appendChild(buildHelpBranch(HELP_TREE, 0, true));
+}
+function selectHelpTopic(id){
+  const node = helpFindNode(id) || HELP_TREE;
+  helpSelectedId = node.id;
+  const path = helpPath(node.id) || [HELP_TREE];
+  const onPath = new Set(path.slice(0,-1).map(n=>n.id));
+  document.querySelectorAll('#help-tree .ht-node').forEach(b=>{
+    const bid = b.dataset.helpId;
+    b.classList.toggle('selected', bid===node.id);
+    b.classList.toggle('on-path', onPath.has(bid));
+    if(bid===node.id) b.setAttribute('aria-current','true'); else b.removeAttribute('aria-current');
+  });
   const body = document.getElementById('help-body');
   if(!body) return;
-  body.innerHTML = `<div class="db-help-text">A quick tour of each panel and button. This is a work in progress — ask if something isn\u2019t covered yet.</div>` +
-    HELP_SECTIONS.map(s=>`<div class="db-rule-builder"><h3>${escapeHtml(s.title)}</h3><div style="font-size:12.5px;line-height:1.55;color:var(--ink);">${escapeHtml(s.body)}</div></div>`).join('');
+  const order = helpFlatOrder();
+  const i = order.indexOf(node.id);
+  const prev = i>0 ? helpFindNode(order[i-1]) : null;
+  const next = i<order.length-1 ? helpFindNode(order[i+1]) : null;
+  const crumbs = path.map((n,k)=> k===path.length-1
+    ? `<span class="cur">${escapeHtml(n.title||n.label)}</span>`
+    : `<button type="button" data-help-goto="${n.id}">${escapeHtml(n.title||n.label)}</button>`).join(' \u203A ');
+  const content = (HELP_CONTENT[node.id] || (()=>''))();
+  body.innerHTML = `${path.length>1 ? `<div class="hc-crumbs">${crumbs}</div>` : ''}<h3>${escapeHtml(node.title||node.label)}</h3>${content}
+    <div class="hc-nav">
+      ${prev ? `<button type="button" class="btn btn-sm" data-help-goto="${prev.id}">\u2039 ${escapeHtml(prev.title||prev.label)}</button>` : '<span></span>'}
+      ${next ? `<button type="button" class="btn btn-sm" data-help-goto="${next.id}">${escapeHtml(next.title||next.label)} \u203A</button>` : '<span></span>'}
+    </div>`;
+  body.scrollTop = 0;
 }
-function openHelp(){
-  renderHelpBody();
+function openHelp(topicId){
+  if(!document.getElementById('help-tree').firstChild) renderHelpTree();
+  selectHelpTopic(typeof topicId==='string' ? topicId : 'all');
   document.getElementById('help-overlay').style.display = 'flex';
   const btn = document.getElementById('btn-help');
   if(btn) btn.classList.remove('pulse-attention');
@@ -10441,7 +11308,13 @@ function init(){
 
   document.getElementById('schedule-dropdown-btn').addEventListener('click', (e)=>openScheduleDropdown(e.currentTarget));
 
-  document.getElementById('btn-help').addEventListener('click', openHelp);
+  document.getElementById('btn-help').addEventListener('click', ()=>openHelp());
+  document.getElementById('help-body').addEventListener('click', (e)=>{
+    const el = e.target.closest('[data-help-goto]');
+    if(!el) return;
+    e.preventDefault(); // these are in-guide links, not page anchors
+    selectHelpTopic(el.dataset.helpGoto);
+  });
   document.getElementById('btn-close-help').addEventListener('click', closeHelp);
   document.getElementById('help-overlay').addEventListener('click', (e)=>{ if(e.target.id==='help-overlay') closeHelp(); });
   try{
