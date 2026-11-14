@@ -1,4 +1,7 @@
 ---
+title: "Video editor"
+resources:
+  - "cutline/**"
 format:
   html:
     embed-resources: false
@@ -21,6 +24,12 @@ execute:
 ---
 
 ```{=html}
-<div id="app"><p class="boot">Opening Cutline…</p></div>
-<script type="module" src="dist/app.js"></script>
+<iframe
+  src="cutline/index.html"
+  title="Cutline local video editor"
+  allow="fullscreen"
+  allowfullscreen
+  style="display:block;width:100%;height:calc(100vh - 180px);min-height:720px;border:1px solid #40534b;border-radius:8px;background:#101315;"
+></iframe>
+<p><a href="cutline/index.html" target="_blank" rel="noopener">Open the editor in a full window</a></p>
 ```

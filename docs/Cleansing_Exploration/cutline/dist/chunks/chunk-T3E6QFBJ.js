@@ -1,0 +1,224 @@
+// src/pipeline/model.ts
+var clone = (value) => structuredClone(value);
+function media(id, durationSec, type = "av") {
+  if (!Number.isFinite(durationSec) || durationSec < 0) throw Error("Media duration must be finite and non-negative.");
+  return { id, originId: id, mediaHash: id, type, durationSec, timeMap: { segments: durationSec ? [{ outStart: 0, outEnd: durationSec, srcStart: 0, srcEnd: durationSec, rate: 1 }] : [] }, tags: [], layouts: [] };
+}
+function compatible(from, to) {
+  return from === to || to === "media" && ["audio", "video", "av", "image", "text", "timeline"].includes(from) || from === "av" && (to === "video" || to === "audio");
+}
+function outputType(edit, nodeId, portId, seen = /* @__PURE__ */ new Set()) {
+  const n = edit.nodes.find((n2) => n2.id === nodeId), type = n?.outputs.find((p) => p.id === portId)?.type;
+  if (type !== "media" || !n || seen.has(nodeId)) return type;
+  seen.add(nodeId);
+  const input = n.inputs.find((p) => p.id === "media"), link = input && edit.connections.find((c) => c.to.node === nodeId && c.to.port === input.id);
+  return link ? outputType(edit, link.from.node, link.from.port, seen) : type;
+}
+function validateGraph(edit, bindings = {}, options = {}) {
+  if (edit.schemaVersion !== 1 || !Array.isArray(edit.nodes) || !Array.isArray(edit.connections) || !Array.isArray(edit.slots)) throw Error("Unsupported pipeline schema. Import a version 1 Edit.");
+  const nodes = new Map(edit.nodes.map((n) => [n.id, n]));
+  if (nodes.size !== edit.nodes.length) throw Error("Node names may repeat, but node IDs must be unique.");
+  const incoming = /* @__PURE__ */ new Set(), degree = new Map(edit.nodes.map((n) => [n.id, 0])), edges = /* @__PURE__ */ new Map();
+  for (const n of edit.nodes) {
+    if (!["media", "detection", "condition", "selection", "action", "breakpoint"].includes(n.kind)) throw Error(`${n.name}: choose a supported node kind.`);
+    if (new Set(n.inputs.map((p) => p.id)).size !== n.inputs.length || new Set(n.outputs.map((p) => p.id)).size !== n.outputs.length) throw Error(`${n.name}: port IDs must be unique.`);
+  }
+  for (const c of edit.connections) {
+    const a = nodes.get(c.from.node), b = nodes.get(c.to.node), out = a?.outputs.find((p) => p.id === c.from.port), input = b?.inputs.find((p) => p.id === c.to.port);
+    if (!a || !b || !out || !input) throw Error("A connection references a missing node or port. Reconnect it.");
+    const actual = outputType(edit, a.id, out.id) ?? out.type;
+    if (!compatible(actual, input.type)) throw Error(`${a.name} (${actual}) cannot connect to ${b.name} \u2192 ${input.name} (${input.type}). Choose a compatible media channel or constructor.`);
+    const key = `${b.id}:${input.id}`;
+    if (incoming.has(key)) throw Error(`${b.name} \u2192 ${input.name} accepts one connection. Use a condition to combine signals.`);
+    incoming.add(key);
+    degree.set(b.id, degree.get(b.id) + 1);
+    edges.set(a.id, [...edges.get(a.id) ?? [], b.id]);
+  }
+  if (!options.allowIncomplete) {
+    for (const n of edit.nodes) for (const p of n.inputs) if (p.required && !incoming.has(`${n.id}:${p.id}`)) throw Error(`${n.name}: connect the required input \u201C${p.name}\u201D.`);
+  }
+  for (const slot of edit.slots) {
+    const node2 = nodes.get(slot.nodeId);
+    if (!node2 || node2.kind !== "media") throw Error(`Slot \u201C${slot.name}\u201D must reference a Media node.`);
+    if (!node2.outputs.length || !compatible(slot.type, node2.outputs[0].type)) throw Error(`Slot \u201C${slot.name}\u201D and its Media output need compatible types.`);
+    const value = bindings[slot.id];
+    if (slot.required && !value) throw Error(`Choose media for the required slot \u201C${slot.name}\u201D.`);
+    if (value && !compatible(value.type, slot.type)) throw Error(`Slot \u201C${slot.name}\u201D needs ${slot.type}, received ${value.type}. Add an explicit cast.`);
+  }
+  for (const n of edit.nodes) {
+    const successors = edit.connections.filter((c) => c.from.node === n.id && n.outputs.find((p) => p.id === c.from.port)?.type !== "selection").map((c) => nodes.get(c.to.node)).filter((b) => b.kind === "action" && ["remove", "speed"].includes(String(b.params.action)));
+    if (successors.length > 1) throw Error(`${n.name}: keep structural actions in one linear chain.`);
+  }
+  const ready = edit.nodes.filter((n) => degree.get(n.id) === 0), order = [];
+  while (ready.length) {
+    const n = ready.shift();
+    order.push(n);
+    for (const id of edges.get(n.id) ?? []) {
+      degree.set(id, degree.get(id) - 1);
+      if (degree.get(id) === 0) ready.push(nodes.get(id));
+    }
+  }
+  if (order.length !== edit.nodes.length) throw Error("This Edit contains a cycle. Disconnect the loop; version 1 runs forward only.");
+  return order;
+}
+
+// src/pipeline/examples.ts
+var port = (id, type, required = true) => ({ id, name: id, type, required });
+function node(id, kind, params, inputs, output) {
+  return { id, name: id, kind, params, inputs, outputs: [port("out", output)], ui: { x: 0, y: 0 } };
+}
+function example(kind = "remove") {
+  const source = node("source", "media", {}, [], "av"), detect = node("quiet", "detection", { detector: "silence" }, [port("media", "av")], "signal"), when = node("long-pause", "condition", { expression: { op: "threshold", signal: "value", on: 2 }, debounce: 0.5 }, [port("value", "signal")], "condition"), selection = node("selection", "selection", {}, [port("media", "av"), port("condition", "condition")], "selection"), action = node("remove", "action", { action: "remove", mode: "propose" }, [port("media", "av"), port("selection", "selection")], "av");
+  const edit = { schemaVersion: 1, id: kind, name: kind === "speaker" ? "Speaker focus" : kind === "cross" ? "Cross-revision tagging" : "Remove long silences", version: 1, nodes: [source, detect, when, selection, action], connections: [], slots: [{ id: "source", name: "Recording", nodeId: "source", type: "av", required: true }], history: [] };
+  const wire = (from, to, input) => edit.connections.push({ from: { node: from, port: "out" }, to: { node: to, port: input } });
+  wire("source", "quiet", "media");
+  wire("quiet", "long-pause", "value");
+  wire("source", "selection", "media");
+  wire("long-pause", "selection", "condition");
+  wire("source", "remove", "media");
+  wire("selection", "remove", "selection");
+  if (kind === "cross") {
+    const tag = node("tag-remaining", "action", { action: "tag", label: "pause remainder", mode: "auto" }, [port("media", "av"), port("selection", "selection")], "av");
+    edit.nodes.push(tag);
+    wire("remove", "tag-remaining", "media");
+    wire("selection", "tag-remaining", "selection");
+  }
+  if (kind === "speaker") {
+    detect.params = { detector: "speaker", label: "speakerA" };
+    when.params = { expression: { op: "threshold", signal: "value", on: 0.5, off: 0.2 }, debounce: 1.5, hold: 3 };
+    action.params = { action: "layout", layout: "speakerA", defaultLayout: "grid", mode: "review" };
+    const b = node("speaker-b", "detection", { detector: "speaker", label: "speakerB" }, [port("media", "av")], "signal"), both = node("both-speaking", "condition", { expression: { op: "and", children: [{ op: "threshold", signal: "a", on: 0.5, off: 0.2 }, { op: "threshold", signal: "b", on: 0.5, off: 0.2 }] }, debounce: 1.5, hold: 3 }, [port("a", "signal"), port("b", "signal")], "condition"), s = node("both-selection", "selection", {}, [port("media", "av"), port("condition", "condition")], "selection"), layout = node("show-both", "action", { action: "layout", layout: "both", defaultLayout: "grid", z: 1, mode: "review" }, [port("media", "av"), port("selection", "selection")], "av");
+    edit.nodes.push(b, both, s, layout);
+    wire("source", "speaker-b", "media");
+    wire("quiet", "both-speaking", "a");
+    wire("speaker-b", "both-speaking", "b");
+    wire("source", "both-selection", "media");
+    wire("both-speaking", "both-selection", "condition");
+    wire("remove", "show-both", "media");
+    wire("both-selection", "show-both", "selection");
+    const onlyB = node("b-active", "condition", { expression: { op: "threshold", signal: "b", on: 0.5, off: 0.2 }, debounce: 1.5, hold: 3 }, [port("b", "signal")], "condition"), selectB = node("b-selection", "selection", {}, [port("media", "av"), port("condition", "condition")], "selection"), showB = node("show-b", "action", { action: "layout", layout: "speakerB", defaultLayout: "grid", z: 0, mode: "review" }, [port("media", "av"), port("selection", "selection")], "av");
+    edit.nodes.push(onlyB, selectB, showB);
+    wire("speaker-b", "b-active", "b");
+    wire("source", "b-selection", "media");
+    wire("b-active", "b-selection", "condition");
+    wire("remove", "show-b", "media");
+    wire("b-selection", "show-b", "selection");
+    edit.connections = edit.connections.filter((c) => !(c.from.node === "remove" && c.to.node === "show-both"));
+    wire("show-b", "show-both", "media");
+  }
+  edit.nodes.forEach((n, i) => n.ui = { x: 40 + i * 200, y: 40 });
+  return edit;
+}
+
+// src/pipeline/serialize.ts
+function serialize(value) {
+  return JSON.stringify(value, (_key, v) => v instanceof Float32Array ? { $type: "Float32Array", data: Array.from(v) } : v, 2);
+}
+function migrate(value) {
+  const graph = structuredClone(value);
+  if (graph.schemaVersion === 0) graph.schemaVersion = 1;
+  if (graph.schemaVersion !== 1) throw Error("Unsupported schema version. Export this Edit with a compatible editor.");
+  return graph;
+}
+function parse(text) {
+  return JSON.parse(text, (_k, v) => {
+    if (v?.$type === "Float32Array") {
+      if (!Array.isArray(v.data) || !v.data.every((n) => typeof n === "number" && Number.isFinite(n))) throw Error("Signal arrays must contain finite numbers.");
+      return Float32Array.from(v.data);
+    }
+    return v;
+  });
+}
+function importEdit(text) {
+  const edit = migrate(parse(text));
+  const bindings = Object.fromEntries(edit.slots.map((s) => [s.id, { type: s.type }]));
+  validateGraph(edit, bindings);
+  return edit;
+}
+function importRun(text) {
+  const run = parse(text);
+  if (run.schemaVersion !== 1 || !["running", "awaiting-approval", "awaiting-continue", "paused-at-breakpoint", "complete", "failed"].includes(run.status) || !Array.isArray(run.queue) || !Number.isInteger(run.cursor)) throw Error("Invalid saved run state.");
+  validateGraph(run.edit, run.bindings);
+  return run;
+}
+
+// src/pipeline/timemap.ts
+var epsilon = 1e-8;
+function sourceTime(map, time) {
+  const s = map.segments.find((s2) => time >= s2.outStart && time < s2.outEnd);
+  return s ? s.srcStart + (time - s.outStart) * s.rate : void 0;
+}
+function project(map, time) {
+  return map.segments.filter((s) => time >= s.srcStart && time < s.srcEnd).map((s) => s.outStart + (time - s.srcStart) / s.rate);
+}
+function compose(local, parent) {
+  const segments = [];
+  for (const a of local.segments) for (const b of parent.segments) {
+    const lo = Math.max(a.srcStart, b.outStart), hi = Math.min(a.srcEnd, b.outEnd);
+    if (hi <= lo) continue;
+    segments.push({ outStart: a.outStart + (lo - a.srcStart) / a.rate, outEnd: a.outStart + (hi - a.srcStart) / a.rate, srcStart: b.srcStart + (lo - b.outStart) * b.rate, srcEnd: b.srcStart + (hi - b.outStart) * b.rate, rate: a.rate * b.rate });
+  }
+  segments.sort((a, b) => a.outStart - b.outStart);
+  return { segments };
+}
+function mergeRanges(ranges) {
+  const result = [];
+  for (const r of [...ranges].sort((a, b) => a.start - b.start)) {
+    if (!Number.isFinite(r.start) || !Number.isFinite(r.end) || r.start < 0 || r.end < r.start) throw Error("Ranges need finite start/end times, with end after start.");
+    if (r.end === r.start) continue;
+    const last = result.at(-1);
+    if (last && r.start <= last.end) {
+      last.end = Math.max(last.end, r.end);
+      last.confidence = Math.min(last.confidence ?? 1, r.confidence ?? 1);
+    } else result.push({ ...r });
+  }
+  return result;
+}
+function rangeProjection(map, ranges) {
+  const output = [], lost = [];
+  for (const r of ranges) {
+    const covered = [];
+    for (const s of map.segments) {
+      const lo = Math.max(r.start, s.srcStart), hi = Math.min(r.end, s.srcEnd);
+      if (hi <= lo) continue;
+      covered.push({ start: lo, end: hi });
+      output.push({ ...r, start: s.outStart + (lo - s.srcStart) / s.rate, end: s.outStart + (hi - s.srcStart) / s.rate });
+    }
+    let cursor = r.start;
+    for (const c of mergeRanges(covered)) {
+      if (c.start > cursor + epsilon) lost.push({ ...r, start: cursor, end: c.start });
+      cursor = Math.max(cursor, c.end);
+    }
+    if (cursor < r.end - epsilon) lost.push({ ...r, start: cursor, end: r.end });
+  }
+  return { ranges: output.sort((a, b) => a.start - b.start), lost };
+}
+function toOrigin(map, ranges) {
+  const output = [];
+  for (const r of ranges) for (const s of map.segments) {
+    const a = Math.max(r.start, s.outStart), b = Math.min(r.end, s.outEnd);
+    if (b > a) output.push({ ...r, start: s.srcStart + (a - s.outStart) * s.rate, end: s.srcStart + (b - s.outStart) * s.rate });
+  }
+  return output;
+}
+
+export {
+  clone,
+  media,
+  compatible,
+  validateGraph,
+  port,
+  node,
+  example,
+  serialize,
+  migrate,
+  importEdit,
+  importRun,
+  sourceTime,
+  project,
+  compose,
+  mergeRanges,
+  rangeProjection,
+  toOrigin
+};
+//# sourceMappingURL=chunk-T3E6QFBJ.js.map

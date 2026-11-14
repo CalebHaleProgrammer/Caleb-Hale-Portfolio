@@ -1,0 +1,8 @@
+/** Radix-2 FFT with a Hann window; used for actual spectral thumbnails, never inferred from volume. */
+const tables=new Map<number,{window:Float64Array;cos:Float64Array;sin:Float64Array}>();
+export function frequencyBins(samples:Float32Array,sampleRate:number,bins=48):Uint8Array{
+  const n=samples.length;if(n<2||(n&(n-1)))throw Error('FFT window must be a power of two.');if(!tables.has(n)){const window=Float64Array.from({length:n},(_,i)=>.5-.5*Math.cos(2*Math.PI*i/(n-1))),cos=Float64Array.from({length:n},(_,i)=>Math.cos(-2*Math.PI*i/n)),sin=Float64Array.from({length:n},(_,i)=>Math.sin(-2*Math.PI*i/n));tables.set(n,{window,cos,sin});}const table=tables.get(n)!,re=new Float64Array(n),im=new Float64Array(n);for(let i=0;i<n;i++)re[i]=samples[i]*table.window[i];
+  for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j)[re[i],re[j]]=[re[j],re[i]];}
+  for(let len=2;len<=n;len<<=1){for(let base=0;base<n;base+=len)for(let j=0;j<len/2;j++){const cos=table.cos[j*n/len],sin=table.sin[j*n/len],a=base+j,b=a+len/2,tr=re[b]*cos-im[b]*sin,ti=re[b]*sin+im[b]*cos;re[b]=re[a]-tr;im[b]=im[a]-ti;re[a]+=tr;im[a]+=ti;}}
+  const result=new Uint8Array(bins),maxFreq=Math.min(20000,sampleRate/2);for(let b=0;b<bins;b++){const low=40*(maxFreq/40)**(b/bins),high=40*(maxFreq/40)**((b+1)/bins),from=Math.max(1,Math.floor(low*n/sampleRate)),to=Math.min(n/2,Math.max(from+1,Math.ceil(high*n/sampleRate)));let power=0;for(let i=from;i<to;i++)power=Math.max(power,re[i]*re[i]+im[i]*im[i]);const db=20*Math.log10(Math.max(1e-8,Math.sqrt(power)*4/n));result[b]=Math.max(0,Math.min(255,Math.round((db+90)/90*255)));}return result;
+}

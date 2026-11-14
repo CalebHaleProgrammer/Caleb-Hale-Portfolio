@@ -1,0 +1,1 @@
+declare module 'soundtouchjs' { export class SoundTouch { tempo:number; stretch:{setParameters(rate:number,sequence:number,seek:number,overlap:number):void}; inputBuffer:{putSamples(samples:Float32Array,position:number,count:number):void}; outputBuffer:{frameCount:number;receiveSamples(target:Float32Array,count:number):void};process():void; } }

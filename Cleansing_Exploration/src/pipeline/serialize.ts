@@ -1,0 +1,7 @@
+import {validateGraph,type EditDef} from './model';
+import {type RunState} from './engine';
+export function serialize(value:EditDef|RunState){return JSON.stringify(value,(_key,v)=>v instanceof Float32Array?{$type:'Float32Array',data:Array.from(v)}:v,2);}
+export function migrate(value:unknown):EditDef {const graph=structuredClone(value) as {schemaVersion:number};if(graph.schemaVersion===0)graph.schemaVersion=1;if(graph.schemaVersion!==1)throw Error('Unsupported schema version. Export this Edit with a compatible editor.');return graph as EditDef;}
+function parse(text:string){return JSON.parse(text,(_k,v)=>{if(v?.$type==='Float32Array'){if(!Array.isArray(v.data)||!v.data.every((n:unknown)=>typeof n==='number'&&Number.isFinite(n)))throw Error('Signal arrays must contain finite numbers.');return Float32Array.from(v.data);}return v;});}
+export function importEdit(text:string):EditDef {const edit=migrate(parse(text));const bindings=Object.fromEntries(edit.slots.map(s=>[s.id,{type:s.type}]));validateGraph(edit,bindings as RunState['bindings']);return edit;}
+export function importRun(text:string):RunState {const run=parse(text) as RunState;if(run.schemaVersion!==1||!['running','awaiting-approval','awaiting-continue','paused-at-breakpoint','complete','failed'].includes(run.status)||!Array.isArray(run.queue)||!Number.isInteger(run.cursor))throw Error('Invalid saved run state.');validateGraph(run.edit,run.bindings);return run;}

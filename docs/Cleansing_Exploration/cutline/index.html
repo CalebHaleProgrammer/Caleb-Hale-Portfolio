@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#111417">
+  <title>Cutline · Local video editor</title>
+  <link rel="stylesheet" href="./dist/app.css">
+</head>
+<body>
+  <div id="app"><p class="boot">Opening Cutline…</p></div>
+  <script type="module">
+    try {
+      if (!window.isSecureContext) {
+        throw new Error('Open this page through HTTPS or localhost so browser media features are available.');
+      }
+      if (location.protocol === 'file:') {
+        throw new Error('Preview the Quarto website through its local server instead of opening the HTML file directly.');
+      }
+      await import('./dist/app.js');
+    } catch (error) {
+      const box = document.createElement('div');
+      box.style.cssText = 'padding:24px;max-width:800px;line-height:1.6;font:16px system-ui;color:#e9efed';
+      const title = document.createElement('h1');
+      title.textContent = 'The editor could not start';
+      const detail = document.createElement('p');
+      detail.textContent = error instanceof Error ? error.message : String(error);
+      const help = document.createElement('p');
+      help.textContent = 'Check that cutline/dist, including media-worker.js and the chunks folder, was copied into the rendered website. If the files exist, inspect the browser console for the detailed error.';
+      box.append(title, detail, help);
+      document.getElementById('app').replaceChildren(box);
+    }
+  </script>
+</body>
+</html>

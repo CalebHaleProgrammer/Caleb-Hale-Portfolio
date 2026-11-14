@@ -1,0 +1,26 @@
+---
+format:
+  html:
+    embed-resources: false
+    page-layout: full
+    title-block-banner: false
+    toc: false
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+    theme: dark
+execute:
+  warning: false
+---
+
+```{=html}
+<div id="app"><p class="boot">Opening Cutline…</p></div>
+<script type="module" src="dist/app.js"></script>
+```

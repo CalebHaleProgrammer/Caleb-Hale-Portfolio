@@ -1,0 +1,10 @@
+import {build} from 'esbuild';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {pathToFileURL} from 'node:url';
+import {resolve} from 'node:path';
+await mkdir('.cache',{recursive:true});
+await build({entryPoints:['src/pipeline/examples.ts'],bundle:true,platform:'node',format:'esm',outfile:'.cache/pipeline-examples.mjs'});
+const {example}=await import(pathToFileURL(resolve('.cache/pipeline-examples.mjs')));
+await mkdir('samples/pipeline',{recursive:true});
+for(const kind of ['remove','speaker','cross'])await writeFile(`samples/pipeline/${kind}.json`,JSON.stringify(example(kind),null,2)+'\n');
+console.log('Generated three sample pipeline graphs.');
